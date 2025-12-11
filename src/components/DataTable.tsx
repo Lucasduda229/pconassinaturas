@@ -11,6 +11,7 @@ import {
 interface Column<T> {
   key: string;
   header: string;
+  hideOnMobile?: boolean;
   render?: (item: T) => ReactNode;
 }
 
@@ -27,38 +28,47 @@ function DataTable<T extends { id: string }>({
 }: DataTableProps<T>) {
   return (
     <div className="glass-card overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow className="border-border/50 hover:bg-transparent">
-            {columns.map((column) => (
-              <TableHead 
-                key={column.key}
-                className="text-muted-foreground font-medium"
-              >
-                {column.header}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.map((item) => (
-            <TableRow 
-              key={item.id}
-              className="border-border/30 hover:bg-secondary/30 cursor-pointer transition-colors"
-              onClick={() => onRowClick?.(item)}
-            >
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-border/50 hover:bg-transparent">
               {columns.map((column) => (
-                <TableCell key={column.key} className="py-4">
-                  {column.render 
-                    ? column.render(item) 
-                    : (item as Record<string, unknown>)[column.key] as ReactNode
-                  }
-                </TableCell>
+                <TableHead 
+                  key={column.key}
+                  className={`text-muted-foreground font-medium whitespace-nowrap ${
+                    column.hideOnMobile ? 'hidden sm:table-cell' : ''
+                  }`}
+                >
+                  {column.header}
+                </TableHead>
               ))}
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {data.map((item) => (
+              <TableRow 
+                key={item.id}
+                className="border-border/30 hover:bg-secondary/30 cursor-pointer transition-colors"
+                onClick={() => onRowClick?.(item)}
+              >
+                {columns.map((column) => (
+                  <TableCell 
+                    key={column.key} 
+                    className={`py-3 sm:py-4 ${
+                      column.hideOnMobile ? 'hidden sm:table-cell' : ''
+                    }`}
+                  >
+                    {column.render 
+                      ? column.render(item) 
+                      : (item as Record<string, unknown>)[column.key] as ReactNode
+                    }
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

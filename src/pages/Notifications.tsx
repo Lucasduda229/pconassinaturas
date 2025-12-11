@@ -1,8 +1,8 @@
+import { useState } from 'react';
 import { Search, Filter, Bell, CheckCircle, XCircle, AlertTriangle, Mail } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -53,25 +53,25 @@ const mockNotifications = [
 const typeConfig = {
   payment_received: {
     icon: CheckCircle,
-    label: 'Pagamento Recebido',
+    label: 'Pagamento',
     bgClass: 'bg-success/10',
     iconClass: 'text-success',
   },
   payment_failed: {
     icon: XCircle,
-    label: 'Falha no Pagamento',
+    label: 'Falha',
     bgClass: 'bg-destructive/10',
     iconClass: 'text-destructive',
   },
   payment_due: {
     icon: AlertTriangle,
-    label: 'Cobrança Enviada',
+    label: 'Cobrança',
     bgClass: 'bg-warning/10',
     iconClass: 'text-warning',
   },
   subscription_renewed: {
     icon: Bell,
-    label: 'Assinatura Renovada',
+    label: 'Renovação',
     bgClass: 'bg-primary/10',
     iconClass: 'text-primary',
   },
@@ -88,54 +88,54 @@ const Notifications = () => {
   return (
     <DashboardLayout 
       title="Notificações" 
-      subtitle="Histórico de notificações enviadas aos clientes"
+      subtitle="Histórico de notificações enviadas"
     >
       {/* Header Actions */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 mb-4 sm:mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <Input
-            placeholder="Buscar notificações..."
+            placeholder="Buscar notificação..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 bg-secondary/50 border-border/50 h-11"
+            className="pl-10 bg-secondary/50 border-border/50 h-10 sm:h-11"
           />
         </div>
         
-        <Button variant="outline" className="h-11 gap-2 border-border/50 bg-secondary/50">
+        <Button variant="outline" size="sm" className="h-10 sm:h-11 gap-2 border-border/50 bg-secondary/50">
           <Filter className="w-4 h-4" />
-          Filtros
+          <span className="hidden sm:inline">Filtros</span>
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="glass-card p-4 text-center">
-          <p className="text-2xl font-bold text-foreground">{mockNotifications.length}</p>
-          <p className="text-sm text-muted-foreground">Total Enviadas</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
+        <div className="glass-card p-3 sm:p-4 text-center">
+          <p className="text-xl sm:text-2xl font-bold text-foreground">{mockNotifications.length}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Total</p>
         </div>
-        <div className="glass-card p-4 text-center">
-          <p className="text-2xl font-bold text-success">
+        <div className="glass-card p-3 sm:p-4 text-center">
+          <p className="text-xl sm:text-2xl font-bold text-success">
             {mockNotifications.filter(n => n.type === 'payment_received').length}
           </p>
-          <p className="text-sm text-muted-foreground">Pagamentos</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Pagamentos</p>
         </div>
-        <div className="glass-card p-4 text-center">
-          <p className="text-2xl font-bold text-warning">
+        <div className="glass-card p-3 sm:p-4 text-center">
+          <p className="text-xl sm:text-2xl font-bold text-warning">
             {mockNotifications.filter(n => n.type === 'payment_due').length}
           </p>
-          <p className="text-sm text-muted-foreground">Cobranças</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Cobranças</p>
         </div>
-        <div className="glass-card p-4 text-center">
-          <p className="text-2xl font-bold text-destructive">
+        <div className="glass-card p-3 sm:p-4 text-center">
+          <p className="text-xl sm:text-2xl font-bold text-destructive">
             {mockNotifications.filter(n => n.type === 'payment_failed').length}
           </p>
-          <p className="text-sm text-muted-foreground">Falhas</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Falhas</p>
         </div>
       </div>
 
       {/* Notification List */}
-      <div className="space-y-3">
+      <div className="space-y-2 sm:space-y-3">
         {filteredNotifications.map((notification) => {
           const config = typeConfig[notification.type];
           const Icon = config.icon;
@@ -143,38 +143,38 @@ const Notifications = () => {
           return (
             <div 
               key={notification.id} 
-              className="glass-card glass-card-hover p-4 flex items-start gap-4"
+              className="glass-card glass-card-hover p-3 sm:p-4 flex items-start gap-3 sm:gap-4"
             >
-              <div className={cn('p-3 rounded-xl', config.bgClass)}>
-                <Icon className={cn('w-5 h-5', config.iconClass)} />
+              <div className={cn('p-2 sm:p-3 rounded-xl flex-shrink-0', config.bgClass)}>
+                <Icon className={cn('w-4 h-4 sm:w-5 sm:h-5', config.iconClass)} />
               </div>
               
               <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="font-medium text-foreground">
+                <div className="flex items-start justify-between gap-2 sm:gap-4">
+                  <div className="min-w-0">
+                    <p className="font-medium text-foreground text-sm sm:text-base truncate">
                       {notification.clientName}
                     </p>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 line-clamp-2">
                       {notification.message}
                     </p>
                   </div>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">
-                    {format(notification.sentAt, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                  <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
+                    {format(notification.sentAt, "dd/MM HH:mm", { locale: ptBR })}
                   </span>
                 </div>
                 
                 <div className="flex items-center gap-2 mt-2">
                   <span className={cn(
-                    'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
+                    'inline-flex items-center px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium',
                     config.bgClass,
                     config.iconClass
                   )}>
                     {config.label}
                   </span>
-                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <Mail className="w-3 h-3" />
-                    E-mail enviado
+                  <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
+                    <Mail className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                    Enviado
                   </span>
                 </div>
               </div>
@@ -184,12 +184,12 @@ const Notifications = () => {
       </div>
 
       {filteredNotifications.length === 0 && (
-        <div className="glass-card p-12 text-center">
-          <Bell className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="font-heading text-lg font-semibold text-foreground mb-2">
+        <div className="glass-card p-8 sm:p-12 text-center">
+          <Bell className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="font-heading text-base sm:text-lg font-semibold text-foreground mb-2">
             Nenhuma notificação encontrada
           </h3>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Tente ajustar os filtros ou termo de busca.
           </p>
         </div>

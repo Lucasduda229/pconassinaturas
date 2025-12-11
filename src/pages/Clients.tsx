@@ -67,22 +67,24 @@ const Clients = () => {
       header: 'Cliente',
       render: (item: Client) => (
         <div>
-          <p className="font-medium text-foreground">{item.name}</p>
-          <p className="text-sm text-muted-foreground">{item.document}</p>
+          <p className="font-medium text-foreground text-sm">{item.name}</p>
+          <p className="text-xs text-muted-foreground">{item.document}</p>
+          <p className="text-xs text-muted-foreground sm:hidden">{item.email}</p>
         </div>
       ),
     },
     {
       key: 'contact',
       header: 'Contato',
+      hideOnMobile: true,
       render: (item: Client) => (
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Mail className="w-4 h-4" />
-            {item.email}
+            <Mail className="w-4 h-4 flex-shrink-0" />
+            <span className="truncate">{item.email}</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Phone className="w-4 h-4" />
+            <Phone className="w-4 h-4 flex-shrink-0" />
             {item.phone}
           </div>
         </div>
@@ -91,21 +93,10 @@ const Clients = () => {
     {
       key: 'createdAt',
       header: 'Cadastro',
+      hideOnMobile: true,
       render: (item: Client) => (
         <span className="text-muted-foreground">
           {format(item.createdAt, 'dd/MM/yyyy', { locale: ptBR })}
-        </span>
-      ),
-    },
-    {
-      key: 'lastAccess',
-      header: 'Último Acesso',
-      render: (item: Client) => (
-        <span className="text-muted-foreground">
-          {item.lastAccess 
-            ? format(item.lastAccess, 'dd/MM/yyyy HH:mm', { locale: ptBR })
-            : 'Nunca acessou'
-          }
         </span>
       ),
     },
@@ -143,31 +134,31 @@ const Clients = () => {
       subtitle="Gerencie os clientes cadastrados no sistema"
     >
       {/* Header Actions */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 mb-4 sm:mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nome, email ou documento..."
+            placeholder="Buscar cliente..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 bg-secondary/50 border-border/50 h-11"
+            className="pl-10 bg-secondary/50 border-border/50 h-10 sm:h-11"
           />
         </div>
         
-        <div className="flex gap-3">
-          <Button variant="outline" className="h-11 gap-2 border-border/50 bg-secondary/50">
+        <div className="flex gap-2 sm:gap-3">
+          <Button variant="outline" size="sm" className="h-10 sm:h-11 gap-2 border-border/50 bg-secondary/50 flex-1 sm:flex-none">
             <Filter className="w-4 h-4" />
-            Filtros
+            <span className="hidden sm:inline">Filtros</span>
           </Button>
           
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="h-11 gap-2">
+              <Button size="sm" className="h-10 sm:h-11 gap-2 flex-1 sm:flex-none">
                 <Plus className="w-4 h-4" />
-                Novo Cliente
+                <span>Novo</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="glass-card border-border/50 max-w-md">
+            <DialogContent className="glass-card border-border/50 max-w-[95vw] sm:max-w-md mx-auto">
               <DialogHeader>
                 <DialogTitle className="font-heading text-xl">Novo Cliente</DialogTitle>
                 <DialogDescription>
@@ -236,28 +227,28 @@ const Clients = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="glass-card p-4 text-center">
-          <p className="text-2xl font-bold text-foreground">{clients.length}</p>
-          <p className="text-sm text-muted-foreground">Total</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
+        <div className="glass-card p-3 sm:p-4 text-center">
+          <p className="text-xl sm:text-2xl font-bold text-foreground">{clients.length}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Total</p>
         </div>
-        <div className="glass-card p-4 text-center">
-          <p className="text-2xl font-bold text-success">{clients.filter(c => c.status === 'active').length}</p>
-          <p className="text-sm text-muted-foreground">Ativos</p>
+        <div className="glass-card p-3 sm:p-4 text-center">
+          <p className="text-xl sm:text-2xl font-bold text-success">{clients.filter(c => c.status === 'active').length}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Ativos</p>
         </div>
-        <div className="glass-card p-4 text-center">
-          <p className="text-2xl font-bold text-warning">{clients.filter(c => c.status === 'inactive').length}</p>
-          <p className="text-sm text-muted-foreground">Inativos</p>
+        <div className="glass-card p-3 sm:p-4 text-center">
+          <p className="text-xl sm:text-2xl font-bold text-warning">{clients.filter(c => c.status === 'inactive').length}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Inativos</p>
         </div>
-        <div className="glass-card p-4 text-center">
-          <p className="text-2xl font-bold text-primary">
+        <div className="glass-card p-3 sm:p-4 text-center">
+          <p className="text-xl sm:text-2xl font-bold text-primary">
             {clients.filter(c => {
               const thirtyDaysAgo = new Date();
               thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
               return c.createdAt > thirtyDaysAgo;
             }).length}
           </p>
-          <p className="text-sm text-muted-foreground">Novos (30 dias)</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Novos (30d)</p>
         </div>
       </div>
 
