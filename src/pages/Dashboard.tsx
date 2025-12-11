@@ -33,12 +33,16 @@ const Dashboard = () => {
       key: 'clientName',
       header: 'Cliente',
       render: (item: Subscription) => (
-        <span className="font-medium text-foreground">{item.clientName}</span>
+        <div>
+          <span className="font-medium text-foreground text-sm">{item.clientName}</span>
+          <span className="block text-xs text-muted-foreground sm:hidden">{item.planName}</span>
+        </div>
       ),
     },
     {
       key: 'planName',
       header: 'Plano',
+      hideOnMobile: true,
       render: (item: Subscription) => (
         <span className="text-muted-foreground">{item.planName}</span>
       ),
@@ -47,12 +51,13 @@ const Dashboard = () => {
       key: 'value',
       header: 'Valor',
       render: (item: Subscription) => (
-        <span className="font-medium text-foreground">{formatCurrency(item.value)}</span>
+        <span className="font-medium text-foreground text-sm">{formatCurrency(item.value)}</span>
       ),
     },
     {
       key: 'nextPayment',
       header: 'Próx. Cobrança',
+      hideOnMobile: true,
       render: (item: Subscription) => (
         <span className="text-muted-foreground">
           {format(item.nextPayment, 'dd/MM/yyyy', { locale: ptBR })}
@@ -71,19 +76,20 @@ const Dashboard = () => {
       key: 'clientName',
       header: 'Cliente',
       render: (item: Payment) => (
-        <span className="font-medium text-foreground">{item.clientName}</span>
+        <span className="font-medium text-foreground text-sm">{item.clientName}</span>
       ),
     },
     {
       key: 'amount',
       header: 'Valor',
       render: (item: Payment) => (
-        <span className="font-medium text-foreground">{formatCurrency(item.amount)}</span>
+        <span className="font-medium text-foreground text-sm">{formatCurrency(item.amount)}</span>
       ),
     },
     {
       key: 'paymentMethod',
       header: 'Método',
+      hideOnMobile: true,
       render: (item: Payment) => (
         <span className="text-muted-foreground">{item.paymentMethod}</span>
       ),
@@ -91,6 +97,7 @@ const Dashboard = () => {
     {
       key: 'createdAt',
       header: 'Data',
+      hideOnMobile: true,
       render: (item: Payment) => (
         <span className="text-muted-foreground">
           {format(item.createdAt, 'dd/MM/yyyy', { locale: ptBR })}
@@ -109,8 +116,8 @@ const Dashboard = () => {
       title="Dashboard" 
       subtitle="Visão geral do sistema de assinaturas"
     >
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {/* Primary Metrics Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 lg:mb-8">
         <MetricCard
           title="Clientes Ativos"
           value={mockDashboardMetrics.activeClients}
@@ -125,13 +132,13 @@ const Dashboard = () => {
           trend={{ value: 8, isPositive: true }}
         />
         <MetricCard
-          title="Assinaturas Renovadas"
+          title="Renovadas"
           value={mockDashboardMetrics.renewedSubscriptions}
           icon={CheckCircle}
           variant="success"
         />
         <MetricCard
-          title="Falhas de Pagamento"
+          title="Falhas"
           value={mockDashboardMetrics.failedPayments}
           icon={AlertTriangle}
           variant="danger"
@@ -139,35 +146,35 @@ const Dashboard = () => {
       </div>
 
       {/* Secondary Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 lg:mb-8">
         <MetricCard
-          title="Total de Clientes"
+          title="Total Clientes"
           value={mockDashboardMetrics.totalClients}
           icon={Users}
         />
         <MetricCard
-          title="Clientes Inativos"
+          title="Inativos"
           value={mockDashboardMetrics.inactiveClients}
           icon={XCircle}
           variant="warning"
         />
         <MetricCard
-          title="Assinaturas Vencidas"
+          title="Vencidas"
           value={mockDashboardMetrics.expiredSubscriptions}
           icon={Calendar}
           variant="danger"
         />
         <MetricCard
-          title="Próximas Renovações"
+          title="Próx. Renovações"
           value={mockDashboardMetrics.upcomingRenewals}
           icon={TrendingUp}
         />
       </div>
 
       {/* Tables */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
         <div>
-          <h2 className="font-heading text-xl font-semibold text-foreground mb-4">
+          <h2 className="font-heading text-lg sm:text-xl font-semibold text-foreground mb-3 sm:mb-4">
             Assinaturas Recentes
           </h2>
           <DataTable 
@@ -177,7 +184,7 @@ const Dashboard = () => {
         </div>
         
         <div>
-          <h2 className="font-heading text-xl font-semibold text-foreground mb-4">
+          <h2 className="font-heading text-lg sm:text-xl font-semibold text-foreground mb-3 sm:mb-4">
             Últimos Pagamentos
           </h2>
           <DataTable 

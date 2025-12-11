@@ -90,8 +90,8 @@ const Subscriptions = () => {
       header: 'Cliente',
       render: (item: Subscription) => (
         <div>
-          <p className="font-medium text-foreground">{item.clientName}</p>
-          <p className="text-sm text-muted-foreground">{item.planName}</p>
+          <p className="font-medium text-foreground text-sm">{item.clientName}</p>
+          <p className="text-xs text-muted-foreground">{item.planName}</p>
         </div>
       ),
     },
@@ -99,43 +99,17 @@ const Subscriptions = () => {
       key: 'value',
       header: 'Valor',
       render: (item: Subscription) => (
-        <div className="flex items-center gap-2">
-          <DollarSign className="w-4 h-4 text-primary" />
-          <span className="font-semibold text-foreground">{formatCurrency(item.value)}</span>
-        </div>
-      ),
-    },
-    {
-      key: 'startDate',
-      header: 'Início',
-      render: (item: Subscription) => (
-        <span className="text-muted-foreground">
-          {format(item.startDate, 'dd/MM/yyyy', { locale: ptBR })}
-        </span>
-      ),
-    },
-    {
-      key: 'lastPayment',
-      header: 'Última Cobrança',
-      render: (item: Subscription) => (
-        <span className="text-muted-foreground">
-          {item.lastPayment 
-            ? format(item.lastPayment, 'dd/MM/yyyy', { locale: ptBR })
-            : '-'
-          }
-        </span>
+        <span className="font-semibold text-foreground text-sm">{formatCurrency(item.value)}</span>
       ),
     },
     {
       key: 'nextPayment',
-      header: 'Próxima Cobrança',
+      header: 'Próx. Cobrança',
+      hideOnMobile: true,
       render: (item: Subscription) => (
-        <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-muted-foreground" />
-          <span className="text-foreground">
-            {format(item.nextPayment, 'dd/MM/yyyy', { locale: ptBR })}
-          </span>
-        </div>
+        <span className="text-muted-foreground text-sm">
+          {format(item.nextPayment, 'dd/MM/yyyy', { locale: ptBR })}
+        </span>
       ),
     },
     {
@@ -172,31 +146,31 @@ const Subscriptions = () => {
       subtitle="Gerencie as assinaturas e planos dos clientes"
     >
       {/* Header Actions */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 mb-4 sm:mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <Input
-            placeholder="Buscar por cliente ou plano..."
+            placeholder="Buscar assinatura..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 bg-secondary/50 border-border/50 h-11"
+            className="pl-10 bg-secondary/50 border-border/50 h-10 sm:h-11"
           />
         </div>
         
-        <div className="flex gap-3">
-          <Button variant="outline" className="h-11 gap-2 border-border/50 bg-secondary/50">
+        <div className="flex gap-2 sm:gap-3">
+          <Button variant="outline" size="sm" className="h-10 sm:h-11 gap-2 border-border/50 bg-secondary/50 flex-1 sm:flex-none">
             <Filter className="w-4 h-4" />
-            Filtros
+            <span className="hidden sm:inline">Filtros</span>
           </Button>
           
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="h-11 gap-2">
+              <Button size="sm" className="h-10 sm:h-11 gap-2 flex-1 sm:flex-none">
                 <Plus className="w-4 h-4" />
-                Nova Assinatura
+                <span>Nova</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="glass-card border-border/50 max-w-md">
+            <DialogContent className="glass-card border-border/50 max-w-[95vw] sm:max-w-md mx-auto">
               <DialogHeader>
                 <DialogTitle className="font-heading text-xl">Nova Assinatura</DialogTitle>
                 <DialogDescription>
@@ -254,7 +228,7 @@ const Subscriptions = () => {
                     Cancelar
                   </Button>
                   <Button className="flex-1" onClick={handleAddSubscription}>
-                    Criar Assinatura
+                    Criar
                   </Button>
                 </div>
               </div>
@@ -264,22 +238,22 @@ const Subscriptions = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="glass-card p-4 text-center">
-          <p className="text-2xl font-bold text-foreground">{subscriptions.length}</p>
-          <p className="text-sm text-muted-foreground">Total</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
+        <div className="glass-card p-3 sm:p-4 text-center">
+          <p className="text-xl sm:text-2xl font-bold text-foreground">{subscriptions.length}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Total</p>
         </div>
-        <div className="glass-card p-4 text-center">
-          <p className="text-2xl font-bold text-success">{subscriptions.filter(s => s.status === 'active').length}</p>
-          <p className="text-sm text-muted-foreground">Ativas</p>
+        <div className="glass-card p-3 sm:p-4 text-center">
+          <p className="text-xl sm:text-2xl font-bold text-success">{subscriptions.filter(s => s.status === 'active').length}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Ativas</p>
         </div>
-        <div className="glass-card p-4 text-center">
-          <p className="text-2xl font-bold text-warning">{subscriptions.filter(s => s.status === 'pending').length}</p>
-          <p className="text-sm text-muted-foreground">Pendentes</p>
+        <div className="glass-card p-3 sm:p-4 text-center">
+          <p className="text-xl sm:text-2xl font-bold text-warning">{subscriptions.filter(s => s.status === 'pending').length}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Pendentes</p>
         </div>
-        <div className="glass-card p-4 text-center">
-          <p className="text-2xl font-bold text-primary">{formatCurrency(totalRevenue)}</p>
-          <p className="text-sm text-muted-foreground">Receita Mensal</p>
+        <div className="glass-card p-3 sm:p-4 text-center">
+          <p className="text-lg sm:text-xl font-bold text-primary">{formatCurrency(totalRevenue)}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Receita/Mês</p>
         </div>
       </div>
 

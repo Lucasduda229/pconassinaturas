@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Lock, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import logo from '@/assets/logo-pcon.png';
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, isAuthenticated } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -51,27 +52,27 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center p-4">
       <AnimatedBackground />
       
-      <div className="w-full max-w-md animate-fade-in">
+      <div className="w-full max-w-sm sm:max-w-md animate-fade-in">
         {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center gap-3 mb-4">
-            <img src={logo} alt="P-CON" className="h-16 w-auto" />
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="inline-flex items-center justify-center gap-3 mb-3 sm:mb-4">
+            <img src={logo} alt="P-CON" className="h-12 sm:h-16 w-auto" />
           </div>
-          <h1 className="font-heading text-3xl font-bold text-foreground">
+          <h1 className="font-heading text-2xl sm:text-3xl font-bold text-foreground">
             P-CON <span className="text-gradient">Assinaturas</span>
           </h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-sm sm:text-base text-muted-foreground mt-2">
             Sistema de Gestão de Assinaturas
           </p>
         </div>
 
         {/* Login Card */}
-        <div className="glass-card p-8">
-          <h2 className="font-heading text-xl font-semibold text-foreground mb-6">
+        <div className="glass-card p-6 sm:p-8">
+          <h2 className="font-heading text-lg sm:text-xl font-semibold text-foreground mb-5 sm:mb-6">
             Entrar no Sistema
           </h2>
           
-          <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={handleLogin} className="space-y-4 sm:space-y-5">
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">Usuário</label>
               <div className="relative">
@@ -81,7 +82,7 @@ const Login = () => {
                   placeholder="Digite seu usuário"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="pl-10 bg-secondary/50 border-border/50 focus:border-primary/50 h-12"
+                  className="pl-10 bg-secondary/50 border-border/50 focus:border-primary/50 h-11 sm:h-12"
                   autoComplete="username"
                 />
               </div>
@@ -96,7 +97,7 @@ const Login = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 pr-10 bg-secondary/50 border-border/50 focus:border-primary/50 h-12"
+                  className="pl-10 pr-10 bg-secondary/50 border-border/50 focus:border-primary/50 h-11 sm:h-12"
                   autoComplete="current-password"
                 />
                 <button
@@ -111,7 +112,7 @@ const Login = () => {
 
             <Button 
               type="submit" 
-              className="w-full h-12 font-semibold animate-pulse-glow"
+              className="w-full h-11 sm:h-12 font-semibold animate-pulse-glow"
               disabled={isLoading}
             >
               {isLoading ? 'Entrando...' : 'Entrar'}
@@ -119,7 +120,7 @@ const Login = () => {
           </form>
         </div>
 
-        <p className="text-center text-muted-foreground text-sm mt-6">
+        <p className="text-center text-muted-foreground text-xs sm:text-sm mt-4 sm:mt-6">
           © 2024 P-CON Construct. Todos os direitos reservados.
         </p>
       </div>

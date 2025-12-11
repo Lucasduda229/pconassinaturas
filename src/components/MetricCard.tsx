@@ -38,24 +38,27 @@ const MetricCard = ({
   return (
     <div className={cn('metric-card', variantStyles[variant], className)}>
       <div className="flex items-start justify-between">
-        <div>
-          <p className="metric-label">{title}</p>
-          <p className="metric-value mt-2">{value}</p>
+        <div className="flex-1 min-w-0">
+          <p className="metric-label truncate">{title}</p>
+          <p className="metric-value mt-2 text-xl sm:text-2xl lg:text-3xl">{value}</p>
           
           {trend && (
-            <div className={trend.isPositive ? 'metric-trend-up mt-2' : 'metric-trend-down mt-2'}>
+            <div className={cn(
+              trend.isPositive ? 'metric-trend-up' : 'metric-trend-down',
+              'mt-2 text-xs sm:text-sm'
+            )}>
               {trend.isPositive ? (
-                <TrendingUp className="w-4 h-4" />
+                <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
               ) : (
-                <TrendingDown className="w-4 h-4" />
+                <TrendingDown className="w-3 h-3 sm:w-4 sm:h-4" />
               )}
               <span>{trend.isPositive ? '+' : ''}{trend.value}% este mês</span>
             </div>
           )}
         </div>
         
-        <div className={cn('p-3 rounded-xl', iconVariantStyles[variant])}>
-          <Icon className="w-6 h-6" />
+        <div className={cn('p-2 sm:p-3 rounded-xl flex-shrink-0', iconVariantStyles[variant])}>
+          <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
         </div>
       </div>
     </div>
