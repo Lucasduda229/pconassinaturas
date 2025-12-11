@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Users, 
@@ -9,6 +9,8 @@ import {
   Settings,
   LogOut
 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 import logo from '@/assets/logo-pcon.png';
 
 const navItems = [
@@ -21,6 +23,15 @@ const navItems = [
 ];
 
 const Sidebar = () => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    toast.success('Logout realizado com sucesso!');
+    navigate('/');
+  };
+
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 glass-card border-r border-border/50 z-50">
       <div className="flex flex-col h-full">
@@ -53,13 +64,13 @@ const Sidebar = () => {
 
         {/* Footer */}
         <div className="p-4 border-t border-border/50 space-y-1">
-          <NavLink to="/settings" className="nav-item">
+          <NavLink to="/settings" className={({ isActive }) => `nav-item ${isActive ? 'nav-item-active' : ''}`}>
             <Settings className="w-5 h-5" />
             <span className="font-medium">Configurações</span>
           </NavLink>
           <button 
             className="nav-item w-full text-destructive hover:bg-destructive/10"
-            onClick={() => window.location.href = '/'}
+            onClick={handleLogout}
           >
             <LogOut className="w-5 h-5" />
             <span className="font-medium">Sair</span>
