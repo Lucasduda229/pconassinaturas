@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Trash2, RefreshCw, CreditCard, QrCode, FileText, Loader2, Link2, Send, Eye, EyeOff, Pencil, Download } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Trash2, RefreshCw, CreditCard, QrCode, FileText, Loader2, Link2, Send, Eye, EyeOff, Pencil, Download, User } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
@@ -34,6 +35,7 @@ import { toast } from 'sonner';
 import { exportToCSV, formatDateForExport } from '@/utils/exportUtils';
 
 const Clients = () => {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isChargeDialogOpen, setIsChargeDialogOpen] = useState(false);
@@ -381,7 +383,10 @@ const Clients = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="glass-card border-border/50">
-            <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate(`/clients/${item.id}`)}>
+              <User className="w-4 h-4 mr-2" />
+              Ver perfil
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => openEditDialog(item)}>
               <Pencil className="w-4 h-4 mr-2" />
               Editar
