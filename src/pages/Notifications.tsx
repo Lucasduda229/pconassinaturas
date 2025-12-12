@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Search, Filter, Bell, CheckCircle, XCircle, AlertTriangle, Mail } from 'lucide-react';
+import { Search, Filter, Bell, CheckCircle, XCircle, AlertTriangle, Mail, Trash2 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const mockNotifications = [
@@ -79,8 +80,14 @@ const typeConfig = {
 
 const Notifications = () => {
   const [search, setSearch] = useState('');
+  const [notifications, setNotifications] = useState(mockNotifications);
 
-  const filteredNotifications = mockNotifications.filter(notification =>
+  const handleDeleteNotification = (notificationId: string) => {
+    setNotifications(notifications.filter(n => n.id !== notificationId));
+    toast.success('Notificação removida com sucesso!');
+  };
+
+  const filteredNotifications = notifications.filter(notification =>
     notification.clientName.toLowerCase().includes(search.toLowerCase()) ||
     notification.message.toLowerCase().includes(search.toLowerCase())
   );
@@ -111,24 +118,24 @@ const Notifications = () => {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
         <div className="glass-card p-3 sm:p-4 text-center">
-          <p className="text-xl sm:text-2xl font-bold text-foreground">{mockNotifications.length}</p>
+          <p className="text-xl sm:text-2xl font-bold text-foreground">{notifications.length}</p>
           <p className="text-xs sm:text-sm text-muted-foreground">Total</p>
         </div>
         <div className="glass-card p-3 sm:p-4 text-center">
           <p className="text-xl sm:text-2xl font-bold text-success">
-            {mockNotifications.filter(n => n.type === 'payment_received').length}
+            {notifications.filter(n => n.type === 'payment_received').length}
           </p>
           <p className="text-xs sm:text-sm text-muted-foreground">Pagamentos</p>
         </div>
         <div className="glass-card p-3 sm:p-4 text-center">
           <p className="text-xl sm:text-2xl font-bold text-warning">
-            {mockNotifications.filter(n => n.type === 'payment_due').length}
+            {notifications.filter(n => n.type === 'payment_due').length}
           </p>
           <p className="text-xs sm:text-sm text-muted-foreground">Cobranças</p>
         </div>
         <div className="glass-card p-3 sm:p-4 text-center">
           <p className="text-xl sm:text-2xl font-bold text-destructive">
-            {mockNotifications.filter(n => n.type === 'payment_failed').length}
+            {notifications.filter(n => n.type === 'payment_failed').length}
           </p>
           <p className="text-xs sm:text-sm text-muted-foreground">Falhas</p>
         </div>
@@ -164,18 +171,28 @@ const Notifications = () => {
                   </span>
                 </div>
                 
-                <div className="flex items-center gap-2 mt-2">
-                  <span className={cn(
-                    'inline-flex items-center px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium',
-                    config.bgClass,
-                    config.iconClass
-                  )}>
-                    {config.label}
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
-                    <Mail className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                    Enviado
-                  </span>
+                <div className="flex items-center justify-between gap-2 mt-2">
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      'inline-flex items-center px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium',
+                      config.bgClass,
+                      config.iconClass
+                    )}>
+                      {config.label}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
+                      <Mail className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                      Enviado
+                    </span>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-6 w-6 p-0 text-destructive hover:bg-destructive/10"
+                    onClick={() => handleDeleteNotification(notification.id)}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
                 </div>
               </div>
             </div>

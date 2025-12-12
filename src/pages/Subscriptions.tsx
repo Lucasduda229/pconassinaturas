@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, Filter, MoreHorizontal, Calendar, DollarSign } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Calendar, DollarSign, Trash2 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
@@ -84,6 +84,11 @@ const Subscriptions = () => {
     toast.success('Assinatura criada com sucesso!');
   };
 
+  const handleDeleteSubscription = (subscriptionId: string) => {
+    setSubscriptions(subscriptions.filter(s => s.id !== subscriptionId));
+    toast.success('Assinatura removida com sucesso!');
+  };
+
   const columns = [
     {
       key: 'client',
@@ -131,8 +136,12 @@ const Subscriptions = () => {
             <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
             <DropdownMenuItem>Alterar valor</DropdownMenuItem>
             <DropdownMenuItem>Gerar cobrança</DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive">
-              Cancelar
+            <DropdownMenuItem 
+              className="text-destructive"
+              onClick={() => handleDeleteSubscription(item.id)}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Remover
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
