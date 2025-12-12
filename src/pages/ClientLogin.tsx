@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Loader2, Lock, Mail, Sparkles } from 'lucide-react';
+import { Loader2, Lock, Mail, ArrowRight } from 'lucide-react';
 import logo from '@/assets/logo-pcon.png';
-import FuturisticBackground from '@/components/FuturisticBackground';
+import BlueBackground from '@/components/BlueBackground';
 
 const ClientLogin = () => {
   const [email, setEmail] = useState('');
@@ -39,58 +39,41 @@ const ClientLogin = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative">
-      <FuturisticBackground />
+      <BlueBackground />
       
       <motion.div
-        initial={{ opacity: 0, y: 30, scale: 0.95 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.7, ease: 'easeOut' }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
         className="w-full max-w-md relative z-10"
       >
         {/* Glass Card */}
-        <div className="glass-card-premium p-8 sm:p-10">
-          {/* Logo with neon glow */}
+        <div className="glass-card p-8 sm:p-10">
+          {/* Logo */}
           <motion.div 
             className="flex justify-center mb-8"
-            initial={{ opacity: 0, scale: 0.8 }}
+            initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
+            transition={{ delay: 0.1, duration: 0.4 }}
           >
-            <div className="relative">
-              <motion.div
-                className="absolute inset-0 blur-2xl opacity-60"
-                style={{
-                  background: 'linear-gradient(135deg, hsl(220 70% 55%), hsl(280 75% 45%))',
-                }}
-                animate={{
-                  scale: [1, 1.25, 1],
-                  opacity: [0.4, 0.65, 0.4],
-                }}
-                transition={{
-                  duration: 4,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                }}
-              />
-              <img 
-                src={logo} 
-                alt="P-CON Logo" 
-                className="h-20 w-auto relative z-10 neon-glow" 
-              />
-            </div>
+            <img 
+              src={logo} 
+              alt="P-CON Logo" 
+              className="h-16 w-auto" 
+            />
           </motion.div>
 
           {/* Title */}
           <motion.div 
             className="text-center mb-8"
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.6 }}
+            transition={{ delay: 0.15, duration: 0.4 }}
           >
-            <h1 className="text-3xl font-heading font-bold text-gradient mb-2">
+            <h1 className="text-2xl font-heading font-bold text-foreground mb-2">
               Área do Cliente
             </h1>
-            <p className="text-muted-foreground text-sm">
+            <p className="text-gray-neutral text-sm">
               Acesse sua assinatura e realize pagamentos
             </p>
           </motion.div>
@@ -98,24 +81,24 @@ const ClientLogin = () => {
           {/* Form */}
           <motion.form 
             onSubmit={handleSubmit} 
-            className="space-y-6"
+            className="space-y-5"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.4, duration: 0.6 }}
+            transition={{ delay: 0.2, duration: 0.4 }}
           >
             <div className="space-y-2">
               <Label htmlFor="email" className="text-foreground/80 text-sm font-medium">
                 Email
               </Label>
               <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors duration-200" />
                 <Input
                   id="email"
                   type="email"
                   placeholder="seu@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-12 h-12 bg-secondary/50 border-border/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all rounded-xl"
+                  className="pl-12 h-12 bg-secondary/50 border-border/50 focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all duration-200 rounded-xl"
                   disabled={isLoading}
                 />
               </div>
@@ -126,41 +109,40 @@ const ClientLogin = () => {
                 Senha
               </Label>
               <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors duration-200" />
                 <Input
                   id="password"
                   type="password"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-12 h-12 bg-secondary/50 border-border/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all rounded-xl"
+                  className="pl-12 h-12 bg-secondary/50 border-border/50 focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all duration-200 rounded-xl"
                   disabled={isLoading}
                 />
               </div>
             </div>
 
             <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              className="pt-2"
             >
               <Button 
                 type="submit" 
-                className="w-full h-12 btn-premium text-base"
+                className="w-full h-12 btn-blue text-base"
                 disabled={isLoading}
               >
-                <span className="relative z-10 flex items-center justify-center gap-2">
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      Entrando...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-5 w-5" />
-                      Entrar
-                    </>
-                  )}
-                </span>
+                {isLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Entrando...
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    Entrar
+                    <ArrowRight className="h-5 w-5" />
+                  </span>
+                )}
               </Button>
             </motion.div>
           </motion.form>
@@ -170,7 +152,7 @@ const ClientLogin = () => {
             className="mt-8 text-center"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.7, duration: 0.5 }}
+            transition={{ delay: 0.35, duration: 0.4 }}
           >
             <p className="text-xs text-muted-foreground/60">
               Pagamentos processados com segurança

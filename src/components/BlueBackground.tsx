@@ -10,18 +10,18 @@ interface Particle {
   delay: number;
 }
 
-const AnimatedBackground = () => {
+const BlueBackground = () => {
   const [particles, setParticles] = useState<Particle[]>([]);
 
   useEffect(() => {
     const newParticles: Particle[] = [];
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 20; i++) {
       newParticles.push({
         id: i,
         x: Math.random() * 100,
         y: Math.random() * 100,
-        size: Math.random() * 3 + 2,
-        duration: Math.random() * 25 + 20,
+        size: Math.random() * 4 + 2,
+        duration: Math.random() * 20 + 25,
         delay: Math.random() * 10,
       });
     }
@@ -29,52 +29,52 @@ const AnimatedBackground = () => {
   }, []);
 
   return (
-    <div className="fixed inset-0 -z-10 overflow-hidden" style={{ backgroundColor: '#0B1C3A' }}>
-      {/* Subtle gradient overlays */}
+    <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ backgroundColor: '#0B1C3A' }}>
+      {/* Subtle gradient overlay */}
       <div 
         className="absolute inset-0"
         style={{
-          background: 'radial-gradient(ellipse at 50% 0%, rgba(30, 79, 163, 0.06) 0%, transparent 50%)',
+          background: 'radial-gradient(ellipse at 50% 0%, rgba(30, 79, 163, 0.08) 0%, transparent 60%)',
         }}
       />
 
-      {/* Ambient glow */}
+      {/* Ambient glow spots */}
+      <motion.div
+        className="absolute w-[600px] h-[600px] rounded-full"
+        style={{
+          background: 'radial-gradient(circle, rgba(30, 79, 163, 0.12) 0%, transparent 60%)',
+          top: '-10%',
+          right: '-5%',
+          filter: 'blur(60px)',
+        }}
+        animate={{
+          scale: [1, 1.1, 1],
+          opacity: [0.5, 0.7, 0.5],
+        }}
+        transition={{
+          duration: 10,
+          repeat: Infinity,
+          ease: 'easeInOut',
+        }}
+      />
+
       <motion.div
         className="absolute w-[500px] h-[500px] rounded-full"
         style={{
-          background: 'radial-gradient(circle, rgba(30, 79, 163, 0.1) 0%, transparent 60%)',
-          top: '-5%',
-          right: '-5%',
-          filter: 'blur(50px)',
+          background: 'radial-gradient(circle, rgba(42, 63, 134, 0.1) 0%, transparent 60%)',
+          bottom: '-10%',
+          left: '-5%',
+          filter: 'blur(60px)',
         }}
         animate={{
-          scale: [1, 1.08, 1],
+          scale: [1.1, 1, 1.1],
           opacity: [0.4, 0.6, 0.4],
         }}
         transition={{
           duration: 12,
           repeat: Infinity,
           ease: 'easeInOut',
-        }}
-      />
-
-      <motion.div
-        className="absolute w-[400px] h-[400px] rounded-full"
-        style={{
-          background: 'radial-gradient(circle, rgba(42, 63, 134, 0.08) 0%, transparent 60%)',
-          bottom: '-5%',
-          left: '-5%',
-          filter: 'blur(50px)',
-        }}
-        animate={{
-          scale: [1.05, 1, 1.05],
-          opacity: [0.3, 0.5, 0.3],
-        }}
-        transition={{
-          duration: 14,
-          repeat: Infinity,
-          ease: 'easeInOut',
-          delay: 4,
+          delay: 3,
         }}
       />
 
@@ -88,12 +88,12 @@ const AnimatedBackground = () => {
             top: `${particle.y}%`,
             width: particle.size,
             height: particle.size,
-            backgroundColor: 'rgba(30, 79, 163, 0.2)',
+            backgroundColor: 'rgba(30, 79, 163, 0.25)',
           }}
           animate={{
-            y: [0, -20, 0, 15, 0],
-            x: [0, 10, -8, 5, 0],
-            opacity: [0.15, 0.3, 0.15],
+            y: [0, -30, 0, 20, 0],
+            x: [0, 15, -10, 5, 0],
+            opacity: [0.2, 0.4, 0.2],
           }}
           transition={{
             duration: particle.duration,
@@ -104,27 +104,30 @@ const AnimatedBackground = () => {
         />
       ))}
 
-      {/* Grid pattern */}
+      {/* Grid pattern - very subtle */}
       <div 
-        className="absolute inset-0 opacity-[0.012]"
+        className="absolute inset-0 opacity-[0.015]"
         style={{
           backgroundImage: `
             linear-gradient(rgba(30, 79, 163, 0.3) 1px, transparent 1px),
             linear-gradient(90deg, rgba(30, 79, 163, 0.3) 1px, transparent 1px)
           `,
-          backgroundSize: '70px 70px',
+          backgroundSize: '80px 80px',
         }}
       />
-      
+
+      {/* Noise texture */}
+      <div className="noise-overlay" />
+
       {/* Vignette */}
       <div 
         className="absolute inset-0"
         style={{
-          background: 'radial-gradient(ellipse at 50% 50%, transparent 0%, rgba(11, 28, 58, 0.6) 100%)',
+          background: 'radial-gradient(ellipse at 50% 50%, transparent 0%, rgba(11, 28, 58, 0.5) 100%)',
         }}
       />
     </div>
   );
 };
 
-export default AnimatedBackground;
+export default BlueBackground;
