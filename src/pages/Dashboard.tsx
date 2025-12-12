@@ -125,7 +125,8 @@ const Dashboard = () => {
     },
   ];
 
-  const handleResetSystem = () => {
+  const handleResetSystem = (e: React.MouseEvent) => {
+    e.preventDefault();
     // Clear all localStorage/sessionStorage data
     localStorage.clear();
     sessionStorage.clear();
