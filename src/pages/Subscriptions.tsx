@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, Filter, MoreHorizontal, Calendar, DollarSign, Trash2 } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Trash2 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
@@ -26,15 +26,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { mockSubscriptions, mockClients } from '@/data/mockData';
-import { Subscription } from '@/types';
+import { useSubscriptions, Subscription } from '@/hooks/useSubscriptions';
+import { useClients } from '@/hooks/useClients';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 
 const Subscriptions = () => {
   const [search, setSearch] = useState('');
-  const [subscriptions, setSubscriptions] = useState(mockSubscriptions);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newSubscription, setNewSubscription] = useState({
     clientId: '',
@@ -42,9 +41,12 @@ const Subscriptions = () => {
     value: '',
   });
 
+  const { subscriptions, loading, addSubscription, deleteSubscription } = useSubscriptions();
+  const { clients } = useClients();
+
   const filteredSubscriptions = subscriptions.filter(sub =>
-    sub.clientName.toLowerCase().includes(search.toLowerCase()) ||
-    sub.planName.toLowerCase().includes(search.toLowerCase())
+    (sub.clients?.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    sub.plan_name.toLowerCase().includes(search.toLowerCase())
   );
 
   const formatCurrency = (value: number) => {
@@ -56,37 +58,28 @@ const Subscriptions = () => {
 
   const totalRevenue = subscriptions
     .filter(s => s.status === 'active')
-    .reduce((acc, s) => acc + s.value, 0);
+    .reduce((acc, s) => acc + Number(s.value), 0);
 
-  const handleAddSubscription = () => {
+  const handleAddSubscription = async () => {
     if (!newSubscription.clientId || !newSubscription.planName || !newSubscription.value) {
       toast.error('Por favor, preencha todos os campos.');
       return;
     }
 
-    const client = mockClients.find(c => c.id === newSubscription.clientId);
-    if (!client) return;
-
-    const subscription: Subscription = {
-      id: String(subscriptions.length + 1),
-      clientId: newSubscription.clientId,
-      clientName: client.name,
-      planName: newSubscription.planName,
+    const result = await addSubscription({
+      client_id: newSubscription.clientId,
+      plan_name: newSubscription.planName,
       value: parseFloat(newSubscription.value),
-      status: 'active',
-      startDate: new Date(),
-      nextPayment: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    };
+    });
 
-    setSubscriptions([...subscriptions, subscription]);
-    setNewSubscription({ clientId: '', planName: '', value: '' });
-    setIsDialogOpen(false);
-    toast.success('Assinatura criada com sucesso!');
+    if (result) {
+      setNewSubscription({ clientId: '', planName: '', value: '' });
+      setIsDialogOpen(false);
+    }
   };
 
-  const handleDeleteSubscription = (subscriptionId: string) => {
-    setSubscriptions(subscriptions.filter(s => s.id !== subscriptionId));
-    toast.success('Assinatura removida com sucesso!');
+  const handleDeleteSubscription = async (subscriptionId: string) => {
+    await deleteSubscription(subscriptionId);
   };
 
   const columns = [
@@ -95,8 +88,8 @@ const Subscriptions = () => {
       header: 'Cliente',
       render: (item: Subscription) => (
         <div>
-          <p className="font-medium text-foreground text-sm">{item.clientName}</p>
-          <p className="text-xs text-muted-foreground">{item.planName}</p>
+          <p className="font-medium text-foreground text-sm">{item.clients?.name || 'N/A'}</p>
+          <p className="text-xs text-muted-foreground">{item.plan_name}</p>
         </div>
       ),
     },
@@ -104,7 +97,7 @@ const Subscriptions = () => {
       key: 'value',
       header: 'Valor',
       render: (item: Subscription) => (
-        <span className="font-semibold text-foreground text-sm">{formatCurrency(item.value)}</span>
+        <span className="font-semibold text-foreground text-sm">{formatCurrency(Number(item.value))}</span>
       ),
     },
     {
@@ -113,7 +106,7 @@ const Subscriptions = () => {
       hideOnMobile: true,
       render: (item: Subscription) => (
         <span className="text-muted-foreground text-sm">
-          {format(item.nextPayment, 'dd/MM/yyyy', { locale: ptBR })}
+          {format(new Date(item.next_payment), 'dd/MM/yyyy', { locale: ptBR })}
         </span>
       ),
     },
@@ -198,7 +191,7 @@ const Subscriptions = () => {
                       <SelectValue placeholder="Selecione um cliente" />
                     </SelectTrigger>
                     <SelectContent className="glass-card border-border/50">
-                      {mockClients.map((client) => (
+                      {clients.map((client) => (
                         <SelectItem key={client.id} value={client.id}>
                           {client.name}
                         </SelectItem>
@@ -267,7 +260,13 @@ const Subscriptions = () => {
       </div>
 
       {/* Table */}
-      <DataTable data={filteredSubscriptions} columns={columns} />
+      {loading ? (
+        <div className="glass-card p-8 text-center">
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      ) : (
+        <DataTable data={filteredSubscriptions} columns={columns} />
+      )}
     </DashboardLayout>
   );
 };
