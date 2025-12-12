@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { useMemo } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface MagneticOrb {
   id: number;
@@ -11,13 +12,16 @@ interface MagneticOrb {
 }
 
 const BlueBackground = () => {
-  // Generate magnetic orbs with random positions and movement patterns
+  const isMobile = useIsMobile();
+  
+  // Reduce orbs on mobile for better performance
   const magneticOrbs = useMemo<MagneticOrb[]>(() => {
+    const orbCount = isMobile ? 2 : 6;
     const orbs: MagneticOrb[] = [];
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < orbCount; i++) {
       orbs.push({
         id: i,
-        size: 300 + Math.random() * 400,
+        size: isMobile ? 200 + Math.random() * 200 : 300 + Math.random() * 400,
         initialX: Math.random() * 100,
         initialY: Math.random() * 100,
         duration: 18 + Math.random() * 12,
@@ -25,10 +29,18 @@ const BlueBackground = () => {
       });
     }
     return orbs;
-  }, []);
+  }, [isMobile]);
 
-  // Generate random movement paths for each orb
+  // Static animation for mobile, dynamic for desktop
   const getOrbAnimation = (orb: MagneticOrb) => {
+    if (isMobile) {
+      // Simpler animation for mobile
+      return {
+        opacity: [0.3, 0.5, 0.3],
+        scale: [1, 1.1, 1],
+      };
+    }
+    
     const xRange = 30 + Math.random() * 20;
     const yRange = 25 + Math.random() * 20;
     return {
@@ -49,6 +61,52 @@ const BlueBackground = () => {
       scale: [1, 1.15, 0.9, 1.1, 1],
     };
   };
+
+  // Simplified mobile background
+  if (isMobile) {
+    return (
+      <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ backgroundColor: '#0B1C3A' }}>
+        {/* Static gradient base layer */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(135deg, #002c5d 0%, #004b8d 40%, #0B1C3A 100%)',
+          }}
+        />
+
+        {/* Reduced orbs for mobile */}
+        {magneticOrbs.map((orb) => (
+          <motion.div
+            key={orb.id}
+            className="absolute rounded-full will-change-transform"
+            style={{
+              width: orb.size,
+              height: orb.size,
+              left: `${orb.initialX}%`,
+              top: `${orb.initialY}%`,
+              background: `radial-gradient(circle, rgba(30, 79, 163, 0.12) 0%, transparent 60%)`,
+              filter: 'blur(30px)',
+            }}
+            animate={getOrbAnimation(orb)}
+            transition={{
+              duration: orb.duration,
+              repeat: Infinity,
+              ease: 'easeInOut',
+              delay: orb.delay,
+            }}
+          />
+        ))}
+
+        {/* Vignette overlay */}
+        <div 
+          className="absolute inset-0"
+          style={{
+            background: 'radial-gradient(ellipse at 50% 50%, transparent 0%, rgba(11, 28, 58, 0.5) 100%)',
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ backgroundColor: '#0B1C3A' }}>
@@ -73,7 +131,7 @@ const BlueBackground = () => {
       {magneticOrbs.map((orb) => (
         <motion.div
           key={orb.id}
-          className="absolute rounded-full"
+          className="absolute rounded-full will-change-transform"
           style={{
             width: orb.size,
             height: orb.size,
@@ -100,7 +158,7 @@ const BlueBackground = () => {
       {[...Array(4)].map((_, i) => (
         <motion.div
           key={`secondary-${i}`}
-          className="absolute rounded-full"
+          className="absolute rounded-full will-change-transform"
           style={{
             width: 150 + i * 50,
             height: 150 + i * 50,
@@ -192,7 +250,7 @@ const BlueBackground = () => {
 
       {/* Corner ambient glows */}
       <motion.div
-        className="absolute rounded-full"
+        className="absolute rounded-full will-change-transform"
         style={{
           width: 500,
           height: 500,
@@ -213,7 +271,7 @@ const BlueBackground = () => {
       />
 
       <motion.div
-        className="absolute rounded-full"
+        className="absolute rounded-full will-change-transform"
         style={{
           width: 400,
           height: 400,
