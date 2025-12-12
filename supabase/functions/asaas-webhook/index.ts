@@ -105,15 +105,32 @@ serve(async (req) => {
             console.log(`Payment for subscription ${payment.externalReference} updated to ${newStatus}`);
           }
 
-          // Create notification
+          // Auto-generate invoice when payment is confirmed
           const clientId = await getClientIdFromSubscription(payment.externalReference);
           if (clientId) {
+            const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`;
+            const { error: invoiceError } = await supabase
+              .from("invoices")
+              .insert({
+                client_id: clientId,
+                number: invoiceNumber,
+                amount: payment.value,
+                status: "paid",
+              });
+
+            if (invoiceError) {
+              console.error("Error creating invoice:", invoiceError);
+            } else {
+              console.log(`Invoice ${invoiceNumber} created for client ${clientId}`);
+            }
+
+            // Create notification
             const amount = payment.value ? 
               new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(payment.value) : '';
             await createNotification(
               clientId,
               "payment_received",
-              `Pagamento de ${amount} recebido com sucesso! Obrigado.`
+              `Pagamento de ${amount} recebido com sucesso! Fatura ${invoiceNumber} gerada.`
             );
           }
         }

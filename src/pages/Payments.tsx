@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Filter, MoreHorizontal, CreditCard, CheckCircle, XCircle, Clock, Trash2 } from 'lucide-react';
+import { Search, Filter, MoreHorizontal, CreditCard, CheckCircle, XCircle, Clock, Trash2, Download } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
@@ -14,6 +14,8 @@ import {
 import { usePayments, Payment } from '@/hooks/usePayments';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
+import { exportToCSV, formatCurrencyForExport, formatDateForExport } from '@/utils/exportUtils';
 
 const Payments = () => {
   const [search, setSearch] = useState('');
@@ -127,9 +129,29 @@ const Payments = () => {
           />
         </div>
         
-        <Button variant="outline" size="sm" className="h-10 sm:h-11 gap-2 border-border/50 bg-secondary/50">
-          <Filter className="w-4 h-4" />
-          <span className="hidden sm:inline">Filtros</span>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-10 sm:h-11 gap-2 border-border/50 bg-secondary/50"
+          onClick={() => {
+            const exportData = payments.map(p => ({
+              ...p,
+              clientName: p.subscriptions?.clients?.name || 'N/A',
+              formattedAmount: formatCurrencyForExport(Number(p.amount)),
+              formattedDate: formatDateForExport(p.created_at),
+            }));
+            exportToCSV(exportData, 'pagamentos', [
+              { key: 'clientName', label: 'Cliente' },
+              { key: 'formattedAmount', label: 'Valor' },
+              { key: 'payment_method', label: 'Método' },
+              { key: 'status', label: 'Status' },
+              { key: 'formattedDate', label: 'Data' },
+            ]);
+            toast.success('Exportação concluída!');
+          }}
+        >
+          <Download className="w-4 h-4" />
+          <span className="hidden sm:inline">Exportar</span>
         </Button>
       </div>
 

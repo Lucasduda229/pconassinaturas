@@ -14,6 +14,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import MetricCard from '@/components/MetricCard';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
+import DashboardCharts from '@/components/DashboardCharts';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -275,6 +276,9 @@ const Dashboard = () => {
           icon={TrendingUp}
         />
       </div>
+
+      {/* Charts */}
+      <DashboardCharts payments={payments} />
 
       {/* Tables */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
