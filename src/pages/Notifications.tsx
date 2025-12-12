@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Filter, Bell, CheckCircle, XCircle, AlertTriangle, Mail, Trash2 } from 'lucide-react';
+import { Search, Filter, Bell, CheckCircle, XCircle, AlertTriangle, Mail, Trash2, X } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,14 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu';
 
 const typeConfig: Record<string, { icon: typeof CheckCircle; label: string; bgClass: string; iconClass: string }> = {
   payment_received: {
@@ -37,15 +45,33 @@ const typeConfig: Record<string, { icon: typeof CheckCircle; label: string; bgCl
 
 const Notifications = () => {
   const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState<string[]>([]);
   const { notifications, loading, deleteNotification } = useNotifications();
 
-  const filteredNotifications = notifications.filter(notification =>
-    (notification.clients?.name || '').toLowerCase().includes(search.toLowerCase()) ||
-    notification.message.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredNotifications = notifications.filter(notification => {
+    const matchesSearch = 
+      (notification.clients?.name || '').toLowerCase().includes(search.toLowerCase()) ||
+      notification.message.toLowerCase().includes(search.toLowerCase());
+    
+    const matchesType = typeFilter.length === 0 || typeFilter.includes(notification.type);
+    
+    return matchesSearch && matchesType;
+  });
 
   const handleDeleteNotification = async (notificationId: string) => {
     await deleteNotification(notificationId);
+  };
+
+  const toggleTypeFilter = (type: string) => {
+    setTypeFilter(prev => 
+      prev.includes(type) 
+        ? prev.filter(t => t !== type)
+        : [...prev, type]
+    );
+  };
+
+  const clearFilters = () => {
+    setTypeFilter([]);
   };
 
   return (
@@ -65,10 +91,64 @@ const Notifications = () => {
           />
         </div>
         
-        <Button variant="outline" size="sm" className="h-10 sm:h-11 gap-2 border-border/50 bg-secondary/50">
-          <Filter className="w-4 h-4" />
-          <span className="hidden sm:inline">Filtros</span>
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-10 sm:h-11 gap-2 border-border/50 bg-secondary/50">
+              <Filter className="w-4 h-4" />
+              <span className="hidden sm:inline">Filtros</span>
+              {typeFilter.length > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 text-xs bg-primary text-primary-foreground rounded-full">
+                  {typeFilter.length}
+                </span>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel className="flex items-center justify-between">
+              Filtrar por tipo
+              {typeFilter.length > 0 && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 px-2 text-xs"
+                  onClick={clearFilters}
+                >
+                  <X className="w-3 h-3 mr-1" />
+                  Limpar
+                </Button>
+              )}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuCheckboxItem
+              checked={typeFilter.includes('payment_received')}
+              onCheckedChange={() => toggleTypeFilter('payment_received')}
+            >
+              <CheckCircle className="w-4 h-4 mr-2 text-success" />
+              Pagamento Recebido
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={typeFilter.includes('payment_due')}
+              onCheckedChange={() => toggleTypeFilter('payment_due')}
+            >
+              <AlertTriangle className="w-4 h-4 mr-2 text-warning" />
+              Cobrança Pendente
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={typeFilter.includes('payment_failed')}
+              onCheckedChange={() => toggleTypeFilter('payment_failed')}
+            >
+              <XCircle className="w-4 h-4 mr-2 text-destructive" />
+              Falha no Pagamento
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={typeFilter.includes('subscription_renewed')}
+              onCheckedChange={() => toggleTypeFilter('subscription_renewed')}
+            >
+              <Bell className="w-4 h-4 mr-2 text-primary" />
+              Renovação
+            </DropdownMenuCheckboxItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Stats */}
