@@ -37,6 +37,8 @@ const Subscriptions = () => {
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
   const [generatingChargeId, setGeneratingChargeId] = useState<string | null>(null);
   const [newSubscription, setNewSubscription] = useState({
@@ -122,7 +124,10 @@ const Subscriptions = () => {
       // First, sync customer to Asaas (creates if not exists)
       const customerResult = await syncCustomerToAsaas(subscription.client_id);
       
-      if (!customerResult?.asaasCustomerId) {
+      // The API returns 'id' not 'asaasCustomerId'
+      const asaasCustomerId = customerResult?.id;
+      
+      if (!asaasCustomerId) {
         throw new Error('Não foi possível sincronizar o cliente com a Asaas.');
       }
 
@@ -132,7 +137,7 @@ const Subscriptions = () => {
 
       // Create payment in Asaas
       const paymentResult = await createPayment({
-        customer: customerResult.asaasCustomerId,
+        customer: asaasCustomerId,
         billingType: 'BOLETO', // Default to boleto, Asaas will send email notification
         value: Number(subscription.value),
         dueDate: format(dueDate, 'yyyy-MM-dd'),
@@ -157,6 +162,11 @@ const Subscriptions = () => {
     } finally {
       setGeneratingChargeId(null);
     }
+  };
+
+  const openDetailsDialog = (subscription: Subscription) => {
+    setSelectedSubscription(subscription);
+    setIsDetailsDialogOpen(true);
   };
 
   const getDaysUntilExpiration = (nextPayment: string) => {
@@ -242,7 +252,10 @@ const Subscriptions = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="glass-card border-border/50">
-            <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => openDetailsDialog(item)}>
+              <Search className="w-4 h-4 mr-2" />
+              Ver detalhes
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => openEditDialog(item)}>
               <Pencil className="w-4 h-4 mr-2" />
               Editar
@@ -489,6 +502,89 @@ const Subscriptions = () => {
                 </Button>
                 <Button className="flex-1" onClick={handleUpdateSubscription}>
                   Salvar
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Details Dialog */}
+      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+        <DialogContent className="glass-card border-border/50 max-w-[95vw] sm:max-w-md mx-auto">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl">Detalhes da Assinatura</DialogTitle>
+            <DialogDescription>
+              Informações completas da assinatura.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedSubscription && (
+            <div className="space-y-4 mt-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Cliente</label>
+                  <p className="text-sm font-medium text-foreground">{selectedSubscription.clients?.name || 'N/A'}</p>
+                </div>
+                
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Plano</label>
+                  <p className="text-sm font-medium text-foreground">{selectedSubscription.plan_name}</p>
+                </div>
+                
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Valor Mensal</label>
+                  <p className="text-sm font-medium text-foreground">{formatCurrency(Number(selectedSubscription.value))}</p>
+                </div>
+                
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Status</label>
+                  <StatusBadge status={selectedSubscription.status} />
+                </div>
+                
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Próximo Vencimento</label>
+                  <p className="text-sm font-medium text-foreground">{formatBrazilDate(selectedSubscription.next_payment)}</p>
+                </div>
+                
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Data de Início</label>
+                  <p className="text-sm font-medium text-foreground">{formatBrazilDate(selectedSubscription.start_date)}</p>
+                </div>
+                
+                <div className="space-y-1 col-span-2">
+                  <label className="text-xs font-medium text-muted-foreground">Data de Criação</label>
+                  <p className="text-sm font-medium text-foreground">{formatBrazilDate(selectedSubscription.created_at)}</p>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 pt-4">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 border-border/50"
+                  onClick={() => setIsDetailsDialogOpen(false)}
+                >
+                  Fechar
+                </Button>
+                <Button 
+                  className="flex-1" 
+                  onClick={() => {
+                    setIsDetailsDialogOpen(false);
+                    handleGenerateCharge(selectedSubscription);
+                  }}
+                  disabled={generatingChargeId === selectedSubscription.id}
+                >
+                  {generatingChargeId === selectedSubscription.id ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Gerando...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Gerar Cobrança
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
