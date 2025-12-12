@@ -11,24 +11,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { mockPayments } from '@/data/mockData';
-import { Payment } from '@/types';
+import { usePayments, Payment } from '@/hooks/usePayments';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-import { toast } from 'sonner';
-
 const Payments = () => {
   const [search, setSearch] = useState('');
-  const [payments, setPayments] = useState(mockPayments);
-
-  const handleDeletePayment = (paymentId: string) => {
-    setPayments(payments.filter(p => p.id !== paymentId));
-    toast.success('Pagamento removido com sucesso!');
-  };
+  const { payments, loading, deletePayment } = usePayments();
 
   const filteredPayments = payments.filter(payment =>
-    payment.clientName.toLowerCase().includes(search.toLowerCase())
+    (payment.subscriptions?.clients?.name || '').toLowerCase().includes(search.toLowerCase())
   );
 
   const formatCurrency = (value: number) => {
@@ -40,11 +32,15 @@ const Payments = () => {
 
   const totalReceived = payments
     .filter(p => p.status === 'paid')
-    .reduce((acc, p) => acc + p.amount, 0);
+    .reduce((acc, p) => acc + Number(p.amount), 0);
 
   const totalPending = payments
     .filter(p => p.status === 'pending')
-    .reduce((acc, p) => acc + p.amount, 0);
+    .reduce((acc, p) => acc + Number(p.amount), 0);
+
+  const handleDeletePayment = async (paymentId: string) => {
+    await deletePayment(paymentId);
+  };
 
   const columns = [
     {
@@ -52,8 +48,8 @@ const Payments = () => {
       header: 'Cliente',
       render: (item: Payment) => (
         <div>
-          <span className="font-medium text-foreground text-sm">{item.clientName}</span>
-          <span className="block text-xs text-muted-foreground sm:hidden">{item.paymentMethod}</span>
+          <span className="font-medium text-foreground text-sm">{item.subscriptions?.clients?.name || 'N/A'}</span>
+          <span className="block text-xs text-muted-foreground sm:hidden">{item.payment_method}</span>
         </div>
       ),
     },
@@ -61,7 +57,7 @@ const Payments = () => {
       key: 'amount',
       header: 'Valor',
       render: (item: Payment) => (
-        <span className="font-semibold text-foreground text-sm">{formatCurrency(item.amount)}</span>
+        <span className="font-semibold text-foreground text-sm">{formatCurrency(Number(item.amount))}</span>
       ),
     },
     {
@@ -69,7 +65,7 @@ const Payments = () => {
       header: 'Método',
       hideOnMobile: true,
       render: (item: Payment) => (
-        <span className="text-muted-foreground">{item.paymentMethod}</span>
+        <span className="text-muted-foreground">{item.payment_method || 'N/A'}</span>
       ),
     },
     {
@@ -78,7 +74,7 @@ const Payments = () => {
       hideOnMobile: true,
       render: (item: Payment) => (
         <span className="text-muted-foreground">
-          {format(item.createdAt, 'dd/MM/yyyy', { locale: ptBR })}
+          {format(new Date(item.created_at), 'dd/MM/yyyy', { locale: ptBR })}
         </span>
       ),
     },
@@ -186,7 +182,13 @@ const Payments = () => {
       </div>
 
       {/* Table */}
-      <DataTable data={filteredPayments} columns={columns} />
+      {loading ? (
+        <div className="glass-card p-8 text-center">
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      ) : (
+        <DataTable data={filteredPayments} columns={columns} />
+      )}
     </DashboardLayout>
   );
 };

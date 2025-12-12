@@ -19,15 +19,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { mockClients } from '@/data/mockData';
-import { Client } from '@/types';
+import { useClients, Client } from '@/hooks/useClients';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 
 const Clients = () => {
   const [search, setSearch] = useState('');
-  const [clients, setClients] = useState(mockClients);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newClient, setNewClient] = useState({
     name: '',
@@ -36,34 +34,35 @@ const Clients = () => {
     document: '',
   });
 
+  const { clients, loading, addClient, deleteClient } = useClients();
+
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(search.toLowerCase()) ||
     client.email.toLowerCase().includes(search.toLowerCase()) ||
-    client.document.includes(search)
+    (client.document && client.document.includes(search))
   );
 
-  const handleAddClient = () => {
+  const handleAddClient = async () => {
     if (!newClient.name || !newClient.email) {
       toast.error('Por favor, preencha todos os campos obrigatórios.');
       return;
     }
 
-    const client: Client = {
-      id: String(clients.length + 1),
-      ...newClient,
-      status: 'active',
-      createdAt: new Date(),
-    };
+    const result = await addClient({
+      name: newClient.name,
+      email: newClient.email,
+      phone: newClient.phone || null,
+      document: newClient.document || null,
+    });
 
-    setClients([...clients, client]);
-    setNewClient({ name: '', email: '', phone: '', document: '' });
-    setIsDialogOpen(false);
-    toast.success('Cliente cadastrado com sucesso!');
+    if (result) {
+      setNewClient({ name: '', email: '', phone: '', document: '' });
+      setIsDialogOpen(false);
+    }
   };
 
-  const handleDeleteClient = (clientId: string) => {
-    setClients(clients.filter(c => c.id !== clientId));
-    toast.success('Cliente removido com sucesso!');
+  const handleDeleteClient = async (clientId: string) => {
+    await deleteClient(clientId);
   };
 
   const columns = [
@@ -88,10 +87,12 @@ const Clients = () => {
             <Mail className="w-4 h-4 flex-shrink-0" />
             <span className="truncate">{item.email}</span>
           </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Phone className="w-4 h-4 flex-shrink-0" />
-            {item.phone}
-          </div>
+          {item.phone && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Phone className="w-4 h-4 flex-shrink-0" />
+              {item.phone}
+            </div>
+          )}
         </div>
       ),
     },
@@ -101,7 +102,7 @@ const Clients = () => {
       hideOnMobile: true,
       render: (item: Client) => (
         <span className="text-muted-foreground">
-          {format(item.createdAt, 'dd/MM/yyyy', { locale: ptBR })}
+          {format(new Date(item.created_at), 'dd/MM/yyyy', { locale: ptBR })}
         </span>
       ),
     },
@@ -254,7 +255,7 @@ const Clients = () => {
             {clients.filter(c => {
               const thirtyDaysAgo = new Date();
               thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-              return c.createdAt > thirtyDaysAgo;
+              return new Date(c.created_at) > thirtyDaysAgo;
             }).length}
           </p>
           <p className="text-xs sm:text-sm text-muted-foreground">Novos (30d)</p>
@@ -262,7 +263,13 @@ const Clients = () => {
       </div>
 
       {/* Table */}
-      <DataTable data={filteredClients} columns={columns} />
+      {loading ? (
+        <div className="glass-card p-8 text-center">
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      ) : (
+        <DataTable data={filteredClients} columns={columns} />
+      )}
     </DashboardLayout>
   );
 };
