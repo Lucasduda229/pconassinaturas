@@ -46,14 +46,158 @@ serve(async (req) => {
       EXPIRED: "overdue",
     };
 
+    // Helper function to create notification
+    const createNotification = async (clientId: string, type: string, message: string) => {
+      try {
+        const { error } = await supabase.from("notifications").insert({
+          client_id: clientId,
+          type: type,
+          message: message,
+          status: "sent",
+        });
+        
+        if (error) {
+          console.error("Error creating notification:", error);
+        } else {
+          console.log(`Notification created for client ${clientId}: ${type}`);
+        }
+      } catch (err) {
+        console.error("Error in createNotification:", err);
+      }
+    };
+
+    // Helper function to get client_id from subscription
+    const getClientIdFromSubscription = async (subscriptionId: string): Promise<string | null> => {
+      const { data, error } = await supabase
+        .from("subscriptions")
+        .select("client_id")
+        .eq("id", subscriptionId)
+        .maybeSingle();
+      
+      if (error || !data) {
+        console.error("Error getting client_id:", error);
+        return null;
+      }
+      return data.client_id;
+    };
+
     switch (event) {
       // Payment events
       case "PAYMENT_RECEIVED":
-      case "PAYMENT_CONFIRMED":
-      case "PAYMENT_OVERDUE":
-      case "PAYMENT_REFUNDED":
-      case "PAYMENT_UPDATED":
+      case "PAYMENT_CONFIRMED": {
+        if (payment?.externalReference) {
+          const newStatus = paymentStatusMap[payment.status] || "paid";
+          
+          // Update payment
+          const { error } = await supabase
+            .from("payments")
+            .update({
+              status: newStatus,
+              paid_at: payment.paymentDate || new Date().toISOString(),
+              transaction_id: payment.id,
+              payment_method: payment.billingType?.toLowerCase(),
+            })
+            .eq("subscription_id", payment.externalReference);
+
+          if (error) {
+            console.error("Error updating payment:", error);
+          } else {
+            console.log(`Payment for subscription ${payment.externalReference} updated to ${newStatus}`);
+          }
+
+          // Create notification
+          const clientId = await getClientIdFromSubscription(payment.externalReference);
+          if (clientId) {
+            const amount = payment.value ? 
+              new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(payment.value) : '';
+            await createNotification(
+              clientId,
+              "payment_received",
+              `Pagamento de ${amount} recebido com sucesso! Obrigado.`
+            );
+          }
+        }
+        break;
+      }
+
       case "PAYMENT_CREATED": {
+        if (payment?.externalReference) {
+          // Create notification for new charge
+          const clientId = await getClientIdFromSubscription(payment.externalReference);
+          if (clientId) {
+            const amount = payment.value ? 
+              new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(payment.value) : '';
+            const dueDate = payment.dueDate ? 
+              new Date(payment.dueDate).toLocaleDateString('pt-BR') : '';
+            await createNotification(
+              clientId,
+              "payment_due",
+              `Nova cobrança gerada: ${amount}. Vencimento: ${dueDate}.`
+            );
+          }
+        }
+        break;
+      }
+
+      case "PAYMENT_OVERDUE": {
+        if (payment?.externalReference) {
+          const { error } = await supabase
+            .from("payments")
+            .update({
+              status: "failed",
+              transaction_id: payment.id,
+            })
+            .eq("subscription_id", payment.externalReference);
+
+          if (error) {
+            console.error("Error updating payment:", error);
+          }
+
+          // Create notification
+          const clientId = await getClientIdFromSubscription(payment.externalReference);
+          if (clientId) {
+            const amount = payment.value ? 
+              new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(payment.value) : '';
+            await createNotification(
+              clientId,
+              "payment_failed",
+              `Pagamento de ${amount} está em atraso. Por favor, regularize.`
+            );
+          }
+        }
+        break;
+      }
+
+      case "PAYMENT_REFUNDED": {
+        if (payment?.externalReference) {
+          const { error } = await supabase
+            .from("payments")
+            .update({
+              status: "refunded",
+              transaction_id: payment.id,
+            })
+            .eq("subscription_id", payment.externalReference);
+
+          if (error) {
+            console.error("Error updating payment:", error);
+          }
+
+          // Create notification
+          const clientId = await getClientIdFromSubscription(payment.externalReference);
+          if (clientId) {
+            const amount = payment.value ? 
+              new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(payment.value) : '';
+            await createNotification(
+              clientId,
+              "payment_failed",
+              `Pagamento de ${amount} foi estornado.`
+            );
+          }
+        }
+        break;
+      }
+
+      case "PAYMENT_UPDATED": {
         if (payment?.externalReference) {
           const newStatus = paymentStatusMap[payment.status] || "pending";
           
@@ -65,65 +209,84 @@ serve(async (req) => {
               transaction_id: payment.id,
               payment_method: payment.billingType?.toLowerCase(),
             })
-            .eq("id", payment.externalReference);
+            .eq("subscription_id", payment.externalReference);
 
           if (error) {
             console.error("Error updating payment:", error);
-          } else {
-            console.log(`Payment ${payment.externalReference} updated to ${newStatus}`);
-          }
-
-          // Create notification for the payment event
-          if (payment.customer) {
-            const notificationMessages: Record<string, string> = {
-              PAYMENT_RECEIVED: "Pagamento recebido com sucesso!",
-              PAYMENT_CONFIRMED: "Pagamento confirmado!",
-              PAYMENT_OVERDUE: "Pagamento em atraso.",
-              PAYMENT_REFUNDED: "Pagamento estornado.",
-            };
-
-            if (notificationMessages[event]) {
-              // Find client by external reference
-              const { data: clients } = await supabase
-                .from("clients")
-                .select("id")
-                .eq("id", payment.externalReference?.split("-")[0])
-                .maybeSingle();
-
-              if (clients) {
-                await supabase.from("notifications").insert({
-                  client_id: clients.id,
-                  type: event.toLowerCase().replace("_", "-"),
-                  message: notificationMessages[event],
-                  status: "sent",
-                });
-              }
-            }
           }
         }
         break;
       }
 
       // Subscription events
-      case "SUBSCRIPTION_CREATED":
-      case "SUBSCRIPTION_UPDATED":
-      case "SUBSCRIPTION_DELETED":
       case "SUBSCRIPTION_RENEWED": {
         if (subscription?.externalReference) {
-          const newStatus = subscriptionStatusMap[subscription.status] || "active";
-          
           const { error } = await supabase
             .from("subscriptions")
             .update({
-              status: event === "SUBSCRIPTION_DELETED" ? "cancelled" : newStatus,
+              status: "active",
               next_payment: subscription.nextDueDate,
             })
             .eq("id", subscription.externalReference);
 
           if (error) {
             console.error("Error updating subscription:", error);
-          } else {
-            console.log(`Subscription ${subscription.externalReference} updated`);
+          }
+
+          // Create notification
+          const clientId = await getClientIdFromSubscription(subscription.externalReference);
+          if (clientId) {
+            await createNotification(
+              clientId,
+              "subscription_renewed",
+              `Sua assinatura foi renovada com sucesso!`
+            );
+          }
+        }
+        break;
+      }
+
+      case "SUBSCRIPTION_CREATED":
+      case "SUBSCRIPTION_UPDATED": {
+        if (subscription?.externalReference) {
+          const newStatus = subscriptionStatusMap[subscription.status] || "active";
+          
+          const { error } = await supabase
+            .from("subscriptions")
+            .update({
+              status: newStatus,
+              next_payment: subscription.nextDueDate,
+            })
+            .eq("id", subscription.externalReference);
+
+          if (error) {
+            console.error("Error updating subscription:", error);
+          }
+        }
+        break;
+      }
+
+      case "SUBSCRIPTION_DELETED": {
+        if (subscription?.externalReference) {
+          const { error } = await supabase
+            .from("subscriptions")
+            .update({
+              status: "cancelled",
+            })
+            .eq("id", subscription.externalReference);
+
+          if (error) {
+            console.error("Error updating subscription:", error);
+          }
+
+          // Create notification
+          const clientId = await getClientIdFromSubscription(subscription.externalReference);
+          if (clientId) {
+            await createNotification(
+              clientId,
+              "payment_failed",
+              `Sua assinatura foi cancelada.`
+            );
           }
         }
         break;
