@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Trash2 } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Trash2, RefreshCw, CreditCard, QrCode, FileText, Loader2 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
@@ -19,7 +19,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useClients, Client } from '@/hooks/useClients';
+import { useAsaas } from '@/hooks/useAsaas';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -27,14 +35,25 @@ import { toast } from 'sonner';
 const Clients = () => {
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isChargeDialogOpen, setIsChargeDialogOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isCreatingCharge, setIsCreatingCharge] = useState(false);
   const [newClient, setNewClient] = useState({
     name: '',
     email: '',
     phone: '',
     document: '',
   });
+  const [newCharge, setNewCharge] = useState({
+    value: '',
+    description: '',
+    dueDate: '',
+    billingType: 'PIX' as 'PIX' | 'BOLETO' | 'CREDIT_CARD',
+  });
 
   const { clients, loading, addClient, deleteClient } = useClients();
+  const { createCustomer, createPayment } = useAsaas();
 
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -63,6 +82,74 @@ const Clients = () => {
 
   const handleDeleteClient = async (clientId: string) => {
     await deleteClient(clientId);
+  };
+
+  const handleSyncWithAsaas = async (client: Client) => {
+    setIsSyncing(true);
+    try {
+      const result = await createCustomer({
+        name: client.name,
+        email: client.email,
+        cpfCnpj: client.document?.replace(/[^\d]/g, '') || '',
+        phone: client.phone?.replace(/[^\d]/g, '') || undefined,
+      });
+      
+      if (result) {
+        toast.success(`Cliente "${client.name}" sincronizado com ASAAS!`);
+      }
+    } catch (error) {
+      toast.error('Erro ao sincronizar cliente com ASAAS');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleCreateCharge = async () => {
+    if (!selectedClient || !newCharge.value || !newCharge.dueDate) {
+      toast.error('Preencha todos os campos obrigatórios');
+      return;
+    }
+
+    setIsCreatingCharge(true);
+    try {
+      // First sync client with ASAAS
+      const customer = await createCustomer({
+        name: selectedClient.name,
+        email: selectedClient.email,
+        cpfCnpj: selectedClient.document?.replace(/[^\d]/g, '') || '',
+        phone: selectedClient.phone?.replace(/[^\d]/g, '') || undefined,
+      });
+
+      if (!customer?.id) {
+        toast.error('Erro ao criar/buscar cliente na ASAAS');
+        return;
+      }
+
+      // Create the payment
+      const payment = await createPayment({
+        customer: customer.id,
+        billingType: newCharge.billingType,
+        value: parseFloat(newCharge.value),
+        dueDate: newCharge.dueDate,
+        description: newCharge.description || `Cobrança para ${selectedClient.name}`,
+      });
+
+      if (payment) {
+        toast.success('Cobrança criada com sucesso!');
+        setIsChargeDialogOpen(false);
+        setNewCharge({ value: '', description: '', dueDate: '', billingType: 'PIX' });
+        setSelectedClient(null);
+      }
+    } catch (error) {
+      toast.error('Erro ao criar cobrança');
+    } finally {
+      setIsCreatingCharge(false);
+    }
+  };
+
+  const openChargeDialog = (client: Client) => {
+    setSelectedClient(client);
+    setIsChargeDialogOpen(true);
   };
 
   const columns = [
@@ -124,6 +211,14 @@ const Clients = () => {
           <DropdownMenuContent align="end" className="glass-card border-border/50">
             <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
             <DropdownMenuItem>Editar</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleSyncWithAsaas(item)}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Sincronizar ASAAS
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => openChargeDialog(item)}>
+              <CreditCard className="w-4 h-4 mr-2" />
+              Nova cobrança
+            </DropdownMenuItem>
             <DropdownMenuItem>Nova assinatura</DropdownMenuItem>
             <DropdownMenuItem 
               className="text-destructive"
@@ -270,6 +365,109 @@ const Clients = () => {
       ) : (
         <DataTable data={filteredClients} columns={columns} />
       )}
+
+      {/* Charge Dialog */}
+      <Dialog open={isChargeDialogOpen} onOpenChange={setIsChargeDialogOpen}>
+        <DialogContent className="glass-card border-border/50 max-w-[95vw] sm:max-w-md mx-auto">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl">Nova Cobrança</DialogTitle>
+            <DialogDescription>
+              Criar cobrança para {selectedClient?.name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Valor *</label>
+              <Input
+                type="number"
+                step="0.01"
+                placeholder="0,00"
+                value={newCharge.value}
+                onChange={(e) => setNewCharge({ ...newCharge, value: e.target.value })}
+                className="bg-secondary/50 border-border/50"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Vencimento *</label>
+              <Input
+                type="date"
+                value={newCharge.dueDate}
+                onChange={(e) => setNewCharge({ ...newCharge, dueDate: e.target.value })}
+                className="bg-secondary/50 border-border/50"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Método de Pagamento *</label>
+              <Select 
+                value={newCharge.billingType} 
+                onValueChange={(value: 'PIX' | 'BOLETO' | 'CREDIT_CARD') => setNewCharge({ ...newCharge, billingType: value })}
+              >
+                <SelectTrigger className="bg-secondary/50 border-border/50">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PIX">
+                    <div className="flex items-center gap-2">
+                      <QrCode className="w-4 h-4" />
+                      PIX
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="BOLETO">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      Boleto
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="CREDIT_CARD">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="w-4 h-4" />
+                      Cartão de Crédito
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Descrição</label>
+              <Input
+                placeholder="Descrição da cobrança"
+                value={newCharge.description}
+                onChange={(e) => setNewCharge({ ...newCharge, description: e.target.value })}
+                className="bg-secondary/50 border-border/50"
+              />
+            </div>
+            
+            <div className="flex gap-3 pt-4">
+              <Button 
+                variant="outline" 
+                className="flex-1 border-border/50"
+                onClick={() => setIsChargeDialogOpen(false)}
+                disabled={isCreatingCharge}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                className="flex-1" 
+                onClick={handleCreateCharge}
+                disabled={isCreatingCharge}
+              >
+                {isCreatingCharge ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Criando...
+                  </>
+                ) : (
+                  'Criar Cobrança'
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
