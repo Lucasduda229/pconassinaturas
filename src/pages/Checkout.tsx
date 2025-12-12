@@ -235,7 +235,7 @@ const Checkout = () => {
       </motion.header>
 
       {/* Main Content */}
-      <main className="relative z-10 container mx-auto px-4 py-10 sm:py-16 max-w-xl">
+      <main className="relative z-10 container mx-auto px-4 py-10 sm:py-16 max-w-5xl">
         <div className="space-y-8">
           {/* Title */}
           <motion.div
@@ -252,27 +252,27 @@ const Checkout = () => {
             </p>
           </motion.div>
 
-          {/* Subscriptions List */}
+          {/* Subscriptions Grid */}
           {subscriptions.length > 0 ? (
-            <div className="space-y-4">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {subscriptions.map((subscription, index) => (
                 <motion.div
                   key={subscription.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 + index * 0.1, duration: 0.5 }}
-                  className="glass-card p-6 sm:p-8"
+                  className="glass-card p-5 sm:p-6 flex flex-col"
                 >
                   {/* Plan Header */}
-                  <div className="flex items-start justify-between mb-6">
-                    <div>
-                      <h2 className="text-xl font-heading font-semibold text-foreground">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1 min-w-0">
+                      <h2 className="text-lg font-heading font-semibold text-foreground truncate">
                         {subscription.plan_name}
                       </h2>
-                      <p className="text-gray-neutral text-sm mt-1">Plano ativo</p>
+                      <p className="text-gray-neutral text-xs mt-0.5">Plano ativo</p>
                     </div>
                     <Badge 
-                      className={`${getStatusConfig(subscription.status).className} flex items-center gap-1.5 px-3 py-1 border rounded-full text-xs`}
+                      className={`${getStatusConfig(subscription.status).className} flex items-center gap-1 px-2 py-0.5 border rounded-full text-[10px] flex-shrink-0`}
                     >
                       {getStatusConfig(subscription.status).icon}
                       {getStatusConfig(subscription.status).label}
@@ -280,76 +280,68 @@ const Checkout = () => {
                   </div>
 
                   {/* Info Cards */}
-                  <div className="grid gap-4 sm:grid-cols-2 mb-6">
-                    <motion.div 
-                      className="p-4 rounded-xl bg-secondary/30 border border-border/30"
-                      whileHover={{ scale: 1.01 }}
-                      transition={{ duration: 0.2 }}
-                    >
+                  <div className="space-y-3 mb-4 flex-1">
+                    <div className="p-3 rounded-xl bg-secondary/30 border border-border/30">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(30, 79, 163, 0.2)' }}>
-                          <DollarSign className="h-5 w-5" style={{ color: '#1E4FA3' }} />
+                        <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(30, 79, 163, 0.2)' }}>
+                          <DollarSign className="h-4 w-4" style={{ color: '#1E4FA3' }} />
                         </div>
-                        <div>
-                          <p className="text-xs text-gray-neutral">Valor</p>
-                          <p className="text-lg font-semibold text-foreground">
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-gray-neutral">Valor</p>
+                          <p className="text-base font-semibold text-foreground">
                             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(subscription.value))}
                           </p>
                         </div>
                       </div>
-                    </motion.div>
+                    </div>
 
-                    <motion.div 
-                      className="p-4 rounded-xl bg-secondary/30 border border-border/30"
-                      whileHover={{ scale: 1.01 }}
-                      transition={{ duration: 0.2 }}
-                    >
+                    <div className="p-3 rounded-xl bg-secondary/30 border border-border/30">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(42, 63, 134, 0.2)' }}>
-                          <Calendar className="h-5 w-5" style={{ color: '#2A3F86' }} />
+                        <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(42, 63, 134, 0.2)' }}>
+                          <Calendar className="h-4 w-4" style={{ color: '#2A3F86' }} />
                         </div>
-                        <div>
-                          <p className="text-xs text-gray-neutral">Vencimento</p>
-                          <p className="text-lg font-semibold text-foreground">
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-gray-neutral">Vencimento</p>
+                          <p className="text-base font-semibold text-foreground">
                             {format(new Date(subscription.next_payment), "dd/MM/yyyy", { locale: ptBR })}
                           </p>
                         </div>
                       </div>
-                    </motion.div>
+                    </div>
                   </div>
 
                   {/* Divider */}
-                  <div className="h-px bg-border/30 mb-6" />
+                  <div className="h-px bg-border/30 mb-4" />
 
                   {/* Pay Button */}
                   <motion.div
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                   >
                     <Button
-                      size="lg"
-                      className="w-full h-14 btn-blue text-base"
+                      size="default"
+                      className="w-full h-11 btn-blue text-sm"
                       onClick={() => openPaymentModal(subscription)}
                       disabled={isProcessing || asaasLoading}
                     >
                       {isProcessing ? (
                         <span className="flex items-center justify-center gap-2">
-                          <Loader2 className="h-5 w-5 animate-spin" />
+                          <Loader2 className="h-4 w-4 animate-spin" />
                           Processando...
                         </span>
                       ) : (
                         <span className="flex items-center justify-center gap-2">
                           Pagar Agora
-                          <ArrowRight className="h-5 w-5" />
+                          <ArrowRight className="h-4 w-4" />
                         </span>
                       )}
                     </Button>
                   </motion.div>
 
                   {/* Security Badge */}
-                  <div className="mt-6 flex items-center justify-center gap-2 text-gray-neutral">
-                    <Shield className="h-4 w-4" />
-                    <span className="text-xs">Pagamento 100% seguro</span>
+                  <div className="mt-4 flex items-center justify-center gap-1.5 text-gray-neutral">
+                    <Shield className="h-3 w-3" />
+                    <span className="text-[10px]">Pagamento seguro</span>
                   </div>
                 </motion.div>
               ))}
