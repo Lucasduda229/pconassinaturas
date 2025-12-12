@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -14,7 +13,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import logo from '@/assets/logo-pcon.png';
+import logo from '@/assets/logo-pcon-grande.png';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
@@ -41,7 +40,6 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   };
 
   const handleNavClick = () => {
-    // Close sidebar on mobile after navigation
     if (window.innerWidth < 1024) {
       onClose();
     }
@@ -66,13 +64,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="p-4 lg:p-6 border-b border-border/50 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img src={logo} alt="P-CON" className="h-8 lg:h-10 w-auto" />
-              <div>
-                <h1 className="font-heading font-bold text-base lg:text-lg text-foreground">P-CON</h1>
-                <p className="text-xs text-muted-foreground">Assinaturas</p>
-              </div>
-            </div>
+            <img src={logo} alt="P-CON" className="h-12 lg:h-14 w-auto" />
             <button 
               onClick={onClose}
               className="lg:hidden p-2 rounded-lg hover:bg-secondary/50 transition-colors"
@@ -124,10 +116,7 @@ export const MobileHeader = ({ onMenuClick }: { onMenuClick: () => void }) => {
       >
         <Menu className="w-6 h-6" />
       </button>
-      <div className="flex items-center gap-2 ml-3">
-        <img src={logo} alt="P-CON" className="h-7 w-auto" />
-        <span className="font-heading font-bold text-foreground">P-CON</span>
-      </div>
+      <img src={logo} alt="P-CON" className="h-8 w-auto ml-3" />
     </header>
   );
 };
