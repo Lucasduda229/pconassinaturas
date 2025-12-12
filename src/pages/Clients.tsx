@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Trash2, RefreshCw, CreditCard, QrCode, FileText, Loader2, Link2, Send, Eye, EyeOff } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Trash2, RefreshCw, CreditCard, QrCode, FileText, Loader2, Link2, Send, Eye, EyeOff, Pencil } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
@@ -52,12 +52,36 @@ const Clients = () => {
     billingType: 'PIX' as 'PIX' | 'BOLETO' | 'CREDIT_CARD',
   });
   const [isAccessDialogOpen, setIsAccessDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [accessPassword, setAccessPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isCreatingAccess, setIsCreatingAccess] = useState(false);
 
-  const { clients, loading, addClient, deleteClient } = useClients();
+  const { clients, loading, addClient, updateClient, deleteClient } = useClients();
   const { createCustomer, createPayment } = useAsaas();
+
+  const openEditDialog = (client: Client) => {
+    setEditingClient(client);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateClient = async () => {
+    if (!editingClient) return;
+    
+    const result = await updateClient(editingClient.id, {
+      name: editingClient.name,
+      email: editingClient.email,
+      phone: editingClient.phone,
+      document: editingClient.document,
+      status: editingClient.status,
+    });
+
+    if (result) {
+      setIsEditDialogOpen(false);
+      setEditingClient(null);
+    }
+  };
 
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -278,7 +302,10 @@ const Clients = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="glass-card border-border/50">
             <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
-            <DropdownMenuItem>Editar</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => openEditDialog(item)}>
+              <Pencil className="w-4 h-4 mr-2" />
+              Editar
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => openChargeDialog(item)}>
               <CreditCard className="w-4 h-4 mr-2" />
               Nova cobrança
@@ -623,6 +650,95 @@ const Clients = () => {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Client Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="glass-card border-border/50 max-w-[95vw] sm:max-w-md mx-auto">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl">Editar Cliente</DialogTitle>
+            <DialogDescription>
+              Atualize as informações do cliente.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {editingClient && (
+            <div className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nome / Razão Social *</label>
+                <Input
+                  placeholder="Nome do cliente"
+                  value={editingClient.name}
+                  onChange={(e) => setEditingClient({ ...editingClient, name: e.target.value })}
+                  className="bg-secondary/50 border-border/50"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">E-mail *</label>
+                <Input
+                  type="email"
+                  placeholder="email@exemplo.com"
+                  value={editingClient.email}
+                  onChange={(e) => setEditingClient({ ...editingClient, email: e.target.value })}
+                  className="bg-secondary/50 border-border/50"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Telefone</label>
+                <Input
+                  placeholder="(00) 00000-0000"
+                  value={editingClient.phone || ''}
+                  onChange={(e) => setEditingClient({ ...editingClient, phone: e.target.value })}
+                  className="bg-secondary/50 border-border/50"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">CPF / CNPJ</label>
+                <Input
+                  placeholder="000.000.000-00"
+                  value={editingClient.document || ''}
+                  onChange={(e) => setEditingClient({ ...editingClient, document: e.target.value })}
+                  className="bg-secondary/50 border-border/50"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Status</label>
+                <Select
+                  value={editingClient.status}
+                  onValueChange={(value) => setEditingClient({ ...editingClient, status: value })}
+                >
+                  <SelectTrigger className="bg-secondary/50 border-border/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="glass-card border-border/50">
+                    <SelectItem value="active">Ativo</SelectItem>
+                    <SelectItem value="inactive">Inativo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex gap-3 pt-4">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 border-border/50"
+                  onClick={() => {
+                    setIsEditDialogOpen(false);
+                    setEditingClient(null);
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button className="flex-1" onClick={handleUpdateClient}>
+                  Salvar
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </DashboardLayout>
