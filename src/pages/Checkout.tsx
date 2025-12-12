@@ -25,7 +25,7 @@ import {
   X
 } from 'lucide-react';
 import logo from '@/assets/logo-pcon-grande.png';
-import logoAsaas from '@/assets/logo-asaas.png';
+import logoAsaas from '@/assets/logo-asaas-white.png';
 import BlueBackground from '@/components/BlueBackground';
 
 interface Subscription {
