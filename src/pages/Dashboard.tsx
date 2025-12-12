@@ -1,37 +1,27 @@
 import { 
   Users, 
-  CreditCard, 
   DollarSign, 
   AlertTriangle,
   TrendingUp,
   Calendar,
   CheckCircle,
   XCircle,
-  RotateCcw
 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import MetricCard from '@/components/MetricCard';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
-import { Button } from '@/components/ui/button';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import { mockDashboardMetrics, mockSubscriptions, mockPayments } from '@/data/mockData';
-import { Subscription, Payment } from '@/types';
+import { useClients } from '@/hooks/useClients';
+import { useSubscriptions } from '@/hooks/useSubscriptions';
+import { usePayments } from '@/hooks/usePayments';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { toast } from 'sonner';
 
 const Dashboard = () => {
+  const { clients, loading: loadingClients } = useClients();
+  const { subscriptions, loading: loadingSubscriptions } = useSubscriptions();
+  const { payments, loading: loadingPayments } = usePayments();
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -39,17 +29,27 @@ const Dashboard = () => {
     }).format(value);
   };
 
-  const recentSubscriptions = mockSubscriptions.slice(0, 5);
-  const recentPayments = mockPayments.slice(0, 5);
+  // Calculate real metrics from database
+  const activeClients = clients.filter(c => c.status === 'active').length;
+  const inactiveClients = clients.filter(c => c.status === 'inactive').length;
+  const activeSubscriptions = subscriptions.filter(s => s.status === 'active');
+  const monthlyRevenue = activeSubscriptions.reduce((acc, sub) => acc + sub.value, 0);
+  const renewedSubscriptions = subscriptions.filter(s => s.status === 'active').length;
+  const expiredSubscriptions = subscriptions.filter(s => s.status === 'overdue' || s.status === 'cancelled').length;
+  const pendingSubscriptions = subscriptions.filter(s => s.status === 'pending').length;
+  const failedPayments = payments.filter(p => p.status === 'failed').length;
+
+  const recentSubscriptions = subscriptions.slice(0, 5);
+  const recentPayments = payments.slice(0, 5);
 
   const subscriptionColumns = [
     {
       key: 'clientName',
       header: 'Cliente',
-      render: (item: Subscription) => (
+      render: (item: any) => (
         <div>
-          <span className="font-medium text-foreground text-sm">{item.clientName}</span>
-          <span className="block text-xs text-muted-foreground sm:hidden">{item.planName}</span>
+          <span className="font-medium text-foreground text-sm">{item.clientName || 'N/A'}</span>
+          <span className="block text-xs text-muted-foreground sm:hidden">{item.plan_name}</span>
         </div>
       ),
     },
@@ -57,14 +57,14 @@ const Dashboard = () => {
       key: 'planName',
       header: 'Plano',
       hideOnMobile: true,
-      render: (item: Subscription) => (
-        <span className="text-muted-foreground">{item.planName}</span>
+      render: (item: any) => (
+        <span className="text-muted-foreground">{item.plan_name}</span>
       ),
     },
     {
       key: 'value',
       header: 'Valor',
-      render: (item: Subscription) => (
+      render: (item: any) => (
         <span className="font-medium text-foreground text-sm">{formatCurrency(item.value)}</span>
       ),
     },
@@ -72,16 +72,16 @@ const Dashboard = () => {
       key: 'nextPayment',
       header: 'Próx. Cobrança',
       hideOnMobile: true,
-      render: (item: Subscription) => (
+      render: (item: any) => (
         <span className="text-muted-foreground">
-          {format(item.nextPayment, 'dd/MM/yyyy', { locale: ptBR })}
+          {format(new Date(item.next_payment), 'dd/MM/yyyy', { locale: ptBR })}
         </span>
       ),
     },
     {
       key: 'status',
       header: 'Status',
-      render: (item: Subscription) => <StatusBadge status={item.status} />,
+      render: (item: any) => <StatusBadge status={item.status} />,
     },
   ];
 
@@ -89,14 +89,14 @@ const Dashboard = () => {
     {
       key: 'clientName',
       header: 'Cliente',
-      render: (item: Payment) => (
-        <span className="font-medium text-foreground text-sm">{item.clientName}</span>
+      render: (item: any) => (
+        <span className="font-medium text-foreground text-sm">{item.clientName || 'N/A'}</span>
       ),
     },
     {
       key: 'amount',
       header: 'Valor',
-      render: (item: Payment) => (
+      render: (item: any) => (
         <span className="font-medium text-foreground text-sm">{formatCurrency(item.amount)}</span>
       ),
     },
@@ -104,91 +104,56 @@ const Dashboard = () => {
       key: 'paymentMethod',
       header: 'Método',
       hideOnMobile: true,
-      render: (item: Payment) => (
-        <span className="text-muted-foreground">{item.paymentMethod}</span>
+      render: (item: any) => (
+        <span className="text-muted-foreground">{item.payment_method || '-'}</span>
       ),
     },
     {
       key: 'createdAt',
       header: 'Data',
       hideOnMobile: true,
-      render: (item: Payment) => (
+      render: (item: any) => (
         <span className="text-muted-foreground">
-          {format(item.createdAt, 'dd/MM/yyyy', { locale: ptBR })}
+          {format(new Date(item.created_at), 'dd/MM/yyyy', { locale: ptBR })}
         </span>
       ),
     },
     {
       key: 'status',
       header: 'Status',
-      render: (item: Payment) => <StatusBadge status={item.status} />,
+      render: (item: any) => <StatusBadge status={item.status} />,
     },
   ];
 
-  const handleResetSystem = (e: React.MouseEvent) => {
-    e.preventDefault();
-    // Clear only app data, not auth session
-    toast.success('Sistema resetado com sucesso!');
-    setTimeout(() => {
-      window.location.reload();
-    }, 1000);
-  };
+  const isLoading = loadingClients || loadingSubscriptions || loadingPayments;
 
   return (
     <DashboardLayout 
       title="Dashboard" 
       subtitle="Visão geral do sistema de assinaturas"
     >
-      {/* Reset Button */}
-      <div className="flex justify-end mb-4">
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm" className="gap-2">
-              <RotateCcw className="w-4 h-4" />
-              Resetar Sistema
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent className="glass-card border-border/50">
-            <AlertDialogHeader>
-              <AlertDialogTitle className="font-heading">Resetar Sistema</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta ação irá limpar todos os dados locais e resetar o sistema para o estado inicial. 
-                Você precisará fazer login novamente. Deseja continuar?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel className="border-border/50">Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleResetSystem} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                Resetar
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
       {/* Primary Metrics Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 lg:mb-8">
         <MetricCard
           title="Clientes Ativos"
-          value={mockDashboardMetrics.activeClients}
+          value={isLoading ? '...' : activeClients}
           icon={Users}
-          trend={{ value: 12, isPositive: true }}
           variant="success"
         />
         <MetricCard
           title="Receita do Mês"
-          value={formatCurrency(mockDashboardMetrics.monthlyRevenue)}
+          value={isLoading ? '...' : formatCurrency(monthlyRevenue)}
           icon={DollarSign}
-          trend={{ value: 8, isPositive: true }}
         />
         <MetricCard
           title="Renovadas"
-          value={mockDashboardMetrics.renewedSubscriptions}
+          value={isLoading ? '...' : renewedSubscriptions}
           icon={CheckCircle}
           variant="success"
         />
         <MetricCard
           title="Falhas"
-          value={mockDashboardMetrics.failedPayments}
+          value={isLoading ? '...' : failedPayments}
           icon={AlertTriangle}
           variant="danger"
         />
@@ -198,24 +163,24 @@ const Dashboard = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 lg:mb-8">
         <MetricCard
           title="Total Clientes"
-          value={mockDashboardMetrics.totalClients}
+          value={isLoading ? '...' : clients.length}
           icon={Users}
         />
         <MetricCard
           title="Inativos"
-          value={mockDashboardMetrics.inactiveClients}
+          value={isLoading ? '...' : inactiveClients}
           icon={XCircle}
           variant="warning"
         />
         <MetricCard
           title="Vencidas"
-          value={mockDashboardMetrics.expiredSubscriptions}
+          value={isLoading ? '...' : expiredSubscriptions}
           icon={Calendar}
           variant="danger"
         />
         <MetricCard
-          title="Próx. Renovações"
-          value={mockDashboardMetrics.upcomingRenewals}
+          title="Pendentes"
+          value={isLoading ? '...' : pendingSubscriptions}
           icon={TrendingUp}
         />
       </div>
