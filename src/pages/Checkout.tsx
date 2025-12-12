@@ -22,7 +22,9 @@ import {
   Copy,
   Shield,
   ArrowRight,
-  X
+  X,
+  Clock,
+  Receipt
 } from 'lucide-react';
 import logo from '@/assets/logo-pcon-grande.png';
 import logoAsaas from '@/assets/logo-asaas-white.png';
@@ -37,12 +39,25 @@ interface Subscription {
   start_date: string;
 }
 
+interface Payment {
+  id: string;
+  amount: number;
+  status: string;
+  payment_method: string | null;
+  created_at: string;
+  paid_at: string | null;
+  subscriptions?: {
+    plan_name: string;
+  };
+}
+
 const Checkout = () => {
   const { client, isAuthenticated, isLoading: authLoading, logout } = useClientAuth();
   const navigate = useNavigate();
   const { createCustomer, createPayment, getPixQrCode, loading: asaasLoading } = useAsaas();
   
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
@@ -60,6 +75,7 @@ const Checkout = () => {
   useEffect(() => {
     if (client?.id) {
       fetchSubscriptions();
+      fetchPayments();
     }
   }, [client?.id]);
 
@@ -84,6 +100,41 @@ const Checkout = () => {
       console.error('Error:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchPayments = async () => {
+    if (!client?.id) return;
+    
+    try {
+      // Primeiro busca as assinaturas do cliente
+      const { data: subs } = await supabase
+        .from('subscriptions')
+        .select('id')
+        .eq('client_id', client.id);
+
+      if (!subs || subs.length === 0) {
+        setPayments([]);
+        return;
+      }
+
+      const subIds = subs.map(s => s.id);
+
+      // Depois busca os pagamentos dessas assinaturas
+      const { data, error } = await supabase
+        .from('payments')
+        .select('*, subscriptions(plan_name)')
+        .in('subscription_id', subIds)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) {
+        console.error('Error fetching payments:', error);
+      }
+      
+      setPayments(data || []);
+    } catch (error) {
+      console.error('Error:', error);
     }
   };
 
@@ -361,6 +412,98 @@ const Checkout = () => {
             </motion.div>
           )}
         </div>
+
+        {/* Payment History */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
+          className="mt-10"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Receipt className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-heading font-semibold text-foreground">
+              Histórico de Pagamentos
+            </h2>
+          </div>
+
+          {payments.length > 0 ? (
+            <div className="glass-card overflow-hidden">
+              <div className="divide-y divide-border/30">
+                {payments.map((payment, index) => {
+                  const statusConfig: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
+                    paid: { 
+                      label: 'Pago', 
+                      className: 'bg-success/20 text-success',
+                      icon: <CheckCircle className="h-3 w-3" />
+                    },
+                    pending: { 
+                      label: 'Pendente', 
+                      className: 'bg-warning/20 text-warning',
+                      icon: <Clock className="h-3 w-3" />
+                    },
+                    cancelled: { 
+                      label: 'Cancelado', 
+                      className: 'bg-destructive/20 text-destructive',
+                      icon: <X className="h-3 w-3" />
+                    },
+                    failed: { 
+                      label: 'Falhou', 
+                      className: 'bg-destructive/20 text-destructive',
+                      icon: <AlertCircle className="h-3 w-3" />
+                    },
+                  };
+                  const config = statusConfig[payment.status] || statusConfig.pending;
+
+                  return (
+                    <motion.div
+                      key={payment.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.1 * index }}
+                      className="p-4 flex items-center justify-between gap-4 hover:bg-secondary/20 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-secondary/50 flex-shrink-0">
+                          {payment.payment_method === 'PIX' ? (
+                            <QrCode className="h-5 w-5 text-primary" />
+                          ) : (
+                            <CreditCard className="h-5 w-5 text-primary" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {payment.subscriptions?.plan_name || 'Pagamento'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(payment.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <span className="text-sm font-semibold text-foreground">
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(payment.amount))}
+                        </span>
+                        <span className={`${config.className} flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium`}>
+                          {config.icon}
+                          {config.label}
+                        </span>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="glass-card p-8 text-center">
+              <Clock className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+              <p className="text-sm text-muted-foreground">
+                Nenhum pagamento registrado ainda.
+              </p>
+            </div>
+          )}
+        </motion.div>
 
         {/* Footer with Payment Methods */}
         <motion.footer
