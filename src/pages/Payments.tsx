@@ -12,8 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { usePayments, Payment } from '@/hooks/usePayments';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatBrazilDate } from '@/utils/dateUtils';
 import { toast } from 'sonner';
 import { exportToCSV, formatCurrencyForExport, formatDateForExport } from '@/utils/exportUtils';
 
@@ -76,7 +75,7 @@ const Payments = () => {
       hideOnMobile: true,
       render: (item: Payment) => (
         <span className="text-muted-foreground">
-          {format(new Date(item.created_at), 'dd/MM/yyyy', { locale: ptBR })}
+          {formatBrazilDate(item.created_at)}
         </span>
       ),
     },

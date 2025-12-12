@@ -31,8 +31,7 @@ import { useClients } from '@/hooks/useClients';
 import { useSubscriptions } from '@/hooks/useSubscriptions';
 import { usePayments } from '@/hooks/usePayments';
 import { supabase } from '@/integrations/supabase/client';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatBrazilDate } from '@/utils/dateUtils';
 import { toast } from 'sonner';
 
 const Dashboard = () => {
@@ -130,7 +129,7 @@ const Dashboard = () => {
       hideOnMobile: true,
       render: (item: any) => (
         <span className="text-muted-foreground">
-          {format(new Date(item.next_payment), 'dd/MM/yyyy', { locale: ptBR })}
+          {formatBrazilDate(item.next_payment)}
         </span>
       ),
     },
@@ -170,7 +169,7 @@ const Dashboard = () => {
       hideOnMobile: true,
       render: (item: any) => (
         <span className="text-muted-foreground">
-          {format(new Date(item.created_at), 'dd/MM/yyyy', { locale: ptBR })}
+          {formatBrazilDate(item.created_at)}
         </span>
       ),
     },

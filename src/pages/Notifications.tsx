@@ -4,8 +4,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useNotifications } from '@/hooks/useNotifications';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatBrazilDate } from '@/utils/dateUtils';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -208,7 +207,7 @@ const Notifications = () => {
                       </p>
                     </div>
                     <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
-                      {format(new Date(notification.sent_at), "dd/MM HH:mm", { locale: ptBR })}
+                      {formatBrazilDate(notification.sent_at, "dd/MM HH:mm")}
                     </span>
                   </div>
                   
