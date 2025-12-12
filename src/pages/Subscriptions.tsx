@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Filter, MoreHorizontal, Trash2, Calendar, AlertTriangle, Plus, Pencil } from 'lucide-react';
+import { Search, Filter, MoreHorizontal, Trash2, Calendar, AlertTriangle, Plus, Pencil, CreditCard, Loader2 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
@@ -28,7 +28,8 @@ import {
 } from '@/components/ui/select';
 import { useSubscriptions, Subscription } from '@/hooks/useSubscriptions';
 import { useClients } from '@/hooks/useClients';
-import { differenceInDays, isPast, isToday } from 'date-fns';
+import { useAsaas } from '@/hooks/useAsaas';
+import { differenceInDays, isPast, isToday, format, addDays } from 'date-fns';
 import { formatBrazilDate, toBrazilTime } from '@/utils/dateUtils';
 import { toast } from 'sonner';
 
@@ -37,6 +38,7 @@ const Subscriptions = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
+  const [generatingChargeId, setGeneratingChargeId] = useState<string | null>(null);
   const [newSubscription, setNewSubscription] = useState({
     clientId: '',
     planName: '',
@@ -46,6 +48,7 @@ const Subscriptions = () => {
 
   const { subscriptions, loading, addSubscription, updateSubscription, deleteSubscription } = useSubscriptions();
   const { clients } = useClients();
+  const { createPayment, syncCustomerToAsaas, loading: asaasLoading } = useAsaas();
 
   const filteredSubscriptions = subscriptions.filter(sub =>
     (sub.clients?.name || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -105,6 +108,55 @@ const Subscriptions = () => {
 
   const handleDeleteSubscription = async (subscriptionId: string) => {
     await deleteSubscription(subscriptionId);
+  };
+
+  const handleGenerateCharge = async (subscription: Subscription) => {
+    if (!subscription.clients) {
+      toast.error('Cliente não encontrado para esta assinatura.');
+      return;
+    }
+
+    setGeneratingChargeId(subscription.id);
+
+    try {
+      // First, sync customer to Asaas (creates if not exists)
+      const customerResult = await syncCustomerToAsaas(subscription.client_id);
+      
+      if (!customerResult?.asaasCustomerId) {
+        throw new Error('Não foi possível sincronizar o cliente com a Asaas.');
+      }
+
+      // Calculate due date (use next_payment or 3 days from now if past)
+      const nextPaymentDate = new Date(subscription.next_payment);
+      const dueDate = isPast(nextPaymentDate) ? addDays(new Date(), 3) : nextPaymentDate;
+
+      // Create payment in Asaas
+      const paymentResult = await createPayment({
+        customer: customerResult.asaasCustomerId,
+        billingType: 'BOLETO', // Default to boleto, Asaas will send email notification
+        value: Number(subscription.value),
+        dueDate: format(dueDate, 'yyyy-MM-dd'),
+        description: `Cobrança - ${subscription.plan_name}`,
+        externalReference: subscription.id,
+      });
+
+      if (paymentResult) {
+        toast.success('Cobrança criada com sucesso! O cliente será notificado por email.');
+        
+        // Update subscription next_payment to next month
+        const newNextPayment = new Date(dueDate);
+        newNextPayment.setMonth(newNextPayment.getMonth() + 1);
+        
+        await updateSubscription(subscription.id, {
+          next_payment: newNextPayment.toISOString(),
+        });
+      }
+    } catch (error: any) {
+      console.error('Error generating charge:', error);
+      toast.error(error.message || 'Erro ao gerar cobrança.');
+    } finally {
+      setGeneratingChargeId(null);
+    }
   };
 
   const getDaysUntilExpiration = (nextPayment: string) => {
@@ -195,7 +247,17 @@ const Subscriptions = () => {
               <Pencil className="w-4 h-4 mr-2" />
               Editar
             </DropdownMenuItem>
-            <DropdownMenuItem>Gerar cobrança</DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => handleGenerateCharge(item)}
+              disabled={generatingChargeId === item.id}
+            >
+              {generatingChargeId === item.id ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <CreditCard className="w-4 h-4 mr-2" />
+              )}
+              {generatingChargeId === item.id ? 'Gerando...' : 'Gerar cobrança'}
+            </DropdownMenuItem>
             <DropdownMenuItem 
               className="text-destructive"
               onClick={() => handleDeleteSubscription(item.id)}
