@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useClientAuth } from '@/contexts/ClientAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useAsaas } from '@/hooks/useAsaas';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -20,11 +19,13 @@ import {
   DollarSign,
   CheckCircle,
   AlertCircle,
-  Clock,
   Copy,
-  ExternalLink
+  Sparkles,
+  Shield,
+  Zap
 } from 'lucide-react';
 import logo from '@/assets/logo-pcon.png';
+import PremiumBackground from '@/components/PremiumBackground';
 
 interface Subscription {
   id: string;
@@ -98,7 +99,6 @@ const Checkout = () => {
     setPixData(null);
 
     try {
-      // First create/sync customer in ASAAS
       const customerResult = await createCustomer({
         name: client.name,
         email: client.email,
@@ -110,7 +110,6 @@ const Checkout = () => {
         throw new Error('Erro ao criar cliente no gateway de pagamento');
       }
 
-      // Create payment
       const dueDate = format(new Date(), 'yyyy-MM-dd');
       const paymentResult = await createPayment({
         customer: customerResult.id,
@@ -126,7 +125,6 @@ const Checkout = () => {
       }
 
       if (method === 'PIX') {
-        // Get PIX QR Code
         const pixResult = await getPixQrCode(paymentResult.id);
         if (pixResult) {
           setPixData({
@@ -136,7 +134,6 @@ const Checkout = () => {
         }
         setIsPaymentDialogOpen(true);
       } else if (method === 'CREDIT_CARD') {
-        // Redirect to ASAAS checkout
         if (paymentResult.invoiceUrl) {
           window.open(paymentResult.invoiceUrl, '_blank');
           toast.success('Redirecionando para pagamento com cartão...');
@@ -159,198 +156,333 @@ const Checkout = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-      active: { label: 'Ativa', variant: 'default' },
-      pending: { label: 'Pendente', variant: 'secondary' },
-      cancelled: { label: 'Cancelada', variant: 'destructive' },
-      overdue: { label: 'Vencida', variant: 'destructive' },
+  const getStatusConfig = (status: string) => {
+    const configs: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
+      active: { 
+        label: 'Ativa', 
+        className: 'bg-success/20 text-success border-success/30',
+        icon: <CheckCircle className="h-3 w-3" />
+      },
+      pending: { 
+        label: 'Pendente', 
+        className: 'bg-warning/20 text-warning border-warning/30',
+        icon: <AlertCircle className="h-3 w-3" />
+      },
+      cancelled: { 
+        label: 'Cancelada', 
+        className: 'bg-destructive/20 text-destructive border-destructive/30',
+        icon: <AlertCircle className="h-3 w-3" />
+      },
     };
-    
-    const config = statusConfig[status] || { label: status, variant: 'outline' };
-    return <Badge variant={config.variant}>{config.label}</Badge>;
+    return configs[status] || { label: status, className: 'bg-muted text-muted-foreground', icon: null };
   };
 
   if (authLoading || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center relative">
+        <PremiumBackground />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="relative z-10"
+        >
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
+    <div className="min-h-screen relative">
+      <PremiumBackground />
+      
       {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+      <motion.header 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="relative z-20 glass-card border-b border-border/30 sticky top-0"
+      >
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src={logo} alt="Logo" className="h-10 w-auto" />
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <motion.div
+                className="absolute inset-0 blur-lg opacity-50"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(218 100% 50%), hsl(286 100% 40%))',
+                }}
+                animate={{
+                  scale: [1, 1.15, 1],
+                  opacity: [0.3, 0.5, 0.3],
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                }}
+              />
+              <img src={logo} alt="Logo" className="h-12 w-auto relative z-10" />
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground hidden sm:block">
-              Olá, {client?.name?.split(' ')[0]}
+              Olá, <span className="text-foreground font-medium">{client?.name?.split(' ')[0]}</span>
             </span>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sair
-            </Button>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleLogout}
+                className="btn-premium-outline"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sair
+              </Button>
+            </motion.div>
           </div>
         </div>
-      </header>
+      </motion.header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
-        <div className="space-y-6">
-          {/* Welcome Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-primary" />
-                Minha Assinatura
-              </CardTitle>
-              <CardDescription>
-                Gerencie sua assinatura e realize pagamentos
-              </CardDescription>
-            </CardHeader>
-          </Card>
+      <main className="relative z-10 container mx-auto px-4 py-8 sm:py-12 max-w-2xl">
+        <div className="space-y-8">
+          {/* Welcome Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.6 }}
+            className="text-center"
+          >
+            <h1 className="text-3xl sm:text-4xl font-heading font-bold text-gradient-light mb-3">
+              Minha Assinatura
+            </h1>
+            <p className="text-muted-foreground">
+              Gerencie sua assinatura e realize pagamentos com segurança
+            </p>
+          </motion.div>
 
-          {/* Subscription Details */}
+          {/* Subscription Card */}
           {subscription ? (
-            <Card className="shadow-lg">
-              <CardHeader>
-                <div className="flex items-center justify-between">
+            <motion.div
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
+              className="glass-card-premium p-6 sm:p-8"
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between mb-8">
+                <div>
+                  <h2 className="text-2xl font-heading font-bold text-foreground mb-2">
+                    {subscription.plan_name}
+                  </h2>
+                  <p className="text-muted-foreground text-sm">Detalhes da sua assinatura</p>
+                </div>
+                <Badge 
+                  className={`${getStatusConfig(subscription.status).className} flex items-center gap-1.5 px-3 py-1 border rounded-full`}
+                >
+                  {getStatusConfig(subscription.status).icon}
+                  {getStatusConfig(subscription.status).label}
+                </Badge>
+              </div>
+
+              {/* Info Grid */}
+              <div className="grid gap-4 sm:grid-cols-2 mb-8">
+                <motion.div 
+                  className="glass-card p-5 flex items-center gap-4"
+                  whileHover={{ scale: 1.02 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                    <DollarSign className="h-6 w-6 text-primary" />
+                  </div>
                   <div>
-                    <CardTitle className="text-xl">{subscription.plan_name}</CardTitle>
-                    <CardDescription>Detalhes da sua assinatura</CardDescription>
+                    <p className="text-sm text-muted-foreground">Valor Mensal</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(subscription.value))}
+                    </p>
                   </div>
-                  {getStatusBadge(subscription.status)}
+                </motion.div>
+
+                <motion.div 
+                  className="glass-card p-5 flex items-center gap-4"
+                  whileHover={{ scale: 1.02 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center">
+                    <Calendar className="h-6 w-6 text-accent" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Próximo Vencimento</p>
+                    <p className="text-xl font-bold text-foreground">
+                      {format(new Date(subscription.next_payment), "dd 'de' MMM", { locale: ptBR })}
+                    </p>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Divider */}
+              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent mb-8" />
+
+              {/* Payment Section */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Zap className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-heading font-semibold text-foreground">Realizar Pagamento</h3>
+                    <p className="text-sm text-muted-foreground">Escolha sua forma de pagamento</p>
+                  </div>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
+
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
-                    <DollarSign className="h-5 w-5 text-primary" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Valor</p>
-                      <p className="text-lg font-semibold">
-                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(subscription.value))}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
-                    <Calendar className="h-5 w-5 text-primary" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Próximo vencimento</p>
-                      <p className="text-lg font-semibold">
-                        {format(new Date(subscription.next_payment), "dd 'de' MMM, yyyy", { locale: ptBR })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Payment Options */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    Realizar Pagamento
-                  </h3>
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
                     <Button
                       size="lg"
-                      className="h-auto py-4 flex-col gap-2"
+                      className="w-full h-auto py-6 btn-premium flex-col gap-3"
                       onClick={() => handlePayment('PIX')}
                       disabled={isProcessing || asaasLoading}
                     >
-                      {isProcessing && paymentMethod === 'PIX' ? (
-                        <Loader2 className="h-6 w-6 animate-spin" />
-                      ) : (
-                        <QrCode className="h-6 w-6" />
-                      )}
-                      <span>Pagar com PIX</span>
-                      <span className="text-xs opacity-80">Aprovação instantânea</span>
+                      <span className="relative z-10 flex flex-col items-center gap-2">
+                        {isProcessing && paymentMethod === 'PIX' ? (
+                          <Loader2 className="h-8 w-8 animate-spin" />
+                        ) : (
+                          <QrCode className="h-8 w-8" />
+                        )}
+                        <span className="text-base font-semibold">Pagar com PIX</span>
+                        <span className="text-xs opacity-80 font-normal">Aprovação instantânea</span>
+                      </span>
                     </Button>
+                  </motion.div>
+
+                  <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
                     <Button
                       size="lg"
-                      variant="outline"
-                      className="h-auto py-4 flex-col gap-2"
+                      className="w-full h-auto py-6 btn-premium-outline flex-col gap-3"
                       onClick={() => handlePayment('CREDIT_CARD')}
                       disabled={isProcessing || asaasLoading}
                     >
                       {isProcessing && paymentMethod === 'CREDIT_CARD' ? (
-                        <Loader2 className="h-6 w-6 animate-spin" />
+                        <Loader2 className="h-8 w-8 animate-spin" />
                       ) : (
-                        <CreditCard className="h-6 w-6" />
+                        <CreditCard className="h-8 w-8" />
                       )}
-                      <span>Cartão de Crédito</span>
-                      <span className="text-xs opacity-80">Parcele em até 12x</span>
+                      <span className="text-base font-semibold">Cartão de Crédito</span>
+                      <span className="text-xs opacity-80 font-normal">Parcele em até 12x</span>
                     </Button>
-                  </div>
+                  </motion.div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+
+              {/* Security Badge */}
+              <motion.div 
+                className="mt-8 flex items-center justify-center gap-2 text-muted-foreground"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.8 }}
+              >
+                <Shield className="h-4 w-4" />
+                <span className="text-xs">Pagamento 100% seguro e criptografado</span>
+              </motion.div>
+            </motion.div>
           ) : (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Nenhuma assinatura ativa</h3>
-                <p className="text-muted-foreground">
-                  Você não possui uma assinatura ativa no momento.
-                </p>
-              </CardContent>
-            </Card>
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
+              className="glass-card-premium p-12 text-center"
+            >
+              <AlertCircle className="h-16 w-16 mx-auto text-muted-foreground mb-6" />
+              <h3 className="text-xl font-heading font-semibold mb-3">Nenhuma assinatura ativa</h3>
+              <p className="text-muted-foreground">
+                Você não possui uma assinatura ativa no momento.
+              </p>
+            </motion.div>
           )}
         </div>
       </main>
 
       {/* PIX Payment Dialog */}
-      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <QrCode className="h-5 w-5" />
-              Pagamento PIX
-            </DialogTitle>
-            <DialogDescription>
-              Escaneie o QR Code ou copie o código para realizar o pagamento
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {pixData?.qrCode && (
-              <div className="flex justify-center p-4 bg-white rounded-lg">
-                <img 
-                  src={`data:image/png;base64,${pixData.qrCode}`} 
-                  alt="QR Code PIX" 
-                  className="w-48 h-48"
-                />
-              </div>
-            )}
-            {pixData?.copyPaste && (
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground text-center">
-                  Ou copie o código PIX:
-                </p>
-                <div className="flex gap-2">
-                  <code className="flex-1 p-2 bg-muted rounded text-xs break-all max-h-20 overflow-y-auto">
-                    {pixData.copyPaste}
-                  </code>
-                  <Button size="icon" variant="outline" onClick={copyPixCode}>
-                    <Copy className="h-4 w-4" />
-                  </Button>
+      <AnimatePresence>
+        {isPaymentDialogOpen && (
+          <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+            <DialogContent className="glass-card-premium border-border/30 sm:max-w-md p-0 overflow-hidden">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="p-6 sm:p-8"
+              >
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-primary/20 flex items-center justify-center">
+                    <QrCode className="h-8 w-8 text-primary" />
+                  </div>
+                  <h2 className="text-2xl font-heading font-bold text-foreground mb-2">
+                    Pagamento PIX
+                  </h2>
+                  <p className="text-muted-foreground text-sm">
+                    Escaneie o QR Code ou copie o código
+                  </p>
                 </div>
-              </div>
-            )}
-            <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg">
-              <AlertCircle className="h-4 w-4 text-primary flex-shrink-0" />
-              <p className="text-xs text-primary">
-                Após o pagamento, a confirmação pode levar alguns minutos.
-              </p>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+
+                {pixData?.qrCode && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="flex justify-center p-6 bg-white rounded-2xl mb-6"
+                  >
+                    <img 
+                      src={`data:image/png;base64,${pixData.qrCode}`} 
+                      alt="QR Code PIX" 
+                      className="w-48 h-48"
+                    />
+                  </motion.div>
+                )}
+
+                {pixData?.copyPaste && (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                    className="space-y-3"
+                  >
+                    <p className="text-sm text-muted-foreground text-center">
+                      Ou copie o código PIX:
+                    </p>
+                    <div className="flex gap-2">
+                      <code className="flex-1 p-3 bg-secondary/50 rounded-xl text-xs break-all max-h-20 overflow-y-auto border border-border/30">
+                        {pixData.copyPaste}
+                      </code>
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Button 
+                          size="icon" 
+                          className="btn-premium h-12 w-12"
+                          onClick={copyPixCode}
+                        >
+                          <Copy className="h-5 w-5 relative z-10" />
+                        </Button>
+                      </motion.div>
+                    </div>
+                  </motion.div>
+                )}
+
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="mt-6 flex items-center gap-3 p-4 rounded-xl bg-primary/10 border border-primary/20"
+                >
+                  <Sparkles className="h-5 w-5 text-primary flex-shrink-0" />
+                  <p className="text-xs text-foreground/80">
+                    Após o pagamento, a confirmação será automática em poucos minutos.
+                  </p>
+                </motion.div>
+              </motion.div>
+            </DialogContent>
+          </Dialog>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
