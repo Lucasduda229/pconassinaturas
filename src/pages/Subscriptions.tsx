@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Filter, MoreHorizontal, Trash2, Calendar, AlertTriangle } from 'lucide-react';
+import { Search, Filter, MoreHorizontal, Trash2, Calendar, AlertTriangle, Plus } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
@@ -11,14 +11,38 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useSubscriptions, Subscription } from '@/hooks/useSubscriptions';
+import { useClients } from '@/hooks/useClients';
 import { format, differenceInDays, isPast, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 const Subscriptions = () => {
   const [search, setSearch] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newSubscription, setNewSubscription] = useState({
+    clientId: '',
+    planName: '',
+    value: '',
+  });
 
-  const { subscriptions, loading, deleteSubscription } = useSubscriptions();
+  const { subscriptions, loading, addSubscription, deleteSubscription } = useSubscriptions();
+  const { clients } = useClients();
 
   const filteredSubscriptions = subscriptions.filter(sub =>
     (sub.clients?.name || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -36,6 +60,23 @@ const Subscriptions = () => {
     .filter(s => s.status === 'active')
     .reduce((acc, s) => acc + Number(s.value), 0);
 
+  const handleAddSubscription = async () => {
+    if (!newSubscription.clientId || !newSubscription.planName || !newSubscription.value) {
+      toast.error('Por favor, preencha todos os campos.');
+      return;
+    }
+
+    const result = await addSubscription({
+      client_id: newSubscription.clientId,
+      plan_name: newSubscription.planName,
+      value: parseFloat(newSubscription.value),
+    });
+
+    if (result) {
+      setNewSubscription({ clientId: '', planName: '', value: '' });
+      setIsDialogOpen(false);
+    }
+  };
 
   const handleDeleteSubscription = async (subscriptionId: string) => {
     await deleteSubscription(subscriptionId);
@@ -157,10 +198,84 @@ const Subscriptions = () => {
           />
         </div>
         
-        <Button variant="outline" size="sm" className="h-10 sm:h-11 gap-2 border-border/50 bg-secondary/50">
-          <Filter className="w-4 h-4" />
-          <span className="hidden sm:inline">Filtros</span>
-        </Button>
+        <div className="flex gap-2 sm:gap-3">
+          <Button variant="outline" size="sm" className="h-10 sm:h-11 gap-2 border-border/50 bg-secondary/50 flex-1 sm:flex-none">
+            <Filter className="w-4 h-4" />
+            <span className="hidden sm:inline">Filtros</span>
+          </Button>
+          
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="h-10 sm:h-11 gap-2 flex-1 sm:flex-none">
+                <Plus className="w-4 h-4" />
+                <span>Nova</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="glass-card border-border/50 max-w-[95vw] sm:max-w-md mx-auto">
+              <DialogHeader>
+                <DialogTitle className="font-heading text-xl">Nova Assinatura</DialogTitle>
+                <DialogDescription>
+                  Crie uma nova assinatura para um cliente.
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-4 mt-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Cliente *</label>
+                  <Select
+                    value={newSubscription.clientId}
+                    onValueChange={(value) => setNewSubscription({ ...newSubscription, clientId: value })}
+                  >
+                    <SelectTrigger className="bg-secondary/50 border-border/50">
+                      <SelectValue placeholder="Selecione um cliente" />
+                    </SelectTrigger>
+                    <SelectContent className="glass-card border-border/50">
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Nome do Plano *</label>
+                  <Input
+                    placeholder="Ex: Plano Empresarial"
+                    value={newSubscription.planName}
+                    onChange={(e) => setNewSubscription({ ...newSubscription, planName: e.target.value })}
+                    className="bg-secondary/50 border-border/50"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Valor Mensal (R$) *</label>
+                  <Input
+                    type="number"
+                    placeholder="299.90"
+                    value={newSubscription.value}
+                    onChange={(e) => setNewSubscription({ ...newSubscription, value: e.target.value })}
+                    className="bg-secondary/50 border-border/50"
+                  />
+                </div>
+                
+                <div className="flex gap-3 pt-4">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 border-border/50"
+                    onClick={() => setIsDialogOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button className="flex-1" onClick={handleAddSubscription}>
+                    Criar
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Stats */}
