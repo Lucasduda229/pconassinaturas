@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Loader2, Lock, Mail, ArrowRight } from 'lucide-react';
-import logo from '@/assets/logo-pcon.png';
+import logo from '@/assets/logo-pcon-grande.png';
 import BlueBackground from '@/components/BlueBackground';
 
 const ClientLogin = () => {
@@ -59,7 +59,7 @@ const ClientLogin = () => {
             <img 
               src={logo} 
               alt="P-CON Logo" 
-              className="h-16 w-auto" 
+              className="h-24 sm:h-28 w-auto" 
             />
           </motion.div>
 
