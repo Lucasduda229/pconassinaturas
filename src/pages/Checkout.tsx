@@ -42,7 +42,8 @@ const Checkout = () => {
   const navigate = useNavigate();
   const { createCustomer, createPayment, getPixQrCode, loading: asaasLoading } = useAsaas();
   
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CREDIT_CARD' | null>(null);
@@ -58,11 +59,11 @@ const Checkout = () => {
 
   useEffect(() => {
     if (client?.id) {
-      fetchSubscription();
+      fetchSubscriptions();
     }
   }, [client?.id]);
 
-  const fetchSubscription = async () => {
+  const fetchSubscriptions = async () => {
     if (!client?.id) return;
     
     setIsLoading(true);
@@ -72,15 +73,13 @@ const Checkout = () => {
         .select('*')
         .eq('client_id', client.id)
         .eq('status', 'active')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+        .order('created_at', { ascending: false });
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching subscription:', error);
+      if (error) {
+        console.error('Error fetching subscriptions:', error);
       }
       
-      setSubscription(data);
+      setSubscriptions(data || []);
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -93,14 +92,15 @@ const Checkout = () => {
     navigate('/cliente');
   };
 
-  const openPaymentModal = () => {
+  const openPaymentModal = (subscription: Subscription) => {
+    setSelectedSubscription(subscription);
     setIsPaymentDialogOpen(true);
     setPaymentStep('select');
     setPixData(null);
   };
 
   const handlePayment = async (method: 'PIX' | 'CREDIT_CARD') => {
-    if (!client || !subscription) return;
+    if (!client || !selectedSubscription) return;
     
     setPaymentMethod(method);
     setPaymentStep('processing');
@@ -123,10 +123,10 @@ const Checkout = () => {
       const paymentResult = await createPayment({
         customer: customerResult.id,
         billingType: method,
-        value: Number(subscription.value),
+        value: Number(selectedSubscription.value),
         dueDate,
-        description: `Pagamento - ${subscription.plan_name}`,
-        externalReference: subscription.id,
+        description: `Pagamento - ${selectedSubscription.plan_name}`,
+        externalReference: selectedSubscription.id,
       });
 
       if (!paymentResult?.id) {
@@ -245,110 +245,115 @@ const Checkout = () => {
             className="text-center"
           >
             <h1 className="text-2xl sm:text-3xl font-heading font-bold text-foreground mb-2">
-              Minha Assinatura
+              Minhas Assinaturas
             </h1>
             <p className="text-gray-neutral text-sm">
               Gerencie e realize pagamentos com segurança
             </p>
           </motion.div>
 
-          {/* Subscription Card */}
-          {subscription ? (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
-              className="glass-card p-6 sm:p-8"
-            >
-              {/* Plan Header */}
-              <div className="flex items-start justify-between mb-6">
-                <div>
-                  <h2 className="text-xl font-heading font-semibold text-foreground">
-                    {subscription.plan_name}
-                  </h2>
-                  <p className="text-gray-neutral text-sm mt-1">Plano ativo</p>
-                </div>
-                <Badge 
-                  className={`${getStatusConfig(subscription.status).className} flex items-center gap-1.5 px-3 py-1 border rounded-full text-xs`}
+          {/* Subscriptions List */}
+          {subscriptions.length > 0 ? (
+            <div className="space-y-4">
+              {subscriptions.map((subscription, index) => (
+                <motion.div
+                  key={subscription.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 + index * 0.1, duration: 0.5 }}
+                  className="glass-card p-6 sm:p-8"
                 >
-                  {getStatusConfig(subscription.status).icon}
-                  {getStatusConfig(subscription.status).label}
-                </Badge>
-              </div>
-
-              {/* Info Cards */}
-              <div className="grid gap-4 sm:grid-cols-2 mb-6">
-                <motion.div 
-                  className="p-4 rounded-xl bg-secondary/30 border border-border/30"
-                  whileHover={{ scale: 1.01 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(30, 79, 163, 0.2)' }}>
-                      <DollarSign className="h-5 w-5" style={{ color: '#1E4FA3' }} />
-                    </div>
+                  {/* Plan Header */}
+                  <div className="flex items-start justify-between mb-6">
                     <div>
-                      <p className="text-xs text-gray-neutral">Valor</p>
-                      <p className="text-lg font-semibold text-foreground">
-                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(subscription.value))}
-                      </p>
+                      <h2 className="text-xl font-heading font-semibold text-foreground">
+                        {subscription.plan_name}
+                      </h2>
+                      <p className="text-gray-neutral text-sm mt-1">Plano ativo</p>
                     </div>
+                    <Badge 
+                      className={`${getStatusConfig(subscription.status).className} flex items-center gap-1.5 px-3 py-1 border rounded-full text-xs`}
+                    >
+                      {getStatusConfig(subscription.status).icon}
+                      {getStatusConfig(subscription.status).label}
+                    </Badge>
+                  </div>
+
+                  {/* Info Cards */}
+                  <div className="grid gap-4 sm:grid-cols-2 mb-6">
+                    <motion.div 
+                      className="p-4 rounded-xl bg-secondary/30 border border-border/30"
+                      whileHover={{ scale: 1.01 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(30, 79, 163, 0.2)' }}>
+                          <DollarSign className="h-5 w-5" style={{ color: '#1E4FA3' }} />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-neutral">Valor</p>
+                          <p className="text-lg font-semibold text-foreground">
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(subscription.value))}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+
+                    <motion.div 
+                      className="p-4 rounded-xl bg-secondary/30 border border-border/30"
+                      whileHover={{ scale: 1.01 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(42, 63, 134, 0.2)' }}>
+                          <Calendar className="h-5 w-5" style={{ color: '#2A3F86' }} />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-neutral">Vencimento</p>
+                          <p className="text-lg font-semibold text-foreground">
+                            {format(new Date(subscription.next_payment), "dd/MM/yyyy", { locale: ptBR })}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="h-px bg-border/30 mb-6" />
+
+                  {/* Pay Button */}
+                  <motion.div
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                  >
+                    <Button
+                      size="lg"
+                      className="w-full h-14 btn-blue text-base"
+                      onClick={() => openPaymentModal(subscription)}
+                      disabled={isProcessing || asaasLoading}
+                    >
+                      {isProcessing ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                          Processando...
+                        </span>
+                      ) : (
+                        <span className="flex items-center justify-center gap-2">
+                          Pagar Agora
+                          <ArrowRight className="h-5 w-5" />
+                        </span>
+                      )}
+                    </Button>
+                  </motion.div>
+
+                  {/* Security Badge */}
+                  <div className="mt-6 flex items-center justify-center gap-2 text-gray-neutral">
+                    <Shield className="h-4 w-4" />
+                    <span className="text-xs">Pagamento 100% seguro</span>
                   </div>
                 </motion.div>
-
-                <motion.div 
-                  className="p-4 rounded-xl bg-secondary/30 border border-border/30"
-                  whileHover={{ scale: 1.01 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(42, 63, 134, 0.2)' }}>
-                      <Calendar className="h-5 w-5" style={{ color: '#2A3F86' }} />
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-neutral">Vencimento</p>
-                      <p className="text-lg font-semibold text-foreground">
-                        {format(new Date(subscription.next_payment), "dd/MM/yyyy", { locale: ptBR })}
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-              </div>
-
-              {/* Divider */}
-              <div className="h-px bg-border/30 mb-6" />
-
-              {/* Pay Button */}
-              <motion.div
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-              >
-                <Button
-                  size="lg"
-                  className="w-full h-14 btn-blue text-base"
-                  onClick={openPaymentModal}
-                  disabled={isProcessing || asaasLoading}
-                >
-                  {isProcessing ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      Processando...
-                    </span>
-                  ) : (
-                    <span className="flex items-center justify-center gap-2">
-                      Pagar Agora
-                      <ArrowRight className="h-5 w-5" />
-                    </span>
-                  )}
-                </Button>
-              </motion.div>
-
-              {/* Security Badge */}
-              <div className="mt-6 flex items-center justify-center gap-2 text-gray-neutral">
-                <Shield className="h-4 w-4" />
-                <span className="text-xs">Pagamento 100% seguro</span>
-              </div>
-            </motion.div>
+              ))}
+            </div>
           ) : (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -359,7 +364,7 @@ const Checkout = () => {
               <AlertCircle className="h-14 w-14 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-heading font-semibold mb-2">Nenhuma assinatura ativa</h3>
               <p className="text-gray-neutral text-sm">
-                Você não possui uma assinatura ativa no momento.
+                Você não possui assinaturas ativas no momento.
               </p>
             </motion.div>
           )}
