@@ -25,7 +25,7 @@ import {
   Zap
 } from 'lucide-react';
 import logo from '@/assets/logo-pcon.png';
-import PremiumBackground from '@/components/PremiumBackground';
+import FuturisticBackground from '@/components/FuturisticBackground';
 
 interface Subscription {
   id: string;
@@ -180,7 +180,7 @@ const Checkout = () => {
   if (authLoading || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center relative">
-        <PremiumBackground />
+        <FuturisticBackground />
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -194,29 +194,29 @@ const Checkout = () => {
 
   return (
     <div className="min-h-screen relative">
-      <PremiumBackground />
+      <FuturisticBackground />
       
       {/* Header */}
       <motion.header 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.6 }}
         className="relative z-20 glass-card border-b border-border/30 sticky top-0"
       >
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="relative">
               <motion.div
-                className="absolute inset-0 blur-lg opacity-50"
+                className="absolute inset-0 blur-xl opacity-50"
                 style={{
-                  background: 'linear-gradient(135deg, hsl(218 100% 50%), hsl(286 100% 40%))',
+                  background: 'linear-gradient(135deg, hsl(220 70% 55%), hsl(280 75% 45%))',
                 }}
                 animate={{
-                  scale: [1, 1.15, 1],
-                  opacity: [0.3, 0.5, 0.3],
+                  scale: [1, 1.2, 1],
+                  opacity: [0.35, 0.55, 0.35],
                 }}
                 transition={{
-                  duration: 3,
+                  duration: 4,
                   repeat: Infinity,
                   ease: 'easeInOut',
                 }}
@@ -250,7 +250,7 @@ const Checkout = () => {
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
+            transition={{ delay: 0.2, duration: 0.7 }}
             className="text-center"
           >
             <h1 className="text-3xl sm:text-4xl font-heading font-bold text-gradient-light mb-3">
@@ -266,7 +266,7 @@ const Checkout = () => {
             <motion.div
               initial={{ opacity: 0, y: 30, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ delay: 0.3, duration: 0.6 }}
+              transition={{ delay: 0.3, duration: 0.7 }}
               className="glass-card-premium p-6 sm:p-8"
             >
               {/* Header */}
@@ -289,8 +289,8 @@ const Checkout = () => {
               <div className="grid gap-4 sm:grid-cols-2 mb-8">
                 <motion.div 
                   className="glass-card p-5 flex items-center gap-4"
-                  whileHover={{ scale: 1.02 }}
-                  transition={{ duration: 0.2 }}
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  transition={{ duration: 0.25 }}
                 >
                   <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
                     <DollarSign className="h-6 w-6 text-primary" />
@@ -305,8 +305,8 @@ const Checkout = () => {
 
                 <motion.div 
                   className="glass-card p-5 flex items-center gap-4"
-                  whileHover={{ scale: 1.02 }}
-                  transition={{ duration: 0.2 }}
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  transition={{ duration: 0.25 }}
                 >
                   <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center">
                     <Calendar className="h-6 w-6 text-accent" />
@@ -336,7 +336,7 @@ const Checkout = () => {
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
+                  <motion.div whileHover={{ scale: 1.03, y: -3 }} whileTap={{ scale: 0.98 }}>
                     <Button
                       size="lg"
                       className="w-full h-auto py-6 btn-premium flex-col gap-3"
@@ -355,7 +355,7 @@ const Checkout = () => {
                     </Button>
                   </motion.div>
 
-                  <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
+                  <motion.div whileHover={{ scale: 1.03, y: -3 }} whileTap={{ scale: 0.98 }}>
                     <Button
                       size="lg"
                       className="w-full h-auto py-6 btn-premium-outline flex-col gap-3"
@@ -379,7 +379,7 @@ const Checkout = () => {
                 className="mt-8 flex items-center justify-center gap-2 text-muted-foreground"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.8 }}
+                transition={{ delay: 0.9 }}
               >
                 <Shield className="h-4 w-4" />
                 <span className="text-xs">Pagamento 100% seguro e criptografado</span>
@@ -389,7 +389,7 @@ const Checkout = () => {
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.6 }}
+              transition={{ delay: 0.3, duration: 0.7 }}
               className="glass-card-premium p-12 text-center"
             >
               <AlertCircle className="h-16 w-16 mx-auto text-muted-foreground mb-6" />

@@ -7,41 +7,51 @@ interface Particle {
   size: number;
   duration: number;
   delay: number;
+  brightness: number;
 }
 
 const AnimatedBackground = () => {
   const [particles, setParticles] = useState<Particle[]>([]);
 
   useEffect(() => {
-    const generateParticles = () => {
-      const newParticles: Particle[] = [];
-      for (let i = 0; i < 20; i++) {
-        newParticles.push({
-          id: i,
-          x: Math.random() * 100,
-          size: Math.random() * 3 + 1,
-          duration: Math.random() * 25 + 20,
-          delay: Math.random() * 25,
-        });
-      }
-      setParticles(newParticles);
-    };
-    generateParticles();
+    const newParticles: Particle[] = [];
+    for (let i = 0; i < 25; i++) {
+      newParticles.push({
+        id: i,
+        x: Math.random() * 100,
+        size: Math.random() * 3 + 1,
+        duration: Math.random() * 25 + 20,
+        delay: Math.random() * 25,
+        brightness: Math.random() * 0.4 + 0.4,
+      });
+    }
+    setParticles(newParticles);
   }, []);
 
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden">
       {/* Base gradient */}
-      <div className="absolute inset-0 premium-bg" />
-      
-      {/* Animated gradient overlay */}
+      <div className="absolute inset-0 futuristic-bg" />
+
+      {/* Mesh gradients */}
+      <div className="mesh-gradient mesh-gradient-1" />
+      <div className="mesh-gradient mesh-gradient-2" />
+      <div className="mesh-gradient mesh-gradient-3" />
+
+      {/* Aurora effect */}
+      <div className="aurora-effect" />
+
+      {/* Animated glow */}
       <motion.div
-        className="absolute inset-0"
+        className="absolute w-[500px] h-[500px] rounded-full blur-[80px] pointer-events-none"
         style={{
-          background: 'radial-gradient(ellipse 80% 50% at 50% -20%, hsl(218 100% 50% / 0.12), transparent)',
+          background: 'radial-gradient(circle, hsl(220 70% 55% / 0.25), transparent 60%)',
+          top: '15%',
+          right: '10%',
         }}
         animate={{
-          opacity: [0.4, 0.8, 0.4],
+          scale: [1, 1.15, 1],
+          opacity: [0.3, 0.5, 0.3],
         }}
         transition={{
           duration: 10,
@@ -50,27 +60,22 @@ const AnimatedBackground = () => {
         }}
       />
 
-      {/* Floating orbs */}
-      <div className="floating-orb floating-orb-blue" />
-      <div className="floating-orb floating-orb-purple" />
-      <div className="floating-orb floating-orb-center" />
-
-      {/* Additional animated glow */}
       <motion.div
-        className="absolute w-[600px] h-[600px] rounded-full blur-[100px] pointer-events-none"
+        className="absolute w-[400px] h-[400px] rounded-full blur-[80px] pointer-events-none"
         style={{
-          background: 'radial-gradient(circle, hsl(218 100% 50% / 0.08), transparent 60%)',
-          top: '30%',
-          right: '5%',
+          background: 'radial-gradient(circle, hsl(280 75% 45% / 0.2), transparent 60%)',
+          bottom: '10%',
+          left: '15%',
         }}
         animate={{
-          scale: [1, 1.15, 1],
-          opacity: [0.2, 0.4, 0.2],
+          scale: [1.1, 1, 1.1],
+          opacity: [0.25, 0.45, 0.25],
         }}
         transition={{
           duration: 12,
           repeat: Infinity,
           ease: 'easeInOut',
+          delay: 3,
         }}
       />
 
@@ -83,13 +88,16 @@ const AnimatedBackground = () => {
             left: `${particle.x}%`,
             width: particle.size,
             height: particle.size,
-            background: 'linear-gradient(135deg, hsl(218 100% 70% / 0.5), hsl(286 100% 60% / 0.3))',
-            boxShadow: `0 0 ${particle.size * 2}px hsl(218 100% 60% / 0.2)`,
+            background: `linear-gradient(135deg, 
+              hsl(220 70% 70% / ${particle.brightness}), 
+              hsl(280 75% 60% / ${particle.brightness * 0.7})
+            )`,
+            boxShadow: `0 0 ${particle.size * 2}px hsl(220 70% 60% / 0.3)`,
           }}
-          initial={{ y: '100vh', opacity: 0 }}
+          initial={{ y: '105vh', opacity: 0 }}
           animate={{
-            y: '-100vh',
-            opacity: [0, 0.8, 0.8, 0],
+            y: '-5vh',
+            opacity: [0, particle.brightness, particle.brightness, 0],
           }}
           transition={{
             duration: particle.duration,
@@ -100,19 +108,19 @@ const AnimatedBackground = () => {
         />
       ))}
 
-      {/* Grid pattern overlay */}
+      {/* Grid pattern */}
       <div 
         className="absolute inset-0 opacity-[0.015]"
         style={{
           backgroundImage: `
-            linear-gradient(hsl(0 0% 100% / 0.08) 1px, transparent 1px),
-            linear-gradient(90deg, hsl(0 0% 100% / 0.08) 1px, transparent 1px)
+            linear-gradient(hsl(220 70% 60% / 0.25) 1px, transparent 1px),
+            linear-gradient(90deg, hsl(220 70% 60% / 0.25) 1px, transparent 1px)
           `,
-          backgroundSize: '60px 60px',
+          backgroundSize: '70px 70px',
         }}
       />
       
-      {/* Radial gradient overlay for depth */}
+      {/* Radial vignette */}
       <div 
         className="absolute inset-0"
         style={{
