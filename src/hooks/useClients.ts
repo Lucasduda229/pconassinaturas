@@ -53,6 +53,26 @@ export const useClients = () => {
     }
   };
 
+  const updateClient = async (id: string, updates: Partial<Omit<Client, 'id' | 'created_at' | 'updated_at'>>) => {
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      setClients(prev => prev.map(c => c.id === id ? data : c));
+      toast.success('Cliente atualizado com sucesso!');
+      return data;
+    } catch (error) {
+      console.error('Error updating client:', error);
+      toast.error('Erro ao atualizar cliente');
+      return null;
+    }
+  };
+
   const deleteClient = async (id: string) => {
     try {
       const { error } = await supabase
@@ -84,5 +104,5 @@ export const useClients = () => {
     };
   }, []);
 
-  return { clients, loading, addClient, deleteClient, refetch: fetchClients };
+  return { clients, loading, addClient, updateClient, deleteClient, refetch: fetchClients };
 };

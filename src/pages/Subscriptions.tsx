@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Filter, MoreHorizontal, Trash2, Calendar, AlertTriangle, Plus } from 'lucide-react';
+import { Search, Filter, MoreHorizontal, Trash2, Calendar, AlertTriangle, Plus, Pencil } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
@@ -35,13 +35,16 @@ import { toast } from 'sonner';
 const Subscriptions = () => {
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
   const [newSubscription, setNewSubscription] = useState({
     clientId: '',
     planName: '',
     value: '',
+    dueDate: '',
   });
 
-  const { subscriptions, loading, addSubscription, deleteSubscription } = useSubscriptions();
+  const { subscriptions, loading, addSubscription, updateSubscription, deleteSubscription } = useSubscriptions();
   const { clients } = useClients();
 
   const filteredSubscriptions = subscriptions.filter(sub =>
@@ -61,7 +64,7 @@ const Subscriptions = () => {
     .reduce((acc, s) => acc + Number(s.value), 0);
 
   const handleAddSubscription = async () => {
-    if (!newSubscription.clientId || !newSubscription.planName || !newSubscription.value) {
+    if (!newSubscription.clientId || !newSubscription.planName || !newSubscription.value || !newSubscription.dueDate) {
       toast.error('Por favor, preencha todos os campos.');
       return;
     }
@@ -70,11 +73,33 @@ const Subscriptions = () => {
       client_id: newSubscription.clientId,
       plan_name: newSubscription.planName,
       value: parseFloat(newSubscription.value),
+      next_payment: new Date(newSubscription.dueDate).toISOString(),
     });
 
     if (result) {
-      setNewSubscription({ clientId: '', planName: '', value: '' });
+      setNewSubscription({ clientId: '', planName: '', value: '', dueDate: '' });
       setIsDialogOpen(false);
+    }
+  };
+
+  const openEditDialog = (subscription: Subscription) => {
+    setEditingSubscription(subscription);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateSubscription = async () => {
+    if (!editingSubscription) return;
+
+    const result = await updateSubscription(editingSubscription.id, {
+      plan_name: editingSubscription.plan_name,
+      value: editingSubscription.value,
+      status: editingSubscription.status,
+      next_payment: editingSubscription.next_payment,
+    });
+
+    if (result) {
+      setIsEditDialogOpen(false);
+      setEditingSubscription(null);
     }
   };
 
@@ -166,7 +191,10 @@ const Subscriptions = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="glass-card border-border/50">
             <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
-            <DropdownMenuItem>Alterar valor</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => openEditDialog(item)}>
+              <Pencil className="w-4 h-4 mr-2" />
+              Editar
+            </DropdownMenuItem>
             <DropdownMenuItem>Gerar cobrança</DropdownMenuItem>
             <DropdownMenuItem 
               className="text-destructive"
@@ -259,6 +287,16 @@ const Subscriptions = () => {
                     className="bg-secondary/50 border-border/50"
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Data de Vencimento *</label>
+                  <Input
+                    type="date"
+                    value={newSubscription.dueDate}
+                    onChange={(e) => setNewSubscription({ ...newSubscription, dueDate: e.target.value })}
+                    className="bg-secondary/50 border-border/50"
+                  />
+                </div>
                 
                 <div className="flex gap-3 pt-4">
                   <Button 
@@ -306,6 +344,95 @@ const Subscriptions = () => {
       ) : (
         <DataTable data={filteredSubscriptions} columns={columns} />
       )}
+
+      {/* Edit Subscription Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="glass-card border-border/50 max-w-[95vw] sm:max-w-md mx-auto">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl">Editar Assinatura</DialogTitle>
+            <DialogDescription>
+              Atualize as informações da assinatura.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {editingSubscription && (
+            <div className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Cliente</label>
+                <Input
+                  value={editingSubscription.clients?.name || 'N/A'}
+                  disabled
+                  className="bg-secondary/50 border-border/50 opacity-60"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nome do Plano *</label>
+                <Input
+                  placeholder="Ex: Plano Empresarial"
+                  value={editingSubscription.plan_name}
+                  onChange={(e) => setEditingSubscription({ ...editingSubscription, plan_name: e.target.value })}
+                  className="bg-secondary/50 border-border/50"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Valor Mensal (R$) *</label>
+                <Input
+                  type="number"
+                  placeholder="299.90"
+                  value={editingSubscription.value}
+                  onChange={(e) => setEditingSubscription({ ...editingSubscription, value: parseFloat(e.target.value) || 0 })}
+                  className="bg-secondary/50 border-border/50"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Data de Vencimento *</label>
+                <Input
+                  type="date"
+                  value={format(new Date(editingSubscription.next_payment), 'yyyy-MM-dd')}
+                  onChange={(e) => setEditingSubscription({ ...editingSubscription, next_payment: new Date(e.target.value).toISOString() })}
+                  className="bg-secondary/50 border-border/50"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Status</label>
+                <Select
+                  value={editingSubscription.status}
+                  onValueChange={(value) => setEditingSubscription({ ...editingSubscription, status: value })}
+                >
+                  <SelectTrigger className="bg-secondary/50 border-border/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="glass-card border-border/50">
+                    <SelectItem value="active">Ativa</SelectItem>
+                    <SelectItem value="pending">Pendente</SelectItem>
+                    <SelectItem value="cancelled">Cancelada</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex gap-3 pt-4">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 border-border/50"
+                  onClick={() => {
+                    setIsEditDialogOpen(false);
+                    setEditingSubscription(null);
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button className="flex-1" onClick={handleUpdateSubscription}>
+                  Salvar
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };

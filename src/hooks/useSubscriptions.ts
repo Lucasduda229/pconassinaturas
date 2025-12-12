@@ -38,17 +38,22 @@ export const useSubscriptions = () => {
     }
   };
 
-  const addSubscription = async (subscription: { client_id: string; plan_name: string; value: number }) => {
+  const addSubscription = async (subscription: { client_id: string; plan_name: string; value: number; next_payment?: string }) => {
     try {
-      const nextPayment = new Date();
-      nextPayment.setDate(nextPayment.getDate() + 30);
+      const nextPayment = subscription.next_payment || (() => {
+        const date = new Date();
+        date.setDate(date.getDate() + 30);
+        return date.toISOString();
+      })();
 
       const { data, error } = await supabase
         .from('subscriptions')
         .insert([{
-          ...subscription,
+          client_id: subscription.client_id,
+          plan_name: subscription.plan_name,
+          value: subscription.value,
           status: 'active',
-          next_payment: nextPayment.toISOString()
+          next_payment: nextPayment
         }])
         .select('*, clients(name)')
         .single();
@@ -60,6 +65,26 @@ export const useSubscriptions = () => {
     } catch (error) {
       console.error('Error adding subscription:', error);
       toast.error('Erro ao criar assinatura');
+      return null;
+    }
+  };
+
+  const updateSubscription = async (id: string, updates: Partial<{ plan_name: string; value: number; status: string; next_payment: string }>) => {
+    try {
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .update(updates)
+        .eq('id', id)
+        .select('*, clients(name)')
+        .single();
+
+      if (error) throw error;
+      setSubscriptions(prev => prev.map(s => s.id === id ? data : s));
+      toast.success('Assinatura atualizada com sucesso!');
+      return data;
+    } catch (error) {
+      console.error('Error updating subscription:', error);
+      toast.error('Erro ao atualizar assinatura');
       return null;
     }
   };
@@ -95,5 +120,5 @@ export const useSubscriptions = () => {
     };
   }, []);
 
-  return { subscriptions, loading, addSubscription, deleteSubscription, refetch: fetchSubscriptions };
+  return { subscriptions, loading, addSubscription, updateSubscription, deleteSubscription, refetch: fetchSubscriptions };
 };
