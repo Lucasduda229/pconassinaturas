@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Loader2, Lock, Mail, Sparkles } from 'lucide-react';
 import logo from '@/assets/logo-pcon.png';
-import PremiumBackground from '@/components/PremiumBackground';
+import FuturisticBackground from '@/components/FuturisticBackground';
 
 const ClientLogin = () => {
   const [email, setEmail] = useState('');
@@ -39,12 +39,12 @@ const ClientLogin = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative">
-      <PremiumBackground />
+      <FuturisticBackground />
       
       <motion.div
         initial={{ opacity: 0, y: 30, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.6, ease: 'easeOut' }}
+        transition={{ duration: 0.7, ease: 'easeOut' }}
         className="w-full max-w-md relative z-10"
       >
         {/* Glass Card */}
@@ -54,20 +54,20 @@ const ClientLogin = () => {
             className="flex justify-center mb-8"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
+            transition={{ delay: 0.2, duration: 0.6 }}
           >
             <div className="relative">
               <motion.div
-                className="absolute inset-0 blur-xl opacity-60"
+                className="absolute inset-0 blur-2xl opacity-60"
                 style={{
-                  background: 'linear-gradient(135deg, hsl(218 100% 50%), hsl(286 100% 40%))',
+                  background: 'linear-gradient(135deg, hsl(220 70% 55%), hsl(280 75% 45%))',
                 }}
                 animate={{
-                  scale: [1, 1.2, 1],
-                  opacity: [0.4, 0.6, 0.4],
+                  scale: [1, 1.25, 1],
+                  opacity: [0.4, 0.65, 0.4],
                 }}
                 transition={{
-                  duration: 3,
+                  duration: 4,
                   repeat: Infinity,
                   ease: 'easeInOut',
                 }}
@@ -85,7 +85,7 @@ const ClientLogin = () => {
             className="text-center mb-8"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
+            transition={{ delay: 0.3, duration: 0.6 }}
           >
             <h1 className="text-3xl font-heading font-bold text-gradient mb-2">
               Área do Cliente
@@ -101,7 +101,7 @@ const ClientLogin = () => {
             className="space-y-6"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.4, duration: 0.5 }}
+            transition={{ delay: 0.4, duration: 0.6 }}
           >
             <div className="space-y-2">
               <Label htmlFor="email" className="text-foreground/80 text-sm font-medium">
@@ -170,7 +170,7 @@ const ClientLogin = () => {
             className="mt-8 text-center"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.6, duration: 0.5 }}
+            transition={{ delay: 0.7, duration: 0.5 }}
           >
             <p className="text-xs text-muted-foreground/60">
               Pagamentos processados com segurança

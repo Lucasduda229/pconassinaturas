@@ -5,7 +5,7 @@ import { Eye, EyeOff, Lock, User, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import AnimatedBackground from '@/components/AnimatedBackground';
+import FuturisticBackground from '@/components/FuturisticBackground';
 import { useAuth } from '@/contexts/AuthContext';
 import logo from '@/assets/logo-pcon.png';
 
@@ -17,7 +17,6 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Redirect if already authenticated
   if (isAuthenticated) {
     navigate('/dashboard');
     return null;
@@ -49,38 +48,38 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative">
-      <AnimatedBackground />
+      <FuturisticBackground />
       
       <motion.div 
         className="w-full max-w-sm sm:max-w-md relative z-10"
         initial={{ opacity: 0, y: 30, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.6, ease: 'easeOut' }}
+        transition={{ duration: 0.7, ease: 'easeOut' }}
       >
         {/* Logo with neon glow */}
         <motion.div 
           className="text-center mb-6 sm:mb-8"
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
+          transition={{ delay: 0.2, duration: 0.6 }}
         >
           <div className="inline-flex items-center justify-center gap-3 mb-3 sm:mb-4 relative">
             <motion.div
-              className="absolute inset-0 blur-xl opacity-50"
+              className="absolute inset-0 blur-2xl opacity-60"
               style={{
-                background: 'linear-gradient(135deg, hsl(218 100% 50%), hsl(286 100% 40%))',
+                background: 'linear-gradient(135deg, hsl(220 70% 55%), hsl(280 75% 45%))',
               }}
               animate={{
-                scale: [1, 1.2, 1],
-                opacity: [0.3, 0.5, 0.3],
+                scale: [1, 1.25, 1],
+                opacity: [0.35, 0.6, 0.35],
               }}
               transition={{
-                duration: 3,
+                duration: 4,
                 repeat: Infinity,
                 ease: 'easeInOut',
               }}
             />
-            <img src={logo} alt="P-CON" className="h-14 sm:h-20 w-auto relative z-10 neon-glow" />
+            <img src={logo} alt="P-CON" className="h-16 sm:h-24 w-auto relative z-10 neon-glow" />
           </div>
           <h1 className="font-heading text-2xl sm:text-3xl font-bold text-foreground">
             P-CON <span className="text-gradient">Assinaturas</span>
@@ -95,7 +94,7 @@ const Login = () => {
           className="glass-card-premium p-6 sm:p-8"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
+          transition={{ delay: 0.3, duration: 0.6 }}
         >
           <h2 className="font-heading text-lg sm:text-xl font-semibold text-foreground mb-5 sm:mb-6">
             Entrar no Sistema
@@ -167,7 +166,7 @@ const Login = () => {
           className="text-center text-muted-foreground/60 text-xs sm:text-sm mt-4 sm:mt-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
+          transition={{ delay: 0.7 }}
         >
           © 2024 P-CON Construct. Todos os direitos reservados.
         </motion.p>
