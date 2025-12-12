@@ -40,12 +40,6 @@ export const useAsaas = () => {
     try {
       const queryParams = new URLSearchParams({ action, ...params });
       
-      const { data, error } = await supabase.functions.invoke('asaas', {
-        body: body || {},
-        method: body ? 'POST' : 'GET',
-      });
-
-      // Since we can't pass query params easily, let's restructure
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/asaas?${queryParams}`,
         {
@@ -53,6 +47,7 @@ export const useAsaas = () => {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
           body: body ? JSON.stringify(body) : undefined,
         }
