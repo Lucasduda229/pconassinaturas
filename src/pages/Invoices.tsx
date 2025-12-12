@@ -5,8 +5,7 @@ import StatusBadge from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useInvoices } from '@/hooks/useInvoices';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatBrazilDate } from '@/utils/dateUtils';
 
 const Invoices = () => {
   const [search, setSearch] = useState('');
@@ -94,7 +93,7 @@ const Invoices = () => {
               
               <div className="flex items-center justify-between text-xs sm:text-sm mb-3 sm:mb-4">
                 <span className="text-muted-foreground">
-                  {format(new Date(invoice.issued_at), 'dd/MM/yyyy', { locale: ptBR })}
+                  {formatBrazilDate(invoice.issued_at)}
                 </span>
                 <span className="font-semibold text-foreground">
                   {formatCurrency(Number(invoice.amount))}

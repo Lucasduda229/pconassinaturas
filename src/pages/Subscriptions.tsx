@@ -28,8 +28,8 @@ import {
 } from '@/components/ui/select';
 import { useSubscriptions, Subscription } from '@/hooks/useSubscriptions';
 import { useClients } from '@/hooks/useClients';
-import { format, differenceInDays, isPast, isToday } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { differenceInDays, isPast, isToday } from 'date-fns';
+import { formatBrazilDate, toBrazilTime } from '@/utils/dateUtils';
 import { toast } from 'sonner';
 
 const Subscriptions = () => {
@@ -161,7 +161,7 @@ const Subscriptions = () => {
             <div className="flex items-center gap-2">
               <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
               <span className="text-foreground text-sm font-medium">
-                {format(new Date(item.next_payment), 'dd/MM/yyyy', { locale: ptBR })}
+                {formatBrazilDate(item.next_payment)}
               </span>
             </div>
             <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full w-fit ${status.bgColor}`}>
@@ -391,7 +391,7 @@ const Subscriptions = () => {
                 <label className="text-sm font-medium">Data de Vencimento *</label>
                 <Input
                   type="date"
-                  value={format(new Date(editingSubscription.next_payment), 'yyyy-MM-dd')}
+                  value={formatBrazilDate(editingSubscription.next_payment, 'yyyy-MM-dd')}
                   onChange={(e) => setEditingSubscription({ ...editingSubscription, next_payment: new Date(e.target.value).toISOString() })}
                   className="bg-secondary/50 border-border/50"
                 />

@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatBrazilDate } from '@/utils/dateUtils';
 import { 
   Loader2, 
   LogOut, 
@@ -374,7 +374,7 @@ const Checkout = () => {
                         <div className="min-w-0">
                           <p className="text-[10px] text-gray-neutral">Vencimento</p>
                           <p className="text-base font-semibold text-foreground">
-                            {format(new Date(subscription.next_payment), "dd/MM/yyyy", { locale: ptBR })}
+                            {formatBrazilDate(subscription.next_payment)}
                           </p>
                         </div>
                       </div>
@@ -498,7 +498,7 @@ const Checkout = () => {
                             {payment.subscriptions?.plan_name || 'Pagamento'}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {format(new Date(payment.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                            {formatBrazilDate(payment.created_at, "dd/MM/yyyy 'às' HH:mm")}
                           </p>
                         </div>
                       </div>
