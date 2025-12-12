@@ -24,7 +24,7 @@ import {
   ArrowRight,
   X
 } from 'lucide-react';
-import logo from '@/assets/logo-pcon.png';
+import logo from '@/assets/logo-pcon-grande.png';
 import BlueBackground from '@/components/BlueBackground';
 
 interface Subscription {
@@ -213,7 +213,7 @@ const Checkout = () => {
         className="relative z-20 glass-card border-b border-border/20 sticky top-0"
       >
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <img src={logo} alt="Logo" className="h-10 w-auto" />
+          <img src={logo} alt="Logo" className="h-14 sm:h-16 w-auto" />
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground hidden sm:block">
               {client?.name?.split(' ')[0]}
