@@ -220,6 +220,52 @@ serve(async (req) => {
         );
       }
 
+      case 'reset-password': {
+        const { clientId, password } = body;
+        
+        if (!clientId || !password) {
+          return new Response(
+            JSON.stringify({ error: 'Dados incompletos' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Find user by client_id
+        const { data: existingUser, error: findError } = await supabase
+          .from('client_users')
+          .select('id')
+          .eq('client_id', clientId)
+          .single();
+
+        if (findError || !existingUser) {
+          return new Response(
+            JSON.stringify({ error: 'Usuário não encontrado' }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const passwordHash = await hashPassword(password);
+
+        const { error: updateError } = await supabase
+          .from('client_users')
+          .update({ password_hash: passwordHash, updated_at: new Date().toISOString() })
+          .eq('id', existingUser.id);
+
+        if (updateError) {
+          console.error('Password update error:', updateError);
+          return new Response(
+            JSON.stringify({ error: 'Erro ao atualizar senha' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        console.log('Password reset for client:', clientId);
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: 'Ação desconhecida' }),
