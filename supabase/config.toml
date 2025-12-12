@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.client-auth]
 verify_jwt = false
+
+[functions.payment-reminders]
+verify_jwt = false

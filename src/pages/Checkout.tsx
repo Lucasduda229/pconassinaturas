@@ -24,7 +24,8 @@ import {
   ArrowRight,
   X,
   Clock,
-  Receipt
+  Receipt,
+  FileText
 } from 'lucide-react';
 import logo from '@/assets/logo-pcon-grande.png';
 import logoAsaas from '@/assets/logo-asaas-white.png';
@@ -54,17 +55,18 @@ interface Payment {
 const Checkout = () => {
   const { client, isAuthenticated, isLoading: authLoading, logout } = useClientAuth();
   const navigate = useNavigate();
-  const { createCustomer, createPayment, getPixQrCode, loading: asaasLoading } = useAsaas();
+  const { createCustomer, createPayment, getPixQrCode, getBoletoData, loading: asaasLoading } = useAsaas();
   
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CREDIT_CARD' | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CREDIT_CARD' | 'BOLETO' | null>(null);
   const [pixData, setPixData] = useState<{ qrCode: string; copyPaste: string } | null>(null);
+  const [boletoData, setBoletoData] = useState<{ identificationField: string; bankSlipUrl: string } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentStep, setPaymentStep] = useState<'select' | 'processing' | 'pix' | 'success' | 'error'>('select');
+  const [paymentStep, setPaymentStep] = useState<'select' | 'processing' | 'pix' | 'boleto' | 'success' | 'error'>('select');
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -148,15 +150,17 @@ const Checkout = () => {
     setIsPaymentDialogOpen(true);
     setPaymentStep('select');
     setPixData(null);
+    setBoletoData(null);
   };
 
-  const handlePayment = async (method: 'PIX' | 'CREDIT_CARD') => {
+  const handlePayment = async (method: 'PIX' | 'CREDIT_CARD' | 'BOLETO') => {
     if (!client || !selectedSubscription) return;
     
     setPaymentMethod(method);
     setPaymentStep('processing');
     setIsProcessing(true);
     setPixData(null);
+    setBoletoData(null);
 
     try {
       const customerResult = await createCustomer({
@@ -193,6 +197,15 @@ const Checkout = () => {
           });
           setPaymentStep('pix');
         }
+      } else if (method === 'BOLETO') {
+        const boletoResult = await getBoletoData(paymentResult.id);
+        if (boletoResult) {
+          setBoletoData({
+            identificationField: boletoResult.identificationField,
+            bankSlipUrl: paymentResult.bankSlipUrl,
+          });
+          setPaymentStep('boleto');
+        }
       } else if (method === 'CREDIT_CARD') {
         if (paymentResult.invoiceUrl) {
           window.open(paymentResult.invoiceUrl, '_blank');
@@ -213,6 +226,13 @@ const Checkout = () => {
     if (pixData?.copyPaste) {
       navigator.clipboard.writeText(pixData.copyPaste);
       toast.success('Código PIX copiado!');
+    }
+  };
+
+  const copyBoletoCode = () => {
+    if (boletoData?.identificationField) {
+      navigator.clipboard.writeText(boletoData.identificationField);
+      toast.success('Linha digitável copiada!');
     }
   };
 
@@ -465,8 +485,10 @@ const Checkout = () => {
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-secondary/50 flex-shrink-0">
-                          {payment.payment_method === 'PIX' ? (
+                          {payment.payment_method === 'pix' ? (
                             <QrCode className="h-5 w-5 text-primary" />
+                          ) : payment.payment_method === 'boleto' ? (
+                            <FileText className="h-5 w-5 text-primary" />
                           ) : (
                             <CreditCard className="h-5 w-5 text-primary" />
                           )}
@@ -515,10 +537,14 @@ const Checkout = () => {
           <div className="flex flex-col items-center gap-4">
             <p className="text-xs text-gray-neutral">Pagamentos processados por</p>
             <img src={logoAsaas} alt="ASAAS" className="h-8 w-auto opacity-80" />
-            <div className="flex items-center gap-4 mt-2">
+            <div className="flex items-center gap-3 mt-2 flex-wrap justify-center">
               <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/30 border border-border/30">
                 <QrCode className="h-5 w-5 text-primary" />
                 <span className="text-sm text-muted-foreground">PIX</span>
+              </div>
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/30 border border-border/30">
+                <FileText className="h-5 w-5 text-primary" />
+                <span className="text-sm text-muted-foreground">Boleto</span>
               </div>
               <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/30 border border-border/30">
                 <CreditCard className="h-5 w-5 text-primary" />
@@ -578,6 +604,22 @@ const Checkout = () => {
                         <div className="text-left flex-1">
                           <p className="font-medium text-foreground">PIX</p>
                           <p className="text-xs text-gray-neutral">Aprovação instantânea</p>
+                        </div>
+                        <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </motion.button>
+
+                      <motion.button
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                        onClick={() => handlePayment('BOLETO')}
+                        className="w-full p-4 rounded-xl bg-secondary/30 border border-border/30 hover:border-primary/40 transition-all duration-200 flex items-center gap-4 group"
+                      >
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(75, 85, 99, 0.15)' }}>
+                          <FileText className="h-6 w-6" style={{ color: '#4B5563' }} />
+                        </div>
+                        <div className="text-left flex-1">
+                          <p className="font-medium text-foreground">Boleto Bancário</p>
+                          <p className="text-xs text-gray-neutral">Vencimento em 3 dias</p>
                         </div>
                         <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                       </motion.button>
@@ -662,6 +704,54 @@ const Checkout = () => {
                         A confirmação será automática após o pagamento.
                       </p>
                     </div>
+                  </motion.div>
+                )}
+
+                {/* Boleto */}
+                {paymentStep === 'boleto' && boletoData && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-6"
+                  >
+                    <div className="text-center">
+                      <h2 className="text-xl font-heading font-semibold text-foreground mb-2">
+                        Boleto Bancário
+                      </h2>
+                      <p className="text-gray-neutral text-sm">
+                        Copie a linha digitável ou baixe o boleto
+                      </p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="flex gap-2">
+                        <code className="flex-1 p-3 bg-secondary/40 rounded-lg text-xs break-all border border-border/30 text-muted-foreground">
+                          {boletoData.identificationField}
+                        </code>
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          className="flex-shrink-0 border-border/30"
+                          onClick={copyBoletoCode}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      
+                      {boletoData.bankSlipUrl && (
+                        <Button 
+                          className="w-full btn-blue"
+                          onClick={() => window.open(boletoData.bankSlipUrl, '_blank')}
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          Baixar Boleto PDF
+                        </Button>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-gray-neutral text-center">
+                      Vencimento em 3 dias úteis. O pagamento será confirmado em até 2 dias úteis após o pagamento.
+                    </p>
                   </motion.div>
                 )}
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Trash2, RefreshCw, CreditCard, QrCode, FileText, Loader2, Link2, Send, Eye, EyeOff, Pencil } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Trash2, RefreshCw, CreditCard, QrCode, FileText, Loader2, Link2, Send, Eye, EyeOff, Pencil, Download } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
@@ -31,6 +31,7 @@ import { useAsaas } from '@/hooks/useAsaas';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { exportToCSV, formatDateForExport } from '@/utils/exportUtils';
 
 const Clients = () => {
   const [search, setSearch] = useState('');
@@ -345,9 +346,24 @@ const Clients = () => {
         </div>
         
         <div className="flex gap-2 sm:gap-3">
-          <Button variant="outline" size="sm" className="h-10 sm:h-11 gap-2 border-border/50 bg-secondary/50 flex-1 sm:flex-none">
-            <Filter className="w-4 h-4" />
-            <span className="hidden sm:inline">Filtros</span>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-10 sm:h-11 gap-2 border-border/50 bg-secondary/50"
+            onClick={() => {
+              exportToCSV(clients, 'clientes', [
+                { key: 'name', label: 'Nome' },
+                { key: 'email', label: 'Email' },
+                { key: 'phone', label: 'Telefone' },
+                { key: 'document', label: 'CPF/CNPJ' },
+                { key: 'status', label: 'Status' },
+                { key: 'created_at', label: 'Cadastro' },
+              ]);
+              toast.success('Exportação concluída!');
+            }}
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Exportar</span>
           </Button>
           
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
