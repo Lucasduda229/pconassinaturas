@@ -181,10 +181,27 @@ const Clients = () => {
     setIsChargeDialogOpen(true);
   };
 
-  const openAccessDialog = (client: Client) => {
+  const [hasExistingAccess, setHasExistingAccess] = useState(false);
+  const [isCheckingAccess, setIsCheckingAccess] = useState(false);
+
+  const openAccessDialog = async (client: Client) => {
     setSelectedClient(client);
     setAccessPassword('');
+    setHasExistingAccess(false);
+    setIsCheckingAccess(true);
     setIsAccessDialogOpen(true);
+
+    // Check if access already exists
+    try {
+      const { data } = await import('@/integrations/supabase/client').then(m => 
+        m.supabase.from('client_users').select('id').eq('client_id', client.id).single()
+      );
+      setHasExistingAccess(!!data);
+    } catch {
+      setHasExistingAccess(false);
+    } finally {
+      setIsCheckingAccess(false);
+    }
   };
 
   const handleCreateAccess = async () => {
@@ -219,24 +236,86 @@ const Clients = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        toast.error(data.error || 'Erro ao criar acesso');
+        if (data.error === 'Email já cadastrado') {
+          toast.error('Este cliente já possui acesso. Use "Reenviar Link" ou "Redefinir Senha".');
+        } else {
+          toast.error(data.error || 'Erro ao criar acesso');
+        }
         return;
       }
 
       toast.success('Acesso criado com sucesso!');
+      sendWhatsAppLink();
       setIsAccessDialogOpen(false);
-      
-      // Open WhatsApp with the link
-      const checkoutUrl = `${window.location.origin}/cliente`;
-      const message = `Olá ${selectedClient.name}!\n\nSeu acesso ao portal de pagamentos foi criado.\n\n📱 Acesse: ${checkoutUrl}\n📧 Email: ${selectedClient.email}\n🔐 Senha: ${accessPassword}\n\nQualquer dúvida, estamos à disposição!`;
-      const whatsappUrl = `https://wa.me/${selectedClient.phone?.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
-      window.open(whatsappUrl, '_blank');
     } catch (error) {
       console.error('Error creating access:', error);
       toast.error('Erro ao criar acesso');
     } finally {
       setIsCreatingAccess(false);
     }
+  };
+
+  const handleResetPassword = async () => {
+    if (!selectedClient || !accessPassword) {
+      toast.error('Por favor, defina uma nova senha');
+      return;
+    }
+
+    if (accessPassword.length < 6) {
+      toast.error('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+
+    setIsCreatingAccess(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/client-auth?action=reset-password`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({
+            clientId: selectedClient.id,
+            password: accessPassword,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast.error(data.error || 'Erro ao redefinir senha');
+        return;
+      }
+
+      toast.success('Senha redefinida com sucesso!');
+      sendWhatsAppLink();
+      setIsAccessDialogOpen(false);
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      toast.error('Erro ao redefinir senha');
+    } finally {
+      setIsCreatingAccess(false);
+    }
+  };
+
+  const sendWhatsAppLink = () => {
+    if (!selectedClient) return;
+    const checkoutUrl = `${window.location.origin}/cliente`;
+    const message = `Olá ${selectedClient.name}!\n\nSeu acesso ao portal de pagamentos foi criado.\n\n📱 Acesse: ${checkoutUrl}\n📧 Email: ${selectedClient.email}\n🔐 Senha: ${accessPassword}\n\nQualquer dúvida, estamos à disposição!`;
+    const whatsappUrl = `https://wa.me/${selectedClient.phone?.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
+  const handleResendLink = () => {
+    if (!selectedClient) return;
+    const checkoutUrl = `${window.location.origin}/cliente`;
+    const message = `Olá ${selectedClient.name}!\n\nSegue o link para acessar seu portal de pagamentos:\n\n📱 Acesse: ${checkoutUrl}\n📧 Email: ${selectedClient.email}\n\nCaso tenha esquecido a senha, entre em contato conosco.`;
+    const whatsappUrl = `https://wa.me/${selectedClient.phone?.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+    toast.success('Link enviado via WhatsApp!');
   };
 
   const copyCheckoutLink = () => {
@@ -583,89 +662,187 @@ const Clients = () => {
       <Dialog open={isAccessDialogOpen} onOpenChange={setIsAccessDialogOpen}>
         <DialogContent className="glass-card border-border/50 max-w-[95vw] sm:max-w-md mx-auto">
           <DialogHeader>
-            <DialogTitle className="font-heading text-xl">Criar Acesso ao Checkout</DialogTitle>
+            <DialogTitle className="font-heading text-xl">
+              {hasExistingAccess ? 'Gerenciar Acesso' : 'Criar Acesso ao Checkout'}
+            </DialogTitle>
             <DialogDescription>
-              Criar acesso para {selectedClient?.name} acessar a página de checkout e pagar suas assinaturas.
+              {hasExistingAccess 
+                ? `O cliente ${selectedClient?.name} já possui acesso. Você pode reenviar o link ou redefinir a senha.`
+                : `Criar acesso para ${selectedClient?.name} acessar a página de checkout e pagar suas assinaturas.`
+              }
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 mt-4">
-            <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-              <p className="text-sm font-medium">Dados de acesso:</p>
-              <p className="text-sm text-muted-foreground">
-                <strong>Email:</strong> {selectedClient?.email}
-              </p>
+          {isCheckingAccess ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Senha *</label>
-              <div className="relative">
-                <Input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Mínimo 6 caracteres"
-                  value={accessPassword}
-                  onChange={(e) => setAccessPassword(e.target.value)}
-                  className="bg-secondary/50 border-border/50 pr-10"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg">
-              <Send className="h-4 w-4 text-primary flex-shrink-0" />
-              <p className="text-xs text-primary">
-                Após criar o acesso, será aberto o WhatsApp com o link e senha para enviar ao cliente.
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={copyCheckoutLink}
-                className="gap-2"
-              >
-                <Link2 className="w-4 h-4" />
-                Copiar link
-              </Button>
-            </div>
-            
-            <div className="flex gap-3 pt-4">
-              <Button 
-                variant="outline" 
-                className="flex-1 border-border/50"
-                onClick={() => setIsAccessDialogOpen(false)}
-                disabled={isCreatingAccess}
-              >
-                Cancelar
-              </Button>
-              <Button 
-                className="flex-1" 
-                onClick={handleCreateAccess}
-                disabled={isCreatingAccess || !accessPassword}
-              >
-                {isCreatingAccess ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Criando...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4 mr-2" />
-                    Criar e Enviar
-                  </>
+          ) : (
+            <div className="space-y-4 mt-4">
+              <div className="p-4 bg-muted/50 rounded-lg space-y-2">
+                <p className="text-sm font-medium">Dados de acesso:</p>
+                <p className="text-sm text-muted-foreground">
+                  <strong>Email:</strong> {selectedClient?.email}
+                </p>
+                {hasExistingAccess && (
+                  <p className="text-xs text-success">✓ Acesso já configurado</p>
                 )}
-              </Button>
+              </div>
+
+              {hasExistingAccess ? (
+                <>
+                  <div className="flex items-center gap-2 p-3 bg-warning/10 rounded-lg">
+                    <RefreshCw className="h-4 w-4 text-warning flex-shrink-0" />
+                    <p className="text-xs text-warning">
+                      Para redefinir a senha, digite uma nova senha abaixo.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Nova Senha (opcional)</label>
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="Deixe vazio para apenas reenviar link"
+                        value={accessPassword}
+                        onChange={(e) => setAccessPassword(e.target.value)}
+                        className="bg-secondary/50 border-border/50 pr-10"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 flex-wrap">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={copyCheckoutLink}
+                      className="gap-2"
+                    >
+                      <Link2 className="w-4 h-4" />
+                      Copiar link
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleResendLink}
+                      className="gap-2"
+                    >
+                      <Send className="w-4 h-4" />
+                      Reenviar Link
+                    </Button>
+                  </div>
+                  
+                  <div className="flex gap-3 pt-4">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1 border-border/50"
+                      onClick={() => setIsAccessDialogOpen(false)}
+                      disabled={isCreatingAccess}
+                    >
+                      Fechar
+                    </Button>
+                    <Button 
+                      className="flex-1" 
+                      onClick={handleResetPassword}
+                      disabled={isCreatingAccess || !accessPassword}
+                    >
+                      {isCreatingAccess ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Redefinindo...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                          Redefinir Senha
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Senha *</label>
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="Mínimo 6 caracteres"
+                        value={accessPassword}
+                        onChange={(e) => setAccessPassword(e.target.value)}
+                        className="bg-secondary/50 border-border/50 pr-10"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg">
+                    <Send className="h-4 w-4 text-primary flex-shrink-0" />
+                    <p className="text-xs text-primary">
+                      Após criar o acesso, será aberto o WhatsApp com o link e senha para enviar ao cliente.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={copyCheckoutLink}
+                      className="gap-2"
+                    >
+                      <Link2 className="w-4 h-4" />
+                      Copiar link
+                    </Button>
+                  </div>
+                  
+                  <div className="flex gap-3 pt-4">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1 border-border/50"
+                      onClick={() => setIsAccessDialogOpen(false)}
+                      disabled={isCreatingAccess}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button 
+                      className="flex-1" 
+                      onClick={handleCreateAccess}
+                      disabled={isCreatingAccess || !accessPassword}
+                    >
+                      {isCreatingAccess ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Criando...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4 mr-2" />
+                          Criar e Enviar
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
 
