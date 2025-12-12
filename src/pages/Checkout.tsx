@@ -20,12 +20,12 @@ import {
   CheckCircle,
   AlertCircle,
   Copy,
-  Sparkles,
   Shield,
-  Zap
+  ArrowRight,
+  X
 } from 'lucide-react';
 import logo from '@/assets/logo-pcon.png';
-import FuturisticBackground from '@/components/FuturisticBackground';
+import BlueBackground from '@/components/BlueBackground';
 
 interface Subscription {
   id: string;
@@ -47,6 +47,7 @@ const Checkout = () => {
   const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CREDIT_CARD' | null>(null);
   const [pixData, setPixData] = useState<{ qrCode: string; copyPaste: string } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentStep, setPaymentStep] = useState<'select' | 'processing' | 'pix' | 'success' | 'error'>('select');
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -91,10 +92,17 @@ const Checkout = () => {
     navigate('/cliente');
   };
 
+  const openPaymentModal = () => {
+    setIsPaymentDialogOpen(true);
+    setPaymentStep('select');
+    setPixData(null);
+  };
+
   const handlePayment = async (method: 'PIX' | 'CREDIT_CARD') => {
     if (!client || !subscription) return;
     
     setPaymentMethod(method);
+    setPaymentStep('processing');
     setIsProcessing(true);
     setPixData(null);
 
@@ -131,18 +139,18 @@ const Checkout = () => {
             qrCode: pixResult.encodedImage,
             copyPaste: pixResult.payload,
           });
+          setPaymentStep('pix');
         }
-        setIsPaymentDialogOpen(true);
       } else if (method === 'CREDIT_CARD') {
         if (paymentResult.invoiceUrl) {
           window.open(paymentResult.invoiceUrl, '_blank');
-          toast.success('Redirecionando para pagamento com cartão...');
+          setPaymentStep('success');
+          toast.success('Redirecionando para pagamento...');
         }
       }
-
-      toast.success('Cobrança criada com sucesso!');
     } catch (error: any) {
       console.error('Payment error:', error);
+      setPaymentStep('error');
       toast.error(error.message || 'Erro ao processar pagamento');
     } finally {
       setIsProcessing(false);
@@ -180,13 +188,14 @@ const Checkout = () => {
   if (authLoading || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center relative">
-        <FuturisticBackground />
+        <BlueBackground />
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="relative z-10"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="relative z-10 flex flex-col items-center gap-4"
         >
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <div className="w-12 h-12 rounded-full spinner-blue" />
+          <p className="text-muted-foreground text-sm">Carregando...</p>
         </motion.div>
       </div>
     );
@@ -194,46 +203,27 @@ const Checkout = () => {
 
   return (
     <div className="min-h-screen relative">
-      <FuturisticBackground />
+      <BlueBackground />
       
       {/* Header */}
       <motion.header 
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="relative z-20 glass-card border-b border-border/30 sticky top-0"
+        transition={{ duration: 0.4 }}
+        className="relative z-20 glass-card border-b border-border/20 sticky top-0"
       >
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <motion.div
-                className="absolute inset-0 blur-xl opacity-50"
-                style={{
-                  background: 'linear-gradient(135deg, hsl(220 70% 55%), hsl(280 75% 45%))',
-                }}
-                animate={{
-                  scale: [1, 1.2, 1],
-                  opacity: [0.35, 0.55, 0.35],
-                }}
-                transition={{
-                  duration: 4,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                }}
-              />
-              <img src={logo} alt="Logo" className="h-12 w-auto relative z-10" />
-            </div>
-          </div>
+          <img src={logo} alt="Logo" className="h-10 w-auto" />
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground hidden sm:block">
-              Olá, <span className="text-foreground font-medium">{client?.name?.split(' ')[0]}</span>
+              {client?.name?.split(' ')[0]}
             </span>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button 
-                variant="outline" 
+                variant="ghost" 
                 size="sm" 
                 onClick={handleLogout}
-                className="btn-premium-outline"
+                className="text-muted-foreground hover:text-foreground hover:bg-secondary/50"
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 Sair
@@ -244,157 +234,130 @@ const Checkout = () => {
       </motion.header>
 
       {/* Main Content */}
-      <main className="relative z-10 container mx-auto px-4 py-8 sm:py-12 max-w-2xl">
+      <main className="relative z-10 container mx-auto px-4 py-10 sm:py-16 max-w-xl">
         <div className="space-y-8">
-          {/* Welcome Section */}
+          {/* Title */}
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.7 }}
+            transition={{ delay: 0.1, duration: 0.5 }}
             className="text-center"
           >
-            <h1 className="text-3xl sm:text-4xl font-heading font-bold text-gradient-light mb-3">
+            <h1 className="text-2xl sm:text-3xl font-heading font-bold text-foreground mb-2">
               Minha Assinatura
             </h1>
-            <p className="text-muted-foreground">
-              Gerencie sua assinatura e realize pagamentos com segurança
+            <p className="text-gray-neutral text-sm">
+              Gerencie e realize pagamentos com segurança
             </p>
           </motion.div>
 
           {/* Subscription Card */}
           {subscription ? (
             <motion.div
-              initial={{ opacity: 0, y: 30, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ delay: 0.3, duration: 0.7 }}
-              className="glass-card-premium p-6 sm:p-8"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="glass-card p-6 sm:p-8"
             >
-              {/* Header */}
-              <div className="flex items-start justify-between mb-8">
+              {/* Plan Header */}
+              <div className="flex items-start justify-between mb-6">
                 <div>
-                  <h2 className="text-2xl font-heading font-bold text-foreground mb-2">
+                  <h2 className="text-xl font-heading font-semibold text-foreground">
                     {subscription.plan_name}
                   </h2>
-                  <p className="text-muted-foreground text-sm">Detalhes da sua assinatura</p>
+                  <p className="text-gray-neutral text-sm mt-1">Plano ativo</p>
                 </div>
                 <Badge 
-                  className={`${getStatusConfig(subscription.status).className} flex items-center gap-1.5 px-3 py-1 border rounded-full`}
+                  className={`${getStatusConfig(subscription.status).className} flex items-center gap-1.5 px-3 py-1 border rounded-full text-xs`}
                 >
                   {getStatusConfig(subscription.status).icon}
                   {getStatusConfig(subscription.status).label}
                 </Badge>
               </div>
 
-              {/* Info Grid */}
-              <div className="grid gap-4 sm:grid-cols-2 mb-8">
+              {/* Info Cards */}
+              <div className="grid gap-4 sm:grid-cols-2 mb-6">
                 <motion.div 
-                  className="glass-card p-5 flex items-center gap-4"
-                  whileHover={{ scale: 1.02, y: -2 }}
-                  transition={{ duration: 0.25 }}
+                  className="p-4 rounded-xl bg-secondary/30 border border-border/30"
+                  whileHover={{ scale: 1.01 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-                    <DollarSign className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Valor Mensal</p>
-                    <p className="text-2xl font-bold text-foreground">
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(subscription.value))}
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(30, 79, 163, 0.2)' }}>
+                      <DollarSign className="h-5 w-5" style={{ color: '#1E4FA3' }} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-neutral">Valor</p>
+                      <p className="text-lg font-semibold text-foreground">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(subscription.value))}
+                      </p>
+                    </div>
                   </div>
                 </motion.div>
 
                 <motion.div 
-                  className="glass-card p-5 flex items-center gap-4"
-                  whileHover={{ scale: 1.02, y: -2 }}
-                  transition={{ duration: 0.25 }}
+                  className="p-4 rounded-xl bg-secondary/30 border border-border/30"
+                  whileHover={{ scale: 1.01 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center">
-                    <Calendar className="h-6 w-6 text-accent" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Próximo Vencimento</p>
-                    <p className="text-xl font-bold text-foreground">
-                      {format(new Date(subscription.next_payment), "dd 'de' MMM", { locale: ptBR })}
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(42, 63, 134, 0.2)' }}>
+                      <Calendar className="h-5 w-5" style={{ color: '#2A3F86' }} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-neutral">Vencimento</p>
+                      <p className="text-lg font-semibold text-foreground">
+                        {format(new Date(subscription.next_payment), "dd/MM/yyyy", { locale: ptBR })}
+                      </p>
+                    </div>
                   </div>
                 </motion.div>
               </div>
 
               {/* Divider */}
-              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent mb-8" />
+              <div className="h-px bg-border/30 mb-6" />
 
-              {/* Payment Section */}
-              <div className="space-y-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Zap className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-heading font-semibold text-foreground">Realizar Pagamento</h3>
-                    <p className="text-sm text-muted-foreground">Escolha sua forma de pagamento</p>
-                  </div>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <motion.div whileHover={{ scale: 1.03, y: -3 }} whileTap={{ scale: 0.98 }}>
-                    <Button
-                      size="lg"
-                      className="w-full h-auto py-6 btn-premium flex-col gap-3"
-                      onClick={() => handlePayment('PIX')}
-                      disabled={isProcessing || asaasLoading}
-                    >
-                      <span className="relative z-10 flex flex-col items-center gap-2">
-                        {isProcessing && paymentMethod === 'PIX' ? (
-                          <Loader2 className="h-8 w-8 animate-spin" />
-                        ) : (
-                          <QrCode className="h-8 w-8" />
-                        )}
-                        <span className="text-base font-semibold">Pagar com PIX</span>
-                        <span className="text-xs opacity-80 font-normal">Aprovação instantânea</span>
-                      </span>
-                    </Button>
-                  </motion.div>
-
-                  <motion.div whileHover={{ scale: 1.03, y: -3 }} whileTap={{ scale: 0.98 }}>
-                    <Button
-                      size="lg"
-                      className="w-full h-auto py-6 btn-premium-outline flex-col gap-3"
-                      onClick={() => handlePayment('CREDIT_CARD')}
-                      disabled={isProcessing || asaasLoading}
-                    >
-                      {isProcessing && paymentMethod === 'CREDIT_CARD' ? (
-                        <Loader2 className="h-8 w-8 animate-spin" />
-                      ) : (
-                        <CreditCard className="h-8 w-8" />
-                      )}
-                      <span className="text-base font-semibold">Cartão de Crédito</span>
-                      <span className="text-xs opacity-80 font-normal">Parcele em até 12x</span>
-                    </Button>
-                  </motion.div>
-                </div>
-              </div>
+              {/* Pay Button */}
+              <motion.div
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+              >
+                <Button
+                  size="lg"
+                  className="w-full h-14 btn-blue text-base"
+                  onClick={openPaymentModal}
+                  disabled={isProcessing || asaasLoading}
+                >
+                  {isProcessing ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Processando...
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      Pagar Agora
+                      <ArrowRight className="h-5 w-5" />
+                    </span>
+                  )}
+                </Button>
+              </motion.div>
 
               {/* Security Badge */}
-              <motion.div 
-                className="mt-8 flex items-center justify-center gap-2 text-muted-foreground"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.9 }}
-              >
+              <div className="mt-6 flex items-center justify-center gap-2 text-gray-neutral">
                 <Shield className="h-4 w-4" />
-                <span className="text-xs">Pagamento 100% seguro e criptografado</span>
-              </motion.div>
+                <span className="text-xs">Pagamento 100% seguro</span>
+              </div>
             </motion.div>
           ) : (
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.7 }}
-              className="glass-card-premium p-12 text-center"
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="glass-card p-10 text-center"
             >
-              <AlertCircle className="h-16 w-16 mx-auto text-muted-foreground mb-6" />
-              <h3 className="text-xl font-heading font-semibold mb-3">Nenhuma assinatura ativa</h3>
-              <p className="text-muted-foreground">
+              <AlertCircle className="h-14 w-14 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-heading font-semibold mb-2">Nenhuma assinatura ativa</h3>
+              <p className="text-gray-neutral text-sm">
                 Você não possui uma assinatura ativa no momento.
               </p>
             </motion.div>
@@ -402,82 +365,185 @@ const Checkout = () => {
         </div>
       </main>
 
-      {/* PIX Payment Dialog */}
+      {/* Payment Modal */}
       <AnimatePresence>
         {isPaymentDialogOpen && (
           <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-            <DialogContent className="glass-card-premium border-border/30 sm:max-w-md p-0 overflow-hidden">
+            <DialogContent className="glass-card border-border/30 sm:max-w-md p-0 overflow-hidden">
               <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
                 className="p-6 sm:p-8"
               >
-                <div className="text-center mb-6">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-primary/20 flex items-center justify-center">
-                    <QrCode className="h-8 w-8 text-primary" />
-                  </div>
-                  <h2 className="text-2xl font-heading font-bold text-foreground mb-2">
-                    Pagamento PIX
-                  </h2>
-                  <p className="text-muted-foreground text-sm">
-                    Escaneie o QR Code ou copie o código
-                  </p>
-                </div>
+                {/* Close button */}
+                <button
+                  onClick={() => setIsPaymentDialogOpen(false)}
+                  className="absolute top-4 right-4 p-2 rounded-lg hover:bg-secondary/50 transition-colors"
+                >
+                  <X className="h-5 w-5 text-muted-foreground" />
+                </button>
 
-                {pixData?.qrCode && (
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.2 }}
-                    className="flex justify-center p-6 bg-white rounded-2xl mb-6"
+                {/* Select Payment Method */}
+                {paymentStep === 'select' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-6"
                   >
-                    <img 
-                      src={`data:image/png;base64,${pixData.qrCode}`} 
-                      alt="QR Code PIX" 
-                      className="w-48 h-48"
-                    />
-                  </motion.div>
-                )}
+                    <div className="text-center">
+                      <h2 className="text-xl font-heading font-semibold text-foreground mb-2">
+                        Escolha o pagamento
+                      </h2>
+                      <p className="text-gray-neutral text-sm">
+                        Selecione a forma de pagamento
+                      </p>
+                    </div>
 
-                {pixData?.copyPaste && (
-                  <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.3 }}
-                    className="space-y-3"
-                  >
-                    <p className="text-sm text-muted-foreground text-center">
-                      Ou copie o código PIX:
-                    </p>
-                    <div className="flex gap-2">
-                      <code className="flex-1 p-3 bg-secondary/50 rounded-xl text-xs break-all max-h-20 overflow-y-auto border border-border/30">
-                        {pixData.copyPaste}
-                      </code>
-                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <Button 
-                          size="icon" 
-                          className="btn-premium h-12 w-12"
-                          onClick={copyPixCode}
-                        >
-                          <Copy className="h-5 w-5 relative z-10" />
-                        </Button>
-                      </motion.div>
+                    <div className="space-y-3">
+                      <motion.button
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                        onClick={() => handlePayment('PIX')}
+                        className="w-full p-4 rounded-xl bg-secondary/30 border border-border/30 hover:border-primary/40 transition-all duration-200 flex items-center gap-4 group"
+                      >
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(30, 79, 163, 0.15)' }}>
+                          <QrCode className="h-6 w-6" style={{ color: '#1E4FA3' }} />
+                        </div>
+                        <div className="text-left flex-1">
+                          <p className="font-medium text-foreground">PIX</p>
+                          <p className="text-xs text-gray-neutral">Aprovação instantânea</p>
+                        </div>
+                        <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </motion.button>
+
+                      <motion.button
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                        onClick={() => handlePayment('CREDIT_CARD')}
+                        className="w-full p-4 rounded-xl bg-secondary/30 border border-border/30 hover:border-primary/40 transition-all duration-200 flex items-center gap-4 group"
+                      >
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(42, 63, 134, 0.15)' }}>
+                          <CreditCard className="h-6 w-6" style={{ color: '#2A3F86' }} />
+                        </div>
+                        <div className="text-left flex-1">
+                          <p className="font-medium text-foreground">Cartão de Crédito</p>
+                          <p className="text-xs text-gray-neutral">Parcele em até 12x</p>
+                        </div>
+                        <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </motion.button>
                     </div>
                   </motion.div>
                 )}
 
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.4 }}
-                  className="mt-6 flex items-center gap-3 p-4 rounded-xl bg-primary/10 border border-primary/20"
-                >
-                  <Sparkles className="h-5 w-5 text-primary flex-shrink-0" />
-                  <p className="text-xs text-foreground/80">
-                    Após o pagamento, a confirmação será automática em poucos minutos.
-                  </p>
-                </motion.div>
+                {/* Processing */}
+                {paymentStep === 'processing' && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="py-10 flex flex-col items-center gap-4"
+                  >
+                    <div className="w-12 h-12 rounded-full spinner-blue" />
+                    <p className="text-foreground font-medium">Processando pagamento...</p>
+                    <p className="text-gray-neutral text-sm">Aguarde um momento</p>
+                  </motion.div>
+                )}
+
+                {/* PIX QR Code */}
+                {paymentStep === 'pix' && pixData && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-6"
+                  >
+                    <div className="text-center">
+                      <h2 className="text-xl font-heading font-semibold text-foreground mb-2">
+                        Pagamento PIX
+                      </h2>
+                      <p className="text-gray-neutral text-sm">
+                        Escaneie o QR Code para pagar
+                      </p>
+                    </div>
+
+                    <div className="flex justify-center p-4 bg-white rounded-xl">
+                      <img 
+                        src={`data:image/png;base64,${pixData.qrCode}`} 
+                        alt="QR Code PIX" 
+                        className="w-44 h-44"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-xs text-gray-neutral text-center">Ou copie o código:</p>
+                      <div className="flex gap-2">
+                        <code className="flex-1 p-3 bg-secondary/40 rounded-lg text-xs break-all max-h-16 overflow-y-auto border border-border/30 text-muted-foreground">
+                          {pixData.copyPaste}
+                        </code>
+                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                          <Button 
+                            size="icon" 
+                            className="btn-blue h-12 w-12"
+                            onClick={copyPixCode}
+                          >
+                            <Copy className="h-5 w-5" />
+                          </Button>
+                        </motion.div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-center gap-3">
+                      <CheckCircle className="h-5 w-5 flex-shrink-0" style={{ color: '#1E4FA3' }} />
+                      <p className="text-xs text-foreground/80">
+                        A confirmação será automática após o pagamento.
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Success */}
+                {paymentStep === 'success' && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="py-8 flex flex-col items-center gap-4 text-center"
+                  >
+                    <div className="w-16 h-16 rounded-full bg-success/20 flex items-center justify-center">
+                      <CheckCircle className="h-8 w-8 text-success" />
+                    </div>
+                    <h3 className="text-lg font-heading font-semibold text-foreground">
+                      Redirecionado com sucesso!
+                    </h3>
+                    <p className="text-gray-neutral text-sm">
+                      Complete o pagamento na nova janela.
+                    </p>
+                  </motion.div>
+                )}
+
+                {/* Error */}
+                {paymentStep === 'error' && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="py-8 flex flex-col items-center gap-4 text-center"
+                  >
+                    <div className="w-16 h-16 rounded-full bg-destructive/20 flex items-center justify-center">
+                      <AlertCircle className="h-8 w-8 text-destructive" />
+                    </div>
+                    <h3 className="text-lg font-heading font-semibold text-foreground">
+                      Erro no pagamento
+                    </h3>
+                    <p className="text-gray-neutral text-sm">
+                      Tente novamente ou escolha outro método.
+                    </p>
+                    <Button 
+                      className="mt-2 btn-outline-blue"
+                      onClick={() => setPaymentStep('select')}
+                    >
+                      Tentar novamente
+                    </Button>
+                  </motion.div>
+                )}
               </motion.div>
             </DialogContent>
           </Dialog>

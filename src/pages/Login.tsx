@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Lock, User, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, Lock, User, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import FuturisticBackground from '@/components/FuturisticBackground';
+import BlueBackground from '@/components/BlueBackground';
 import { useAuth } from '@/contexts/AuthContext';
 import logo from '@/assets/logo-pcon.png';
 
@@ -48,69 +48,54 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative">
-      <FuturisticBackground />
+      <BlueBackground />
       
       <motion.div 
         className="w-full max-w-sm sm:max-w-md relative z-10"
-        initial={{ opacity: 0, y: 30, scale: 0.95 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.7, ease: 'easeOut' }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
       >
-        {/* Logo with neon glow */}
+        {/* Logo */}
         <motion.div 
-          className="text-center mb-6 sm:mb-8"
-          initial={{ opacity: 0, scale: 0.8 }}
+          className="text-center mb-8"
+          initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2, duration: 0.6 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
         >
-          <div className="inline-flex items-center justify-center gap-3 mb-3 sm:mb-4 relative">
-            <motion.div
-              className="absolute inset-0 blur-2xl opacity-60"
-              style={{
-                background: 'linear-gradient(135deg, hsl(220 70% 55%), hsl(280 75% 45%))',
-              }}
-              animate={{
-                scale: [1, 1.25, 1],
-                opacity: [0.35, 0.6, 0.35],
-              }}
-              transition={{
-                duration: 4,
-                repeat: Infinity,
-                ease: 'easeInOut',
-              }}
-            />
-            <img src={logo} alt="P-CON" className="h-16 sm:h-24 w-auto relative z-10 neon-glow" />
+          <div className="inline-flex items-center justify-center gap-3 mb-4">
+            <img src={logo} alt="P-CON" className="h-14 sm:h-18 w-auto" />
           </div>
           <h1 className="font-heading text-2xl sm:text-3xl font-bold text-foreground">
-            P-CON <span className="text-gradient">Assinaturas</span>
+            P-CON Assinaturas
           </h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-2">
+          <p className="text-sm sm:text-base text-gray-neutral mt-2">
             Sistema de Gestão de Assinaturas
           </p>
         </motion.div>
 
         {/* Login Card */}
         <motion.div 
-          className="glass-card-premium p-6 sm:p-8"
-          initial={{ opacity: 0, y: 20 }}
+          className="glass-card p-6 sm:p-8"
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.6 }}
+          transition={{ delay: 0.15, duration: 0.4 }}
         >
-          <h2 className="font-heading text-lg sm:text-xl font-semibold text-foreground mb-5 sm:mb-6">
+          <h2 className="font-heading text-lg sm:text-xl font-semibold text-foreground mb-6">
             Entrar no Sistema
           </h2>
           
-          <form onSubmit={handleLogin} className="space-y-4 sm:space-y-5">
+          <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground/80">Usuário</label>
               <div className="relative group">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors duration-200" />
                 <Input
                   type="text"
                   placeholder="Digite seu usuário"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="pl-12 bg-secondary/50 border-border/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 h-12 rounded-xl transition-all"
+                  className="pl-12 bg-secondary/50 border-border/50 focus:border-primary/60 focus:ring-2 focus:ring-primary/20 h-12 rounded-xl transition-all duration-200"
                   autoComplete="username"
                 />
               </div>
@@ -119,13 +104,13 @@ const Login = () => {
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground/80">Senha</label>
               <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors duration-200" />
                 <Input
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-12 pr-12 bg-secondary/50 border-border/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 h-12 rounded-xl transition-all"
+                  className="pl-12 pr-12 bg-secondary/50 border-border/50 focus:border-primary/60 focus:ring-2 focus:ring-primary/20 h-12 rounded-xl transition-all duration-200"
                   autoComplete="current-password"
                 />
                 <button
@@ -139,34 +124,33 @@ const Login = () => {
             </div>
 
             <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              className="pt-2"
             >
               <Button 
                 type="submit" 
-                className="w-full h-12 btn-premium text-base font-semibold"
+                className="w-full h-12 btn-blue text-base font-semibold"
                 disabled={isLoading}
               >
-                <span className="relative z-10 flex items-center justify-center gap-2">
-                  {isLoading ? (
-                    'Entrando...'
-                  ) : (
-                    <>
-                      <Sparkles className="h-5 w-5" />
-                      Entrar
-                    </>
-                  )}
-                </span>
+                {isLoading ? (
+                  'Entrando...'
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    Entrar
+                    <ArrowRight className="h-5 w-5" />
+                  </span>
+                )}
               </Button>
             </motion.div>
           </form>
         </motion.div>
 
         <motion.p 
-          className="text-center text-muted-foreground/60 text-xs sm:text-sm mt-4 sm:mt-6"
+          className="text-center text-muted-foreground/60 text-xs sm:text-sm mt-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.7 }}
+          transition={{ delay: 0.3 }}
         >
           © 2024 P-CON Construct. Todos os direitos reservados.
         </motion.p>
