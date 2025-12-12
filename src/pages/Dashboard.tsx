@@ -6,16 +6,30 @@ import {
   TrendingUp,
   Calendar,
   CheckCircle,
-  XCircle
+  XCircle,
+  RotateCcw
 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import MetricCard from '@/components/MetricCard';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
+import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { mockDashboardMetrics, mockSubscriptions, mockPayments } from '@/data/mockData';
 import { Subscription, Payment } from '@/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 const Dashboard = () => {
   const formatCurrency = (value: number) => {
@@ -111,11 +125,47 @@ const Dashboard = () => {
     },
   ];
 
+  const handleResetSystem = () => {
+    // Clear all localStorage/sessionStorage data
+    localStorage.clear();
+    sessionStorage.clear();
+    toast.success('Sistema resetado com sucesso! A página será recarregada.');
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 1500);
+  };
+
   return (
     <DashboardLayout 
       title="Dashboard" 
       subtitle="Visão geral do sistema de assinaturas"
     >
+      {/* Reset Button */}
+      <div className="flex justify-end mb-4">
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" size="sm" className="gap-2">
+              <RotateCcw className="w-4 h-4" />
+              Resetar Sistema
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent className="glass-card border-border/50">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="font-heading">Resetar Sistema</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação irá limpar todos os dados locais e resetar o sistema para o estado inicial. 
+                Você precisará fazer login novamente. Deseja continuar?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="border-border/50">Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleResetSystem} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Resetar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
       {/* Primary Metrics Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 lg:mb-8">
         <MetricCard

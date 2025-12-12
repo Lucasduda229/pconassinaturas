@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Search, Filter, FileText, Download, Eye } from 'lucide-react';
+import { Search, Filter, FileText, Download, Eye, Trash2 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import StatusBadge from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 const mockInvoices = [
   {
@@ -36,6 +37,12 @@ const mockInvoices = [
 
 const Invoices = () => {
   const [search, setSearch] = useState('');
+  const [invoices, setInvoices] = useState(mockInvoices);
+
+  const handleDeleteInvoice = (invoiceId: string) => {
+    setInvoices(invoices.filter(i => i.id !== invoiceId));
+    toast.success('Nota fiscal removida com sucesso!');
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -44,12 +51,12 @@ const Invoices = () => {
     }).format(value);
   };
 
-  const filteredInvoices = mockInvoices.filter(invoice =>
+  const filteredInvoices = invoices.filter(invoice =>
     invoice.clientName.toLowerCase().includes(search.toLowerCase()) ||
     invoice.number.toLowerCase().includes(search.toLowerCase())
   );
 
-  const totalIssued = mockInvoices.reduce((acc, inv) => acc + inv.amount, 0);
+  const totalIssued = invoices.reduce((acc, inv) => acc + inv.amount, 0);
 
   return (
     <DashboardLayout 
@@ -77,7 +84,7 @@ const Invoices = () => {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
         <div className="glass-card p-3 sm:p-4 text-center">
-          <p className="text-xl sm:text-2xl font-bold text-foreground">{mockInvoices.length}</p>
+          <p className="text-xl sm:text-2xl font-bold text-foreground">{invoices.length}</p>
           <p className="text-xs sm:text-sm text-muted-foreground">Emitidas</p>
         </div>
         <div className="glass-card p-3 sm:p-4 text-center">
@@ -85,7 +92,7 @@ const Invoices = () => {
           <p className="text-xs sm:text-sm text-muted-foreground">Valor Total</p>
         </div>
         <div className="glass-card p-3 sm:p-4 text-center">
-          <p className="text-xl sm:text-2xl font-bold text-success">{mockInvoices.length}</p>
+          <p className="text-xl sm:text-2xl font-bold text-success">{invoices.length}</p>
           <p className="text-xs sm:text-sm text-muted-foreground">Este Mês</p>
         </div>
       </div>
@@ -125,6 +132,14 @@ const Invoices = () => {
               <Button variant="outline" size="sm" className="flex-1 gap-1 sm:gap-2 border-border/50 text-xs sm:text-sm h-8 sm:h-9">
                 <Download className="w-3 h-3 sm:w-4 sm:h-4" />
                 PDF
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-1 sm:gap-2 border-destructive/50 text-destructive hover:bg-destructive/10 text-xs sm:text-sm h-8 sm:h-9"
+                onClick={() => handleDeleteInvoice(invoice.id)}
+              >
+                <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
               </Button>
             </div>
           </div>

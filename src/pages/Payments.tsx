@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Filter, MoreHorizontal, CreditCard, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Search, Filter, MoreHorizontal, CreditCard, CheckCircle, XCircle, Clock, Trash2 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
@@ -16,9 +16,16 @@ import { Payment } from '@/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+import { toast } from 'sonner';
+
 const Payments = () => {
   const [search, setSearch] = useState('');
-  const payments = mockPayments;
+  const [payments, setPayments] = useState(mockPayments);
+
+  const handleDeletePayment = (paymentId: string) => {
+    setPayments(payments.filter(p => p.id !== paymentId));
+    toast.success('Pagamento removido com sucesso!');
+  };
 
   const filteredPayments = payments.filter(payment =>
     payment.clientName.toLowerCase().includes(search.toLowerCase())
@@ -94,6 +101,13 @@ const Payments = () => {
             <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
             <DropdownMenuItem>Emitir nota fiscal</DropdownMenuItem>
             <DropdownMenuItem>Reenviar cobrança</DropdownMenuItem>
+            <DropdownMenuItem 
+              className="text-destructive"
+              onClick={() => handleDeletePayment(item.id)}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Remover
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ),

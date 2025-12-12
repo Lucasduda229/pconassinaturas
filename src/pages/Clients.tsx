@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, Filter, MoreHorizontal, Mail, Phone } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Trash2 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
@@ -61,6 +61,11 @@ const Clients = () => {
     toast.success('Cliente cadastrado com sucesso!');
   };
 
+  const handleDeleteClient = (clientId: string) => {
+    setClients(clients.filter(c => c.id !== clientId));
+    toast.success('Cliente removido com sucesso!');
+  };
+
   const columns = [
     {
       key: 'name',
@@ -119,8 +124,12 @@ const Clients = () => {
             <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
             <DropdownMenuItem>Editar</DropdownMenuItem>
             <DropdownMenuItem>Nova assinatura</DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive">
-              Desativar
+            <DropdownMenuItem 
+              className="text-destructive"
+              onClick={() => handleDeleteClient(item.id)}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Remover
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
