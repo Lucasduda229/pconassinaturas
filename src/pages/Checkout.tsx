@@ -25,6 +25,7 @@ import {
   X
 } from 'lucide-react';
 import logo from '@/assets/logo-pcon-grande.png';
+import logoAsaas from '@/assets/logo-asaas.png';
 import BlueBackground from '@/components/BlueBackground';
 
 interface Subscription {
@@ -363,6 +364,29 @@ const Checkout = () => {
             </motion.div>
           )}
         </div>
+
+        {/* Footer with Payment Methods */}
+        <motion.footer
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 0.5 }}
+          className="mt-12 pb-8"
+        >
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-xs text-gray-neutral">Pagamentos processados por</p>
+            <img src={logoAsaas} alt="ASAAS" className="h-8 w-auto opacity-80" />
+            <div className="flex items-center gap-4 mt-2">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/30 border border-border/30">
+                <QrCode className="h-5 w-5 text-primary" />
+                <span className="text-sm text-muted-foreground">PIX</span>
+              </div>
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/30 border border-border/30">
+                <CreditCard className="h-5 w-5 text-primary" />
+                <span className="text-sm text-muted-foreground">Cartão</span>
+              </div>
+            </div>
+          </div>
+        </motion.footer>
       </main>
 
       {/* Payment Modal */}
