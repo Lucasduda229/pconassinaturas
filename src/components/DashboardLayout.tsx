@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
 import Sidebar, { MobileHeader } from './Sidebar';
-import AnimatedBackground from './AnimatedBackground';
+import BlueBackground from './BlueBackground';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -13,7 +13,7 @@ const DashboardLayout = ({ children, title, subtitle }: DashboardLayoutProps) =>
 
   return (
     <div className="min-h-screen">
-      <AnimatedBackground />
+      <BlueBackground />
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <MobileHeader onMenuClick={() => setSidebarOpen(true)} />
       
