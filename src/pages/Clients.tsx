@@ -279,10 +279,6 @@ const Clients = () => {
           <DropdownMenuContent align="end" className="glass-card border-border/50">
             <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
             <DropdownMenuItem>Editar</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleSyncWithAsaas(item)}>
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Sincronizar ASAAS
-            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => openChargeDialog(item)}>
               <CreditCard className="w-4 h-4 mr-2" />
               Nova cobrança
@@ -291,7 +287,6 @@ const Clients = () => {
               <Link2 className="w-4 h-4 mr-2" />
               Criar acesso checkout
             </DropdownMenuItem>
-            <DropdownMenuItem>Nova assinatura</DropdownMenuItem>
             <DropdownMenuItem 
               className="text-destructive"
               onClick={() => handleDeleteClient(item.id)}
