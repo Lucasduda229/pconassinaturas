@@ -13,7 +13,7 @@ import Subscriptions from "./pages/Subscriptions";
 import Payments from "./pages/Payments";
 import Invoices from "./pages/Invoices";
 import Notifications from "./pages/Notifications";
-import Settings from "./pages/Settings";
+
 import ClientLogin from "./pages/ClientLogin";
 import Checkout from "./pages/Checkout";
 import NotFound from "./pages/NotFound";
@@ -37,7 +37,7 @@ const App = () => (
               <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
               <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              
               
               {/* Client Routes - Isolated Checkout */}
               <Route path="/cliente" element={<ClientLogin />} />

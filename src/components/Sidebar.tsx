@@ -7,7 +7,6 @@ import {
   Receipt, 
   FileText, 
   Bell,
-  Settings,
   LogOut,
   Menu,
   X
@@ -100,15 +99,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           </nav>
 
           {/* Footer */}
-          <div className="p-3 lg:p-4 border-t border-border/50 space-y-1">
-            <NavLink 
-              to="/settings" 
-              onClick={handleNavClick}
-              className={({ isActive }) => `nav-item ${isActive ? 'nav-item-active' : ''}`}
-            >
-              <Settings className="w-5 h-5" />
-              <span className="font-medium">Configurações</span>
-            </NavLink>
+          <div className="p-3 lg:p-4 border-t border-border/50">
             <button 
               className="nav-item w-full text-destructive hover:bg-destructive/10"
               onClick={handleLogout}
