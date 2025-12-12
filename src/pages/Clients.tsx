@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Trash2, RefreshCw, CreditCard, QrCode, FileText, Loader2 } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Trash2, RefreshCw, CreditCard, QrCode, FileText, Loader2, Link2, Send, Eye, EyeOff } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
@@ -51,6 +51,10 @@ const Clients = () => {
     dueDate: '',
     billingType: 'PIX' as 'PIX' | 'BOLETO' | 'CREDIT_CARD',
   });
+  const [isAccessDialogOpen, setIsAccessDialogOpen] = useState(false);
+  const [accessPassword, setAccessPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isCreatingAccess, setIsCreatingAccess] = useState(false);
 
   const { clients, loading, addClient, deleteClient } = useClients();
   const { createCustomer, createPayment } = useAsaas();
@@ -152,6 +156,70 @@ const Clients = () => {
     setIsChargeDialogOpen(true);
   };
 
+  const openAccessDialog = (client: Client) => {
+    setSelectedClient(client);
+    setAccessPassword('');
+    setIsAccessDialogOpen(true);
+  };
+
+  const handleCreateAccess = async () => {
+    if (!selectedClient || !accessPassword) {
+      toast.error('Por favor, defina uma senha');
+      return;
+    }
+
+    if (accessPassword.length < 6) {
+      toast.error('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+
+    setIsCreatingAccess(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/client-auth?action=register`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({
+            clientId: selectedClient.id,
+            email: selectedClient.email,
+            password: accessPassword,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast.error(data.error || 'Erro ao criar acesso');
+        return;
+      }
+
+      toast.success('Acesso criado com sucesso!');
+      setIsAccessDialogOpen(false);
+      
+      // Open WhatsApp with the link
+      const checkoutUrl = `${window.location.origin}/cliente`;
+      const message = `Olá ${selectedClient.name}!\n\nSeu acesso ao portal de pagamentos foi criado.\n\n📱 Acesse: ${checkoutUrl}\n📧 Email: ${selectedClient.email}\n🔐 Senha: ${accessPassword}\n\nQualquer dúvida, estamos à disposição!`;
+      const whatsappUrl = `https://wa.me/${selectedClient.phone?.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, '_blank');
+    } catch (error) {
+      console.error('Error creating access:', error);
+      toast.error('Erro ao criar acesso');
+    } finally {
+      setIsCreatingAccess(false);
+    }
+  };
+
+  const copyCheckoutLink = () => {
+    const checkoutUrl = `${window.location.origin}/cliente`;
+    navigator.clipboard.writeText(checkoutUrl);
+    toast.success('Link copiado!');
+  };
+
   const columns = [
     {
       key: 'name',
@@ -218,6 +286,10 @@ const Clients = () => {
             <DropdownMenuItem onClick={() => openChargeDialog(item)}>
               <CreditCard className="w-4 h-4 mr-2" />
               Nova cobrança
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => openAccessDialog(item)}>
+              <Link2 className="w-4 h-4 mr-2" />
+              Criar acesso checkout
             </DropdownMenuItem>
             <DropdownMenuItem>Nova assinatura</DropdownMenuItem>
             <DropdownMenuItem 
@@ -462,6 +534,96 @@ const Clients = () => {
                   </>
                 ) : (
                   'Criar Cobrança'
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Access Dialog */}
+      <Dialog open={isAccessDialogOpen} onOpenChange={setIsAccessDialogOpen}>
+        <DialogContent className="glass-card border-border/50 max-w-[95vw] sm:max-w-md mx-auto">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl">Criar Acesso ao Checkout</DialogTitle>
+            <DialogDescription>
+              Criar acesso para {selectedClient?.name} acessar a página de checkout e pagar suas assinaturas.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 mt-4">
+            <div className="p-4 bg-muted/50 rounded-lg space-y-2">
+              <p className="text-sm font-medium">Dados de acesso:</p>
+              <p className="text-sm text-muted-foreground">
+                <strong>Email:</strong> {selectedClient?.email}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Senha *</label>
+              <div className="relative">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Mínimo 6 caracteres"
+                  value={accessPassword}
+                  onChange={(e) => setAccessPassword(e.target.value)}
+                  className="bg-secondary/50 border-border/50 pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg">
+              <Send className="h-4 w-4 text-primary flex-shrink-0" />
+              <p className="text-xs text-primary">
+                Após criar o acesso, será aberto o WhatsApp com o link e senha para enviar ao cliente.
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={copyCheckoutLink}
+                className="gap-2"
+              >
+                <Link2 className="w-4 h-4" />
+                Copiar link
+              </Button>
+            </div>
+            
+            <div className="flex gap-3 pt-4">
+              <Button 
+                variant="outline" 
+                className="flex-1 border-border/50"
+                onClick={() => setIsAccessDialogOpen(false)}
+                disabled={isCreatingAccess}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                className="flex-1" 
+                onClick={handleCreateAccess}
+                disabled={isCreatingAccess || !accessPassword}
+              >
+                {isCreatingAccess ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Criando...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Criar e Enviar
+                  </>
                 )}
               </Button>
             </div>
