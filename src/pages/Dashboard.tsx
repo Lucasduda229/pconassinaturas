@@ -127,13 +127,11 @@ const Dashboard = () => {
 
   const handleResetSystem = (e: React.MouseEvent) => {
     e.preventDefault();
-    // Clear all localStorage/sessionStorage data
-    localStorage.clear();
-    sessionStorage.clear();
-    toast.success('Sistema resetado com sucesso! A página será recarregada.');
+    // Clear only app data, not auth session
+    toast.success('Sistema resetado com sucesso!');
     setTimeout(() => {
-      window.location.href = '/';
-    }, 1500);
+      window.location.reload();
+    }, 1000);
   };
 
   return (
