@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Trash2, RefreshCw, CreditCard, QrCode, FileText, Loader2, Link2, Send, Eye, EyeOff, Pencil, Download, User } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Trash2, RefreshCw, CreditCard, QrCode, FileText, Loader2, Link2, Send, Eye, EyeOff, Pencil, Download, User, Receipt, Calendar } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
@@ -27,7 +27,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useClients, Client } from '@/hooks/useClients';
+import { supabase } from '@/integrations/supabase/client';
 import { useAsaas } from '@/hooks/useAsaas';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -54,6 +56,12 @@ const Clients = () => {
     dueDate: '',
     billingType: 'PIX' as 'PIX' | 'BOLETO' | 'CREDIT_CARD',
   });
+  const [newSubscription, setNewSubscription] = useState({
+    planName: '',
+    value: '',
+    dueDate: '',
+  });
+  const [isCreatingSubscription, setIsCreatingSubscription] = useState(false);
   const [isAccessDialogOpen, setIsAccessDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -180,7 +188,42 @@ const Clients = () => {
 
   const openChargeDialog = (client: Client) => {
     setSelectedClient(client);
+    setNewSubscription({ planName: '', value: '', dueDate: '' });
     setIsChargeDialogOpen(true);
+  };
+
+  const handleCreateSubscription = async () => {
+    if (!selectedClient || !newSubscription.planName || !newSubscription.value || !newSubscription.dueDate) {
+      toast.error('Por favor, preencha todos os campos.');
+      return;
+    }
+
+    setIsCreatingSubscription(true);
+    try {
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .insert([{
+          client_id: selectedClient.id,
+          plan_name: newSubscription.planName,
+          value: parseFloat(newSubscription.value),
+          status: 'active',
+          next_payment: new Date(newSubscription.dueDate).toISOString()
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast.success('Assinatura criada com sucesso!');
+      setNewSubscription({ planName: '', value: '', dueDate: '' });
+      setIsChargeDialogOpen(false);
+      setSelectedClient(null);
+    } catch (error) {
+      console.error('Error adding subscription:', error);
+      toast.error('Erro ao criar assinatura');
+    } finally {
+      setIsCreatingSubscription(false);
+    }
   };
 
   const [hasExistingAccess, setHasExistingAccess] = useState(false);
@@ -570,96 +613,154 @@ const Clients = () => {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Valor *</label>
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="0,00"
-                value={newCharge.value}
-                onChange={(e) => setNewCharge({ ...newCharge, value: e.target.value })}
-                className="bg-secondary/50 border-border/50"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Vencimento *</label>
-              <Input
-                type="date"
-                value={newCharge.dueDate}
-                onChange={(e) => setNewCharge({ ...newCharge, dueDate: e.target.value })}
-                className="bg-secondary/50 border-border/50"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Método de Pagamento *</label>
-              <Select 
-                value={newCharge.billingType} 
-                onValueChange={(value: 'PIX' | 'BOLETO' | 'CREDIT_CARD') => setNewCharge({ ...newCharge, billingType: value })}
-              >
-                <SelectTrigger className="bg-secondary/50 border-border/50">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PIX">
-                    <div className="flex items-center gap-2">
-                      <QrCode className="w-4 h-4" />
-                      PIX
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="BOLETO">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4" />
-                      Boleto
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="CREDIT_CARD">
-                    <div className="flex items-center gap-2">
-                      <CreditCard className="w-4 h-4" />
-                      Cartão de Crédito
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Descrição</label>
-              <Input
-                placeholder="Descrição da cobrança"
-                value={newCharge.description}
-                onChange={(e) => setNewCharge({ ...newCharge, description: e.target.value })}
-                className="bg-secondary/50 border-border/50"
-              />
-            </div>
-            
-            <div className="flex gap-3 pt-4">
-              <Button 
-                variant="outline" 
-                className="flex-1 border-border/50"
-                onClick={() => setIsChargeDialogOpen(false)}
-                disabled={isCreatingCharge}
-              >
-                Cancelar
-              </Button>
-              <Button 
-                className="flex-1" 
-                onClick={handleCreateCharge}
-                disabled={isCreatingCharge}
-              >
-                {isCreatingCharge ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Criando...
-                  </>
-                ) : (
-                  'Criar Cobrança'
-                )}
-              </Button>
-            </div>
-          </div>
+          <Tabs defaultValue="single" className="w-full mt-4">
+            <TabsList className="w-full grid grid-cols-2 mb-4">
+              <TabsTrigger value="single" className="gap-2">
+                <Receipt className="w-4 h-4" />
+                Única
+              </TabsTrigger>
+              <TabsTrigger value="recurring" className="gap-2">
+                <Calendar className="w-4 h-4" />
+                Recorrente
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="single" className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Valor (R$) *</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="0,00"
+                  value={newCharge.value}
+                  onChange={(e) => setNewCharge({ ...newCharge, value: e.target.value })}
+                  className="bg-secondary/50 border-border/50"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Vencimento *</label>
+                <Input
+                  type="date"
+                  value={newCharge.dueDate}
+                  onChange={(e) => setNewCharge({ ...newCharge, dueDate: e.target.value })}
+                  className="bg-secondary/50 border-border/50"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Método de Pagamento *</label>
+                <Select 
+                  value={newCharge.billingType} 
+                  onValueChange={(value: 'PIX' | 'BOLETO' | 'CREDIT_CARD') => setNewCharge({ ...newCharge, billingType: value })}
+                >
+                  <SelectTrigger className="bg-secondary/50 border-border/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PIX">
+                      <div className="flex items-center gap-2">
+                        <QrCode className="w-4 h-4" />
+                        PIX
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="BOLETO">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4" />
+                        Boleto
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="CREDIT_CARD">
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="w-4 h-4" />
+                        Cartão de Crédito
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Descrição</label>
+                <Input
+                  placeholder="Descrição da cobrança"
+                  value={newCharge.description}
+                  onChange={(e) => setNewCharge({ ...newCharge, description: e.target.value })}
+                  className="bg-secondary/50 border-border/50"
+                />
+              </div>
+              
+              <div className="flex gap-3 pt-4">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 border-border/50"
+                  onClick={() => setIsChargeDialogOpen(false)}
+                  disabled={isCreatingCharge}
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  className="flex-1" 
+                  onClick={handleCreateCharge}
+                  disabled={isCreatingCharge}
+                >
+                  {isCreatingCharge ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Criar Cobrança'}
+                </Button>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="recurring" className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nome do Plano *</label>
+                <Input
+                  placeholder="Ex: Plano Mensal"
+                  value={newSubscription.planName}
+                  onChange={(e) => setNewSubscription({ ...newSubscription, planName: e.target.value })}
+                  className="bg-secondary/50 border-border/50"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Valor Mensal (R$) *</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="299.90"
+                  value={newSubscription.value}
+                  onChange={(e) => setNewSubscription({ ...newSubscription, value: e.target.value })}
+                  className="bg-secondary/50 border-border/50"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Data do Primeiro Vencimento *</label>
+                <Input
+                  type="date"
+                  value={newSubscription.dueDate}
+                  onChange={(e) => setNewSubscription({ ...newSubscription, dueDate: e.target.value })}
+                  className="bg-secondary/50 border-border/50"
+                />
+              </div>
+              
+              <div className="flex gap-3 pt-4">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 border-border/50"
+                  onClick={() => setIsChargeDialogOpen(false)}
+                  disabled={isCreatingSubscription}
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  className="flex-1" 
+                  onClick={handleCreateSubscription}
+                  disabled={isCreatingSubscription}
+                >
+                  {isCreatingSubscription ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Criar Assinatura'}
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 
