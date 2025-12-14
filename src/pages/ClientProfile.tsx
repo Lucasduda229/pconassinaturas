@@ -1,14 +1,17 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, FileText, CreditCard, Calendar, User, Loader2 } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, FileText, CreditCard, Calendar, User, Loader2, Plus } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import StatusBadge from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 interface Client {
   id: string;
@@ -49,6 +52,43 @@ const ClientProfile = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newSubscription, setNewSubscription] = useState({ planName: '', value: '', dueDate: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleAddSubscription = async () => {
+    if (!id || !newSubscription.planName || !newSubscription.value || !newSubscription.dueDate) {
+      toast.error('Por favor, preencha todos os campos.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .insert([{
+          client_id: id,
+          plan_name: newSubscription.planName,
+          value: parseFloat(newSubscription.value),
+          status: 'active',
+          next_payment: new Date(newSubscription.dueDate).toISOString()
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setSubscriptions(prev => [data, ...prev]);
+      setNewSubscription({ planName: '', value: '', dueDate: '' });
+      setIsDialogOpen(false);
+      toast.success('Assinatura criada com sucesso!');
+    } catch (error) {
+      console.error('Error adding subscription:', error);
+      toast.error('Erro ao criar assinatura');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -251,8 +291,75 @@ const ClientProfile = () => {
 
         <TabsContent value="subscriptions">
           <Card className="glass-card border-border/50">
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
               <CardTitle className="text-lg">Assinaturas ({subscriptions.length})</CardTitle>
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    Nova Assinatura
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="glass-card border-border/50 max-w-[95vw] sm:max-w-md mx-auto">
+                  <DialogHeader>
+                    <DialogTitle className="font-heading text-xl">Nova Assinatura</DialogTitle>
+                    <DialogDescription>
+                      Criar assinatura para {client?.name}
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="space-y-4 mt-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Nome do Plano *</label>
+                      <Input
+                        placeholder="Ex: Plano Empresarial"
+                        value={newSubscription.planName}
+                        onChange={(e) => setNewSubscription({ ...newSubscription, planName: e.target.value })}
+                        className="bg-secondary/50 border-border/50"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Valor Mensal (R$) *</label>
+                      <Input
+                        type="number"
+                        placeholder="299.90"
+                        value={newSubscription.value}
+                        onChange={(e) => setNewSubscription({ ...newSubscription, value: e.target.value })}
+                        className="bg-secondary/50 border-border/50"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Data de Vencimento *</label>
+                      <Input
+                        type="date"
+                        value={newSubscription.dueDate}
+                        onChange={(e) => setNewSubscription({ ...newSubscription, dueDate: e.target.value })}
+                        className="bg-secondary/50 border-border/50"
+                      />
+                    </div>
+                    
+                    <div className="flex gap-3 pt-4">
+                      <Button 
+                        variant="outline" 
+                        className="flex-1 border-border/50"
+                        onClick={() => setIsDialogOpen(false)}
+                        disabled={isSubmitting}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button 
+                        className="flex-1" 
+                        onClick={handleAddSubscription}
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Criar'}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
               {subscriptions.length === 0 ? (
