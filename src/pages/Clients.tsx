@@ -54,7 +54,7 @@ const Clients = () => {
     value: '',
     description: '',
     dueDate: '',
-    billingType: 'PIX' as 'PIX' | 'BOLETO' | 'CREDIT_CARD',
+    billingType: 'PIX' as 'PIX' | 'CREDIT_CARD',
   });
   const [newSubscription, setNewSubscription] = useState({
     planName: '',
@@ -668,7 +668,7 @@ const Clients = () => {
                 <label className="text-sm font-medium">Método de Pagamento *</label>
                 <Select 
                   value={newCharge.billingType} 
-                  onValueChange={(value: 'PIX' | 'BOLETO' | 'CREDIT_CARD') => setNewCharge({ ...newCharge, billingType: value })}
+                  onValueChange={(value: 'PIX' | 'CREDIT_CARD') => setNewCharge({ ...newCharge, billingType: value })}
                 >
                   <SelectTrigger className="bg-secondary/50 border-border/50">
                     <SelectValue />
@@ -678,12 +678,6 @@ const Clients = () => {
                       <div className="flex items-center gap-2">
                         <QrCode className="w-4 h-4" />
                         PIX
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="BOLETO">
-                      <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4" />
-                        Boleto
                       </div>
                     </SelectItem>
                     <SelectItem value="CREDIT_CARD">
