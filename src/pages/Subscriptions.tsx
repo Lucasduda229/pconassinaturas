@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Filter, MoreHorizontal, Trash2, Calendar, AlertTriangle, Plus, Pencil, CreditCard, Loader2 } from 'lucide-react';
+import { Search, Filter, MoreHorizontal, Trash2, Calendar, AlertTriangle, Plus, Pencil, CreditCard, Loader2, Receipt, QrCode, FileText } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
@@ -26,9 +26,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSubscriptions, Subscription } from '@/hooks/useSubscriptions';
 import { useClients } from '@/hooks/useClients';
 import { useAsaas } from '@/hooks/useAsaas';
+import { supabase } from '@/integrations/supabase/client';
 import { differenceInDays, isPast, isToday, format, addDays } from 'date-fns';
 import { formatBrazilDate, toBrazilTime } from '@/utils/dateUtils';
 import { toast } from 'sonner';
@@ -47,10 +49,18 @@ const Subscriptions = () => {
     value: '',
     dueDate: '',
   });
+  const [newCharge, setNewCharge] = useState({
+    clientId: '',
+    value: '',
+    description: '',
+    dueDate: '',
+    billingType: 'PIX' as 'PIX' | 'BOLETO' | 'CREDIT_CARD',
+  });
+  const [isCreatingCharge, setIsCreatingCharge] = useState(false);
 
   const { subscriptions, loading, addSubscription, updateSubscription, deleteSubscription } = useSubscriptions();
   const { clients } = useClients();
-  const { createPayment, syncCustomerToAsaas, loading: asaasLoading } = useAsaas();
+  const { createPayment, createCustomer, syncCustomerToAsaas, loading: asaasLoading } = useAsaas();
 
   const filteredSubscriptions = subscriptions.filter(sub =>
     (sub.clients?.name || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -84,6 +94,70 @@ const Subscriptions = () => {
     if (result) {
       setNewSubscription({ clientId: '', planName: '', value: '', dueDate: '' });
       setIsDialogOpen(false);
+    }
+  };
+
+  const handleCreateSingleCharge = async () => {
+    if (!newCharge.clientId || !newCharge.value || !newCharge.dueDate) {
+      toast.error('Preencha todos os campos obrigatórios');
+      return;
+    }
+
+    const selectedClient = clients.find(c => c.id === newCharge.clientId);
+    if (!selectedClient) {
+      toast.error('Cliente não encontrado');
+      return;
+    }
+
+    setIsCreatingCharge(true);
+    try {
+      // First sync client with ASAAS
+      const customer = await createCustomer({
+        name: selectedClient.name,
+        email: selectedClient.email,
+        cpfCnpj: selectedClient.document?.replace(/[^\d]/g, '') || '',
+        phone: selectedClient.phone?.replace(/[^\d]/g, '') || undefined,
+      });
+
+      if (!customer?.id) {
+        toast.error('Erro ao criar/buscar cliente na ASAAS');
+        return;
+      }
+
+      // Create the payment in ASAAS
+      const asaasPayment = await createPayment({
+        customer: customer.id,
+        billingType: newCharge.billingType,
+        value: parseFloat(newCharge.value),
+        dueDate: newCharge.dueDate,
+        description: newCharge.description || `Cobrança para ${selectedClient.name}`,
+      });
+
+      if (asaasPayment) {
+        // Save the payment to local database
+        const { error } = await supabase
+          .from('payments')
+          .insert({
+            client_id: newCharge.clientId,
+            amount: parseFloat(newCharge.value),
+            status: 'pending',
+            payment_method: newCharge.billingType,
+            description: newCharge.description || `Cobrança única para ${selectedClient.name}`,
+            asaas_id: asaasPayment.id,
+          });
+
+        if (error) {
+          console.error('Error saving payment locally:', error);
+        }
+
+        toast.success('Cobrança criada com sucesso!');
+        setIsDialogOpen(false);
+        setNewCharge({ clientId: '', value: '', description: '', dueDate: '', billingType: 'PIX' });
+      }
+    } catch (error) {
+      toast.error('Erro ao criar cobrança');
+    } finally {
+      setIsCreatingCharge(false);
     }
   };
 
@@ -316,76 +390,192 @@ const Subscriptions = () => {
             </DialogTrigger>
             <DialogContent className="glass-card border-border/50 max-w-[95vw] sm:max-w-md mx-auto">
               <DialogHeader>
-                <DialogTitle className="font-heading text-xl">Nova Assinatura</DialogTitle>
+                <DialogTitle className="font-heading text-xl">Nova Cobrança</DialogTitle>
                 <DialogDescription>
-                  Crie uma nova assinatura para um cliente.
+                  Crie uma nova cobrança para um cliente.
                 </DialogDescription>
               </DialogHeader>
               
-              <div className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Cliente *</label>
-                  <Select
-                    value={newSubscription.clientId}
-                    onValueChange={(value) => setNewSubscription({ ...newSubscription, clientId: value })}
-                  >
-                    <SelectTrigger className="bg-secondary/50 border-border/50">
-                      <SelectValue placeholder="Selecione um cliente" />
-                    </SelectTrigger>
-                    <SelectContent className="glass-card border-border/50">
-                      {clients.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Nome do Plano *</label>
-                  <Input
-                    placeholder="Ex: Plano Empresarial"
-                    value={newSubscription.planName}
-                    onChange={(e) => setNewSubscription({ ...newSubscription, planName: e.target.value })}
-                    className="bg-secondary/50 border-border/50"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Valor Mensal (R$) *</label>
-                  <Input
-                    type="number"
-                    placeholder="299.90"
-                    value={newSubscription.value}
-                    onChange={(e) => setNewSubscription({ ...newSubscription, value: e.target.value })}
-                    className="bg-secondary/50 border-border/50"
-                  />
-                </div>
+              <Tabs defaultValue="recurring" className="w-full mt-4">
+                <TabsList className="w-full grid grid-cols-2 mb-4">
+                  <TabsTrigger value="recurring" className="gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Recorrente
+                  </TabsTrigger>
+                  <TabsTrigger value="single" className="gap-2">
+                    <Receipt className="w-4 h-4" />
+                    Única
+                  </TabsTrigger>
+                </TabsList>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Data de Vencimento *</label>
-                  <Input
-                    type="date"
-                    value={newSubscription.dueDate}
-                    onChange={(e) => setNewSubscription({ ...newSubscription, dueDate: e.target.value })}
-                    className="bg-secondary/50 border-border/50"
-                  />
-                </div>
-                
-                <div className="flex gap-3 pt-4">
-                  <Button 
-                    variant="outline" 
-                    className="flex-1 border-border/50"
-                    onClick={() => setIsDialogOpen(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button className="flex-1" onClick={handleAddSubscription}>
-                    Criar
-                  </Button>
-                </div>
-              </div>
+                <TabsContent value="recurring" className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Cliente *</label>
+                    <Select
+                      value={newSubscription.clientId}
+                      onValueChange={(value) => setNewSubscription({ ...newSubscription, clientId: value })}
+                    >
+                      <SelectTrigger className="bg-secondary/50 border-border/50">
+                        <SelectValue placeholder="Selecione um cliente" />
+                      </SelectTrigger>
+                      <SelectContent className="glass-card border-border/50">
+                        {clients.map((client) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Nome do Plano *</label>
+                    <Input
+                      placeholder="Ex: Plano Empresarial"
+                      value={newSubscription.planName}
+                      onChange={(e) => setNewSubscription({ ...newSubscription, planName: e.target.value })}
+                      className="bg-secondary/50 border-border/50"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Valor Mensal (R$) *</label>
+                    <Input
+                      type="number"
+                      placeholder="299.90"
+                      value={newSubscription.value}
+                      onChange={(e) => setNewSubscription({ ...newSubscription, value: e.target.value })}
+                      className="bg-secondary/50 border-border/50"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Data de Vencimento *</label>
+                    <Input
+                      type="date"
+                      value={newSubscription.dueDate}
+                      onChange={(e) => setNewSubscription({ ...newSubscription, dueDate: e.target.value })}
+                      className="bg-secondary/50 border-border/50"
+                    />
+                  </div>
+                  
+                  <div className="flex gap-3 pt-4">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1 border-border/50"
+                      onClick={() => setIsDialogOpen(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button className="flex-1" onClick={handleAddSubscription}>
+                      Criar Assinatura
+                    </Button>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="single" className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Cliente *</label>
+                    <Select
+                      value={newCharge.clientId}
+                      onValueChange={(value) => setNewCharge({ ...newCharge, clientId: value })}
+                    >
+                      <SelectTrigger className="bg-secondary/50 border-border/50">
+                        <SelectValue placeholder="Selecione um cliente" />
+                      </SelectTrigger>
+                      <SelectContent className="glass-card border-border/50">
+                        {clients.map((client) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Valor (R$) *</label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0,00"
+                      value={newCharge.value}
+                      onChange={(e) => setNewCharge({ ...newCharge, value: e.target.value })}
+                      className="bg-secondary/50 border-border/50"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Vencimento *</label>
+                    <Input
+                      type="date"
+                      value={newCharge.dueDate}
+                      onChange={(e) => setNewCharge({ ...newCharge, dueDate: e.target.value })}
+                      className="bg-secondary/50 border-border/50"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Método de Pagamento *</label>
+                    <Select 
+                      value={newCharge.billingType} 
+                      onValueChange={(value: 'PIX' | 'BOLETO' | 'CREDIT_CARD') => setNewCharge({ ...newCharge, billingType: value })}
+                    >
+                      <SelectTrigger className="bg-secondary/50 border-border/50">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PIX">
+                          <div className="flex items-center gap-2">
+                            <QrCode className="w-4 h-4" />
+                            PIX
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="BOLETO">
+                          <div className="flex items-center gap-2">
+                            <FileText className="w-4 h-4" />
+                            Boleto
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="CREDIT_CARD">
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="w-4 h-4" />
+                            Cartão de Crédito
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Descrição</label>
+                    <Input
+                      placeholder="Descrição da cobrança"
+                      value={newCharge.description}
+                      onChange={(e) => setNewCharge({ ...newCharge, description: e.target.value })}
+                      className="bg-secondary/50 border-border/50"
+                    />
+                  </div>
+                  
+                  <div className="flex gap-3 pt-4">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1 border-border/50"
+                      onClick={() => setIsDialogOpen(false)}
+                      disabled={isCreatingCharge}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button 
+                      className="flex-1" 
+                      onClick={handleCreateSingleCharge}
+                      disabled={isCreatingCharge}
+                    >
+                      {isCreatingCharge ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Criar Cobrança'}
+                    </Button>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </DialogContent>
           </Dialog>
         </div>
