@@ -54,7 +54,7 @@ const Subscriptions = () => {
     value: '',
     description: '',
     dueDate: '',
-    billingType: 'PIX' as 'PIX' | 'BOLETO' | 'CREDIT_CARD',
+    billingType: 'PIX' as 'PIX' | 'CREDIT_CARD',
   });
   const [isCreatingCharge, setIsCreatingCharge] = useState(false);
 
@@ -212,7 +212,7 @@ const Subscriptions = () => {
       // Create payment in Asaas
       const paymentResult = await createPayment({
         customer: asaasCustomerId,
-        billingType: 'BOLETO', // Default to boleto, Asaas will send email notification
+        billingType: 'PIX', // Default to PIX
         value: Number(subscription.value),
         dueDate: format(dueDate, 'yyyy-MM-dd'),
         description: `Cobrança - ${subscription.plan_name}`,
@@ -519,7 +519,7 @@ const Subscriptions = () => {
                     <label className="text-sm font-medium">Método de Pagamento *</label>
                     <Select 
                       value={newCharge.billingType} 
-                      onValueChange={(value: 'PIX' | 'BOLETO' | 'CREDIT_CARD') => setNewCharge({ ...newCharge, billingType: value })}
+                      onValueChange={(value: 'PIX' | 'CREDIT_CARD') => setNewCharge({ ...newCharge, billingType: value })}
                     >
                       <SelectTrigger className="bg-secondary/50 border-border/50">
                         <SelectValue />
@@ -529,12 +529,6 @@ const Subscriptions = () => {
                           <div className="flex items-center gap-2">
                             <QrCode className="w-4 h-4" />
                             PIX
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="BOLETO">
-                          <div className="flex items-center gap-2">
-                            <FileText className="w-4 h-4" />
-                            Boleto
                           </div>
                         </SelectItem>
                         <SelectItem value="CREDIT_CARD">

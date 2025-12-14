@@ -543,10 +543,6 @@ const Checkout = () => {
                 <span className="text-sm text-muted-foreground">PIX</span>
               </div>
               <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/30 border border-border/30">
-                <FileText className="h-5 w-5 text-primary" />
-                <span className="text-sm text-muted-foreground">Boleto</span>
-              </div>
-              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/30 border border-border/30">
                 <CreditCard className="h-5 w-5 text-primary" />
                 <span className="text-sm text-muted-foreground">Cartão</span>
               </div>
@@ -604,22 +600,6 @@ const Checkout = () => {
                         <div className="text-left flex-1">
                           <p className="font-medium text-foreground">PIX</p>
                           <p className="text-xs text-gray-neutral">Aprovação instantânea</p>
-                        </div>
-                        <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </motion.button>
-
-                      <motion.button
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.99 }}
-                        onClick={() => handlePayment('BOLETO')}
-                        className="w-full p-4 rounded-xl bg-secondary/30 border border-border/30 hover:border-primary/40 transition-all duration-200 flex items-center gap-4 group"
-                      >
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(75, 85, 99, 0.15)' }}>
-                          <FileText className="h-6 w-6" style={{ color: '#4B5563' }} />
-                        </div>
-                        <div className="text-left flex-1">
-                          <p className="font-medium text-foreground">Boleto Bancário</p>
-                          <p className="text-xs text-gray-neutral">Vencimento em 3 dias</p>
                         </div>
                         <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                       </motion.button>
