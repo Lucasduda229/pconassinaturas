@@ -200,35 +200,51 @@ export type Database = {
       payments: {
         Row: {
           amount: number
+          asaas_id: string | null
+          client_id: string | null
           created_at: string
+          description: string | null
           id: string
           paid_at: string | null
           payment_method: string | null
           status: string
-          subscription_id: string
+          subscription_id: string | null
           transaction_id: string | null
         }
         Insert: {
           amount: number
+          asaas_id?: string | null
+          client_id?: string | null
           created_at?: string
+          description?: string | null
           id?: string
           paid_at?: string | null
           payment_method?: string | null
           status?: string
-          subscription_id: string
+          subscription_id?: string | null
           transaction_id?: string | null
         }
         Update: {
           amount?: number
+          asaas_id?: string | null
+          client_id?: string | null
           created_at?: string
+          description?: string | null
           id?: string
           paid_at?: string | null
           payment_method?: string | null
           status?: string
-          subscription_id?: string
+          subscription_id?: string | null
           transaction_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "payments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payments_subscription_id_fkey"
             columns: ["subscription_id"]

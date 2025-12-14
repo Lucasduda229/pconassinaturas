@@ -164,8 +164,8 @@ const Clients = () => {
         return;
       }
 
-      // Create the payment
-      const payment = await createPayment({
+      // Create the payment in ASAAS
+      const asaasPayment = await createPayment({
         customer: customer.id,
         billingType: newCharge.billingType,
         value: parseFloat(newCharge.value),
@@ -173,7 +173,23 @@ const Clients = () => {
         description: newCharge.description || `Cobrança para ${selectedClient.name}`,
       });
 
-      if (payment) {
+      if (asaasPayment) {
+        // Save the payment to local database
+        const { error } = await supabase
+          .from('payments')
+          .insert({
+            client_id: selectedClient.id,
+            amount: parseFloat(newCharge.value),
+            status: 'pending',
+            payment_method: newCharge.billingType,
+            description: newCharge.description || `Cobrança única para ${selectedClient.name}`,
+            asaas_id: asaasPayment.id,
+          });
+
+        if (error) {
+          console.error('Error saving payment locally:', error);
+        }
+
         toast.success('Cobrança criada com sucesso!');
         setIsChargeDialogOpen(false);
         setNewCharge({ value: '', description: '', dueDate: '', billingType: 'PIX' });

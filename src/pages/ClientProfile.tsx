@@ -41,6 +41,7 @@ interface Payment {
   payment_method: string | null;
   created_at: string;
   paid_at: string | null;
+  description?: string | null;
   subscription: {
     plan_name: string;
   } | null;
@@ -119,8 +120,8 @@ const ClientProfile = () => {
         return;
       }
 
-      // Create the payment
-      const payment = await createPayment({
+      // Create the payment in ASAAS
+      const asaasPayment = await createPayment({
         customer: customer.id,
         billingType: newCharge.billingType,
         value: parseFloat(newCharge.value),
@@ -128,7 +129,31 @@ const ClientProfile = () => {
         description: newCharge.description || `Cobrança para ${client.name}`,
       });
 
-      if (payment) {
+      if (asaasPayment) {
+        // Save the payment to local database
+        const { data: savedPayment, error } = await supabase
+          .from('payments')
+          .insert({
+            client_id: client.id,
+            amount: parseFloat(newCharge.value),
+            status: 'pending',
+            payment_method: newCharge.billingType,
+            description: newCharge.description || `Cobrança única para ${client.name}`,
+            asaas_id: asaasPayment.id,
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error saving payment locally:', error);
+        } else if (savedPayment) {
+          // Add to local payments state
+          setPayments(prev => [{
+            ...savedPayment,
+            subscription: null
+          } as Payment, ...prev]);
+        }
+
         toast.success('Cobrança criada com sucesso!');
         setIsChargeDialogOpen(false);
         setNewCharge({ value: '', description: '', dueDate: '', billingType: 'PIX' });
@@ -178,10 +203,13 @@ const ClientProfile = () => {
         setSubscriptions(subsData);
       }
 
+      // Fetch payments - both from subscriptions and single charges
+      const allPayments: Payment[] = [];
+
       // Fetch payments through subscriptions
       if (subsData && subsData.length > 0) {
         const subscriptionIds = subsData.map(s => s.id);
-        const { data: paymentsData } = await supabase
+        const { data: subscriptionPayments } = await supabase
           .from('payments')
           .select(`
             *,
@@ -190,10 +218,30 @@ const ClientProfile = () => {
           .in('subscription_id', subscriptionIds)
           .order('created_at', { ascending: false });
         
-        if (paymentsData) {
-          setPayments(paymentsData as Payment[]);
+        if (subscriptionPayments) {
+          allPayments.push(...(subscriptionPayments as Payment[]));
         }
       }
+
+      // Fetch single charges (payments with client_id but no subscription_id)
+      const { data: singleCharges } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('client_id', id)
+        .is('subscription_id', null)
+        .order('created_at', { ascending: false });
+
+      if (singleCharges) {
+        const formattedCharges = singleCharges.map(p => ({
+          ...p,
+          subscription: null
+        })) as Payment[];
+        allPayments.push(...formattedCharges);
+      }
+
+      // Sort all payments by created_at
+      allPayments.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setPayments(allPayments);
 
       setLoading(false);
     };
@@ -630,7 +678,7 @@ const ClientProfile = () => {
                     >
                       <div className="min-w-0">
                         <p className="font-medium text-foreground truncate">
-                          {payment.subscription?.plan_name || 'Pagamento avulso'}
+                          {payment.subscription?.plan_name || payment.description || 'Cobrança única'}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           {format(new Date(payment.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
