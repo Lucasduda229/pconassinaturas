@@ -47,9 +47,12 @@ interface Payment {
   payment_method: string | null;
   created_at: string;
   paid_at: string | null;
+  description: string | null;
+  asaas_id: string | null;
+  subscription_id: string | null;
   subscriptions?: {
     plan_name: string;
-  };
+  } | null;
 }
 
 const Checkout = () => {
@@ -59,7 +62,9 @@ const Checkout = () => {
   
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [pendingCharges, setPendingCharges] = useState<Payment[]>([]);
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
+  const [selectedCharge, setSelectedCharge] = useState<Payment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CREDIT_CARD' | 'BOLETO' | null>(null);
@@ -78,6 +83,7 @@ const Checkout = () => {
     if (client?.id) {
       fetchSubscriptions();
       fetchPayments();
+      fetchPendingCharges();
     }
   }, [client?.id]);
 
@@ -109,32 +115,42 @@ const Checkout = () => {
     if (!client?.id) return;
     
     try {
-      // Primeiro busca as assinaturas do cliente
-      const { data: subs } = await supabase
-        .from('subscriptions')
-        .select('id')
-        .eq('client_id', client.id);
-
-      if (!subs || subs.length === 0) {
-        setPayments([]);
-        return;
-      }
-
-      const subIds = subs.map(s => s.id);
-
-      // Depois busca os pagamentos dessas assinaturas
+      // Busca todos os pagamentos do cliente (com e sem assinatura)
       const { data, error } = await supabase
         .from('payments')
         .select('*, subscriptions(plan_name)')
-        .in('subscription_id', subIds)
+        .eq('client_id', client.id)
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(20);
 
       if (error) {
         console.error('Error fetching payments:', error);
       }
       
       setPayments(data || []);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const fetchPendingCharges = async () => {
+    if (!client?.id) return;
+    
+    try {
+      // Busca cobranças únicas pendentes (sem subscription_id)
+      const { data, error } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('client_id', client.id)
+        .is('subscription_id', null)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching pending charges:', error);
+      }
+      
+      setPendingCharges(data || []);
     } catch (error) {
       console.error('Error:', error);
     }
@@ -147,14 +163,32 @@ const Checkout = () => {
 
   const openPaymentModal = (subscription: Subscription) => {
     setSelectedSubscription(subscription);
+    setSelectedCharge(null);
     setIsPaymentDialogOpen(true);
     setPaymentStep('select');
     setPixData(null);
     setBoletoData(null);
   };
 
-  const handlePayment = async (method: 'PIX' | 'CREDIT_CARD' | 'BOLETO') => {
-    if (!client || !selectedSubscription) return;
+  const openChargePaymentModal = (charge: Payment) => {
+    setSelectedCharge(charge);
+    setSelectedSubscription(null);
+    setIsPaymentDialogOpen(true);
+    setPaymentStep('select');
+    setPixData(null);
+    setBoletoData(null);
+  };
+
+  const handlePayment = async (method: 'PIX' | 'CREDIT_CARD') => {
+    if (!client) return;
+    
+    // Determina se é assinatura ou cobrança única
+    const isSubscription = !!selectedSubscription;
+    const paymentValue = isSubscription ? Number(selectedSubscription!.value) : Number(selectedCharge!.amount);
+    const paymentDescription = isSubscription 
+      ? `Pagamento - ${selectedSubscription!.plan_name}` 
+      : selectedCharge!.description || 'Cobrança única';
+    const externalRef = isSubscription ? selectedSubscription!.id : selectedCharge!.id;
     
     setPaymentMethod(method);
     setPaymentStep('processing');
@@ -163,6 +197,42 @@ const Checkout = () => {
     setBoletoData(null);
 
     try {
+      // Se é cobrança única e já tem asaas_id, usa ele diretamente
+      if (!isSubscription && selectedCharge?.asaas_id) {
+        const asaasPaymentId = selectedCharge.asaas_id;
+        
+        if (method === 'PIX') {
+          const pixResult = await getPixQrCode(asaasPaymentId);
+          if (pixResult) {
+            setPixData({
+              qrCode: pixResult.encodedImage,
+              copyPaste: pixResult.payload,
+            });
+            setPaymentStep('pix');
+          }
+        } else if (method === 'CREDIT_CARD') {
+          // Para cartão, redireciona para a URL de pagamento
+          const paymentData = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/asaas?action=getPayment&paymentId=${asaasPaymentId}`,
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+                'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              },
+            }
+          ).then(r => r.json());
+          
+          if (paymentData.invoiceUrl) {
+            window.open(paymentData.invoiceUrl, '_blank');
+            setPaymentStep('success');
+            toast.success('Redirecionando para pagamento...');
+          }
+        }
+        return;
+      }
+
+      // Para assinaturas ou cobranças sem asaas_id, cria nova cobrança
       const customerResult = await createCustomer({
         name: client.name,
         email: client.email,
@@ -178,10 +248,10 @@ const Checkout = () => {
       const paymentResult = await createPayment({
         customer: customerResult.id,
         billingType: method,
-        value: Number(selectedSubscription.value),
+        value: paymentValue,
         dueDate,
-        description: `Pagamento - ${selectedSubscription.plan_name}`,
-        externalReference: selectedSubscription.id,
+        description: paymentDescription,
+        externalReference: externalRef,
       });
 
       if (!paymentResult?.id) {
@@ -196,15 +266,6 @@ const Checkout = () => {
             copyPaste: pixResult.payload,
           });
           setPaymentStep('pix');
-        }
-      } else if (method === 'BOLETO') {
-        const boletoResult = await getBoletoData(paymentResult.id);
-        if (boletoResult) {
-          setBoletoData({
-            identificationField: boletoResult.identificationField,
-            bankSlipUrl: paymentResult.bankSlipUrl,
-          });
-          setPaymentStep('boleto');
         }
       } else if (method === 'CREDIT_CARD') {
         if (paymentResult.invoiceUrl) {
@@ -316,108 +377,191 @@ const Checkout = () => {
             className="text-center"
           >
             <h1 className="text-2xl sm:text-3xl font-heading font-bold text-foreground mb-2">
-              Minhas Assinaturas
+              Meus Pagamentos
             </h1>
             <p className="text-gray-neutral text-sm">
               Gerencie e realize pagamentos com segurança
             </p>
           </motion.div>
 
-          {/* Subscriptions Grid */}
-          {subscriptions.length > 0 ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {subscriptions.map((subscription, index) => (
-                <motion.div
-                  key={subscription.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 + index * 0.1, duration: 0.5 }}
-                  className="glass-card p-5 sm:p-6 flex flex-col"
-                >
-                  {/* Plan Header */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1 min-w-0">
-                      <h2 className="text-lg font-heading font-semibold text-foreground truncate">
-                        {subscription.plan_name}
-                      </h2>
-                      <p className="text-gray-neutral text-xs mt-0.5">Plano ativo</p>
+          {/* Pending Single Charges */}
+          {pendingCharges.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15, duration: 0.5 }}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <Receipt className="h-5 w-5 text-warning" />
+                <h2 className="text-lg font-heading font-semibold text-foreground">
+                  Cobranças Pendentes
+                </h2>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {pendingCharges.map((charge, index) => (
+                  <motion.div
+                    key={charge.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 + index * 0.05, duration: 0.5 }}
+                    className="glass-card p-5 flex flex-col border-l-4 border-warning"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base font-heading font-semibold text-foreground truncate">
+                          {charge.description || 'Cobrança única'}
+                        </h3>
+                        <p className="text-gray-neutral text-xs mt-0.5">Aguardando pagamento</p>
+                      </div>
+                      <Badge className="bg-warning/20 text-warning border-warning/30 flex items-center gap-1 px-2 py-0.5 border rounded-full text-[10px] flex-shrink-0">
+                        <Clock className="h-3 w-3" />
+                        Pendente
+                      </Badge>
                     </div>
-                    <Badge 
-                      className={`${getStatusConfig(subscription.status).className} flex items-center gap-1 px-2 py-0.5 border rounded-full text-[10px] flex-shrink-0`}
-                    >
-                      {getStatusConfig(subscription.status).icon}
-                      {getStatusConfig(subscription.status).label}
-                    </Badge>
-                  </div>
 
-                  {/* Info Cards */}
-                  <div className="space-y-3 mb-4 flex-1">
-                    <div className="p-3 rounded-xl bg-secondary/30 border border-border/30">
+                    <div className="p-3 rounded-xl bg-secondary/30 border border-border/30 mb-4">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(30, 79, 163, 0.2)' }}>
                           <DollarSign className="h-4 w-4" style={{ color: '#1E4FA3' }} />
                         </div>
                         <div className="min-w-0">
                           <p className="text-[10px] text-gray-neutral">Valor</p>
-                          <p className="text-base font-semibold text-foreground">
-                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(subscription.value))}
+                          <p className="text-lg font-semibold text-foreground">
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(charge.amount))}
                           </p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-secondary/30 border border-border/30">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(42, 63, 134, 0.2)' }}>
-                          <Calendar className="h-4 w-4" style={{ color: '#2A3F86' }} />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[10px] text-gray-neutral">Vencimento</p>
-                          <p className="text-base font-semibold text-foreground">
-                            {formatBrazilDate(subscription.next_payment)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Divider */}
-                  <div className="h-px bg-border/30 mb-4" />
-
-                  {/* Pay Button */}
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <Button
-                      size="default"
-                      className="w-full h-11 btn-blue text-sm"
-                      onClick={() => openPaymentModal(subscription)}
-                      disabled={isProcessing || asaasLoading}
-                    >
-                      {isProcessing ? (
-                        <span className="flex items-center justify-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Processando...
-                        </span>
-                      ) : (
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <Button
+                        size="default"
+                        className="w-full h-10 btn-blue text-sm"
+                        onClick={() => openChargePaymentModal(charge)}
+                        disabled={isProcessing || asaasLoading}
+                      >
                         <span className="flex items-center justify-center gap-2">
                           Pagar Agora
                           <ArrowRight className="h-4 w-4" />
                         </span>
-                      )}
-                    </Button>
+                      </Button>
+                    </motion.div>
                   </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
 
-                  {/* Security Badge */}
-                  <div className="mt-4 flex items-center justify-center gap-1.5 text-gray-neutral">
-                    <Shield className="h-3 w-3" />
-                    <span className="text-[10px]">Pagamento seguro</span>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          ) : (
+          {/* Subscriptions Section */}
+          {subscriptions.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <Calendar className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-heading font-semibold text-foreground">
+                  Minhas Assinaturas
+                </h2>
+              </div>
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {subscriptions.map((subscription, index) => (
+                  <motion.div
+                    key={subscription.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.25 + index * 0.1, duration: 0.5 }}
+                    className="glass-card p-5 sm:p-6 flex flex-col"
+                  >
+                    {/* Plan Header */}
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1 min-w-0">
+                        <h2 className="text-lg font-heading font-semibold text-foreground truncate">
+                          {subscription.plan_name}
+                        </h2>
+                        <p className="text-gray-neutral text-xs mt-0.5">Plano ativo</p>
+                      </div>
+                      <Badge 
+                        className={`${getStatusConfig(subscription.status).className} flex items-center gap-1 px-2 py-0.5 border rounded-full text-[10px] flex-shrink-0`}
+                      >
+                        {getStatusConfig(subscription.status).icon}
+                        {getStatusConfig(subscription.status).label}
+                      </Badge>
+                    </div>
+
+                    {/* Info Cards */}
+                    <div className="space-y-3 mb-4 flex-1">
+                      <div className="p-3 rounded-xl bg-secondary/30 border border-border/30">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(30, 79, 163, 0.2)' }}>
+                            <DollarSign className="h-4 w-4" style={{ color: '#1E4FA3' }} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[10px] text-gray-neutral">Valor</p>
+                            <p className="text-base font-semibold text-foreground">
+                              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(subscription.value))}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-secondary/30 border border-border/30">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(42, 63, 134, 0.2)' }}>
+                            <Calendar className="h-4 w-4" style={{ color: '#2A3F86' }} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[10px] text-gray-neutral">Vencimento</p>
+                            <p className="text-base font-semibold text-foreground">
+                              {formatBrazilDate(subscription.next_payment)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="h-px bg-border/30 mb-4" />
+
+                    {/* Pay Button */}
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Button
+                        size="default"
+                        className="w-full h-11 btn-blue text-sm"
+                        onClick={() => openPaymentModal(subscription)}
+                        disabled={isProcessing || asaasLoading}
+                      >
+                        {isProcessing ? (
+                          <span className="flex items-center justify-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Processando...
+                          </span>
+                        ) : (
+                          <span className="flex items-center justify-center gap-2">
+                            Pagar Agora
+                            <ArrowRight className="h-4 w-4" />
+                          </span>
+                        )}
+                      </Button>
+                    </motion.div>
+
+                    {/* Security Badge */}
+                    <div className="mt-4 flex items-center justify-center gap-1.5 text-gray-neutral">
+                      <Shield className="h-3 w-3" />
+                      <span className="text-[10px]">Pagamento seguro</span>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Empty State */}
+          {subscriptions.length === 0 && pendingCharges.length === 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -425,9 +569,9 @@ const Checkout = () => {
               className="glass-card p-10 text-center"
             >
               <AlertCircle className="h-14 w-14 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-heading font-semibold mb-2">Nenhuma assinatura ativa</h3>
+              <h3 className="text-lg font-heading font-semibold mb-2">Nenhum pagamento pendente</h3>
               <p className="text-gray-neutral text-sm">
-                Você não possui assinaturas ativas no momento.
+                Você não possui pagamentos ou assinaturas pendentes no momento.
               </p>
             </motion.div>
           )}
@@ -495,7 +639,7 @@ const Checkout = () => {
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">
-                            {payment.subscriptions?.plan_name || 'Pagamento'}
+                            {payment.subscriptions?.plan_name || payment.description || 'Cobrança única'}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {formatBrazilDate(payment.created_at, "dd/MM/yyyy 'às' HH:mm")}
@@ -580,8 +724,13 @@ const Checkout = () => {
                   >
                     <div className="text-center">
                       <h2 className="text-xl font-heading font-semibold text-foreground mb-2">
-                        Escolha o pagamento
+                        {selectedSubscription ? selectedSubscription.plan_name : (selectedCharge?.description || 'Cobrança única')}
                       </h2>
+                      <p className="text-2xl font-bold text-foreground mb-1">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                          selectedSubscription ? Number(selectedSubscription.value) : Number(selectedCharge?.amount || 0)
+                        )}
+                      </p>
                       <p className="text-gray-neutral text-sm">
                         Selecione a forma de pagamento
                       </p>
