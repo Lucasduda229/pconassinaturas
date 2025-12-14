@@ -68,12 +68,33 @@ serve(async (req) => {
       // ========== CUSTOMERS ==========
       case "createCustomer": {
         const { name, email, cpfCnpj, phone } = body;
-        result = await asaasRequest("/customers", "POST", {
+        
+        // First try to find existing customer by email
+        try {
+          const existingCustomers = await asaasRequest(`/customers?email=${encodeURIComponent(email)}`);
+          if (existingCustomers.data && existingCustomers.data.length > 0) {
+            console.log("Customer already exists, returning existing:", existingCustomers.data[0].id);
+            result = existingCustomers.data[0];
+            break;
+          }
+        } catch (e) {
+          console.log("Error searching for existing customer, will try to create:", e);
+        }
+        
+        // Build customer payload - cpfCnpj is optional
+        const customerPayload: any = {
           name,
           email,
-          cpfCnpj: cpfCnpj?.replace(/\D/g, ""),
-          phone: phone?.replace(/\D/g, ""),
-        });
+          phone: phone?.replace(/\D/g, "") || undefined,
+        };
+        
+        // Only add cpfCnpj if it's valid (11 or 14 digits)
+        const cleanCpfCnpj = cpfCnpj?.replace(/\D/g, "");
+        if (cleanCpfCnpj && (cleanCpfCnpj.length === 11 || cleanCpfCnpj.length === 14)) {
+          customerPayload.cpfCnpj = cleanCpfCnpj;
+        }
+        
+        result = await asaasRequest("/customers", "POST", customerPayload);
         break;
       }
 
@@ -102,14 +123,33 @@ serve(async (req) => {
           throw new Error("Cliente não encontrado");
         }
 
-        // Create customer in ASAAS
-        result = await asaasRequest("/customers", "POST", {
+        // First try to find existing customer by email
+        try {
+          const existingCustomers = await asaasRequest(`/customers?email=${encodeURIComponent(client.email)}`);
+          if (existingCustomers.data && existingCustomers.data.length > 0) {
+            console.log("Customer already exists, returning existing:", existingCustomers.data[0].id);
+            result = existingCustomers.data[0];
+            break;
+          }
+        } catch (e) {
+          console.log("Error searching for existing customer, will try to create:", e);
+        }
+
+        // Build customer payload - cpfCnpj is optional
+        const syncPayload: any = {
           name: client.name,
           email: client.email,
-          cpfCnpj: client.document?.replace(/\D/g, ""),
-          phone: client.phone?.replace(/\D/g, ""),
+          phone: client.phone?.replace(/\D/g, "") || undefined,
           externalReference: client.id,
-        });
+        };
+        
+        // Only add cpfCnpj if it's valid (11 or 14 digits)
+        const cleanDoc = client.document?.replace(/\D/g, "");
+        if (cleanDoc && (cleanDoc.length === 11 || cleanDoc.length === 14)) {
+          syncPayload.cpfCnpj = cleanDoc;
+        }
+
+        result = await asaasRequest("/customers", "POST", syncPayload);
         break;
       }
 
