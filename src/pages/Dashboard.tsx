@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { 
   Users, 
   DollarSign, 
@@ -10,6 +10,7 @@ import {
   RotateCcw,
   Loader2,
 } from 'lucide-react';
+import { startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import DashboardLayout from '@/components/DashboardLayout';
 import MetricCard from '@/components/MetricCard';
 import DataTable from '@/components/DataTable';
@@ -87,12 +88,25 @@ const Dashboard = () => {
   // Calculate real metrics from database
   const activeClients = clients.filter(c => c.status === 'active').length;
   const inactiveClients = clients.filter(c => c.status === 'inactive').length;
-  const activeSubscriptions = subscriptions.filter(s => s.status === 'active');
-  const monthlyRevenue = activeSubscriptions.reduce((acc, sub) => acc + sub.value, 0);
   const renewedSubscriptions = subscriptions.filter(s => s.status === 'active').length;
   const expiredSubscriptions = subscriptions.filter(s => s.status === 'overdue' || s.status === 'cancelled').length;
   const pendingSubscriptions = subscriptions.filter(s => s.status === 'pending').length;
   const failedPayments = payments.filter(p => p.status === 'failed').length;
+
+  // Calculate monthly revenue from actual paid payments in current month
+  const monthlyRevenue = useMemo(() => {
+    const now = new Date();
+    const monthStart = startOfMonth(now);
+    const monthEnd = endOfMonth(now);
+    
+    return payments
+      .filter(p => {
+        if (p.status !== 'paid') return false;
+        const paidDate = p.paid_at ? new Date(p.paid_at) : new Date(p.created_at);
+        return isWithinInterval(paidDate, { start: monthStart, end: monthEnd });
+      })
+      .reduce((acc, p) => acc + Number(p.amount), 0);
+  }, [payments]);
 
   const recentSubscriptions = subscriptions.slice(0, 5);
   const recentPayments = payments.slice(0, 5);
