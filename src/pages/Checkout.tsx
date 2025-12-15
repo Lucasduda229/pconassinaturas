@@ -65,6 +65,8 @@ const Checkout = () => {
   const [pendingCharges, setPendingCharges] = useState<Payment[]>([]);
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
   const [selectedCharge, setSelectedCharge] = useState<Payment | null>(null);
+  const [selectedPaidPayment, setSelectedPaidPayment] = useState<Payment | null>(null);
+  const [isPaidDetailsOpen, setIsPaidDetailsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CREDIT_CARD' | 'BOLETO' | null>(null);
@@ -177,6 +179,11 @@ const Checkout = () => {
     setPaymentStep('select');
     setPixData(null);
     setBoletoData(null);
+  };
+
+  const openPaidPaymentDetails = (payment: Payment) => {
+    setSelectedPaidPayment(payment);
+    setIsPaidDetailsOpen(true);
   };
 
   const handlePayment = async (method: 'PIX' | 'CREDIT_CARD') => {
@@ -619,13 +626,16 @@ const Checkout = () => {
                   };
                   const config = statusConfig[payment.status] || statusConfig.pending;
 
+                  const isPaid = payment.status === 'paid';
+
                   return (
                     <motion.div
                       key={payment.id}
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.1 * index }}
-                      className="p-4 flex items-center justify-between gap-4 hover:bg-secondary/20 transition-colors"
+                      className={`p-4 flex items-center justify-between gap-4 hover:bg-secondary/20 transition-colors ${isPaid ? 'cursor-pointer' : ''}`}
+                      onClick={() => isPaid && openPaidPaymentDetails(payment)}
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-secondary/50 flex-shrink-0">
@@ -655,6 +665,9 @@ const Checkout = () => {
                           {config.icon}
                           {config.label}
                         </span>
+                        {isPaid && (
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        )}
                       </div>
                     </motion.div>
                   );
@@ -928,6 +941,97 @@ const Checkout = () => {
                   </motion.div>
                 )}
               </motion.div>
+            </DialogContent>
+          </Dialog>
+        )}
+      </AnimatePresence>
+
+      {/* Paid Payment Details Modal */}
+      <AnimatePresence>
+        {isPaidDetailsOpen && selectedPaidPayment && (
+          <Dialog open={isPaidDetailsOpen} onOpenChange={setIsPaidDetailsOpen}>
+            <DialogContent className="max-w-md p-0 gap-0 rounded-2xl overflow-hidden border-0">
+              {/* Header */}
+              <div className="bg-[#1E4FA3] text-white p-4 flex items-center justify-between">
+                <h2 className="text-lg font-heading font-semibold">
+                  Detalhes da fatura - {formatBrazilDate(selectedPaidPayment.created_at, "MMM/yy")}
+                </h2>
+                <button 
+                  onClick={() => setIsPaidDetailsOpen(false)}
+                  className="text-white/80 hover:text-white transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 space-y-6">
+                {/* Invoice Info Card */}
+                <div className="bg-secondary/30 rounded-xl p-4 border border-border/30">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Vencimento</p>
+                      <p className="text-sm font-semibold text-foreground">
+                        {formatBrazilDate(selectedPaidPayment.created_at, "dd/MM/yy")}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Valor</p>
+                      <p className="text-sm font-semibold text-foreground">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(selectedPaidPayment.amount))}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Status</p>
+                      <Badge className="bg-success/20 text-success border-0 px-2 py-0.5 text-xs">
+                        Paga
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Success Icon */}
+                <div className="flex flex-col items-center py-4">
+                  <div className="w-24 h-24 rounded-full border-4 border-success flex items-center justify-center mb-4">
+                    <CheckCircle className="h-12 w-12 text-success" />
+                  </div>
+                  <h3 className="text-lg font-heading font-semibold text-foreground">
+                    Pagamento realizado com sucesso!
+                  </h3>
+                </div>
+
+                {/* Payment Details Card */}
+                <div className="bg-success/10 rounded-xl p-4 border border-success/20">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-foreground">Data do pagamento</span>
+                      <span className="text-sm text-muted-foreground">
+                        {selectedPaidPayment.paid_at 
+                          ? formatBrazilDate(selectedPaidPayment.paid_at, "dd/MM/yy")
+                          : formatBrazilDate(selectedPaidPayment.created_at, "dd/MM/yy")
+                        }
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-foreground">Valor pago</span>
+                      <span className="text-sm text-muted-foreground">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(selectedPaidPayment.amount))}
+                      </span>
+                    </div>
+                    {selectedPaidPayment.payment_method && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-foreground">Método</span>
+                        <span className="text-sm text-muted-foreground capitalize">
+                          {selectedPaidPayment.payment_method === 'pix' ? 'PIX' : 
+                           selectedPaidPayment.payment_method === 'boleto' ? 'Boleto' : 
+                           selectedPaidPayment.payment_method === 'credit_card' ? 'Cartão de Crédito' : 
+                           selectedPaidPayment.payment_method}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </DialogContent>
           </Dialog>
         )}
