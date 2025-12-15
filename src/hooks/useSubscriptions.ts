@@ -12,6 +12,7 @@ export interface Subscription {
   next_payment: string;
   created_at: string;
   updated_at: string;
+  clientName?: string;
   clients?: {
     name: string;
   };
@@ -29,7 +30,14 @@ export const useSubscriptions = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setSubscriptions(data || []);
+      
+      // Map client names
+      const subscriptionsWithClientName = (data || []).map(sub => ({
+        ...sub,
+        clientName: sub.clients?.name || 'N/A'
+      }));
+      
+      setSubscriptions(subscriptionsWithClientName);
     } catch (error) {
       console.error('Error fetching subscriptions:', error);
       toast.error('Erro ao carregar assinaturas');

@@ -4,17 +4,24 @@ import { toast } from 'sonner';
 
 export interface Payment {
   id: string;
-  subscription_id: string;
+  subscription_id: string | null;
+  client_id: string | null;
   amount: number;
   status: string;
   payment_method: string | null;
   transaction_id: string | null;
   paid_at: string | null;
   created_at: string;
+  description: string | null;
+  clientName?: string;
   subscriptions?: {
     clients?: {
       name: string;
     };
+    plan_name?: string;
+  };
+  clients?: {
+    name: string;
   };
 }
 
@@ -26,11 +33,18 @@ export const usePayments = () => {
     try {
       const { data, error } = await supabase
         .from('payments')
-        .select('*, subscriptions(clients(name))')
+        .select('*, subscriptions(clients(name), plan_name), clients(name)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setPayments(data || []);
+      
+      // Map client names - either from subscription or direct client relationship
+      const paymentsWithClientName = (data || []).map(payment => ({
+        ...payment,
+        clientName: payment.subscriptions?.clients?.name || payment.clients?.name || 'N/A'
+      }));
+      
+      setPayments(paymentsWithClientName);
     } catch (error) {
       console.error('Error fetching payments:', error);
       toast.error('Erro ao carregar pagamentos');
