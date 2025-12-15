@@ -103,7 +103,7 @@ const Dashboard = () => {
       header: 'Cliente',
       render: (item: any) => (
         <div>
-          <span className="font-medium text-foreground text-sm">{item.clientName || 'N/A'}</span>
+          <span className="font-medium text-foreground text-sm">{item.clientName}</span>
           <span className="block text-xs text-muted-foreground sm:hidden">{item.plan_name}</span>
         </div>
       ),
@@ -145,7 +145,7 @@ const Dashboard = () => {
       key: 'clientName',
       header: 'Cliente',
       render: (item: any) => (
-        <span className="font-medium text-foreground text-sm">{item.clientName || 'N/A'}</span>
+        <span className="font-medium text-foreground text-sm">{item.clientName}</span>
       ),
     },
     {
