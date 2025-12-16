@@ -852,6 +852,7 @@ const ClientProfile = () => {
                         )}
                       </div>
                       <div className="flex items-center gap-2">
+                        <StatusBadge status={contract.status} />
                         {contract.file_path && (
                           <Button
                             size="sm"

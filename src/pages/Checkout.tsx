@@ -598,7 +598,7 @@ const Checkout = () => {
                   >
                     {/* Contract Header with Status Badge */}
                     <div className="flex items-start justify-between mb-4">
-                      <Badge className="bg-success/20 text-success border-success/30 px-3 py-1 border rounded-full text-xs font-medium">
+                      <Badge className="bg-primary/20 text-primary border-primary/30 px-3 py-1 border rounded-full text-xs font-medium">
                         {contract.status === 'active' ? 'Ativo' : contract.status}
                       </Badge>
                     </div>
