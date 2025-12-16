@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, FileText, CreditCard, Calendar, User, Loader2, Plus, QrCode, Receipt } from 'lucide-react';
-import { useEffect, useState, useMemo } from 'react';
+import { ArrowLeft, Mail, Phone, FileText, CreditCard, Calendar, User, Loader2, Plus, QrCode, Receipt, Upload, Trash2, ExternalLink, FileSignature } from 'lucide-react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import StatusBadge from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
@@ -8,12 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { useAsaas } from '@/hooks/useAsaas';
+import { useContracts } from '@/hooks/useContracts';
 
 interface Client {
   id: string;
@@ -59,11 +61,42 @@ const ClientProfile = () => {
   const [newSubscription, setNewSubscription] = useState({ planName: '', value: '', dueDate: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Single charge state
   const [isChargeDialogOpen, setIsChargeDialogOpen] = useState(false);
   const [newCharge, setNewCharge] = useState({ value: '', description: '', dueDate: '', billingType: 'PIX' as 'PIX' | 'CREDIT_CARD' });
   const [isCreatingCharge, setIsCreatingCharge] = useState(false);
   const { createCustomer, createPayment } = useAsaas();
+  
+  // Contracts
+  const { contracts, loading: contractsLoading, addContract, deleteContract } = useContracts(id);
+  const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
+  const [newContract, setNewContract] = useState({ title: '', content: '' });
+  const [contractFile, setContractFile] = useState<File | null>(null);
+  const [isCreatingContract, setIsCreatingContract] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAddContract = async () => {
+    if (!newContract.title) {
+      toast.error('Por favor, preencha o título do contrato');
+      return;
+    }
+
+    setIsCreatingContract(true);
+    try {
+      const result = await addContract({
+        title: newContract.title,
+        content: newContract.content || undefined,
+        file: contractFile || undefined,
+      });
+
+      if (result) {
+        setNewContract({ title: '', content: '' });
+        setContractFile(null);
+        setIsContractDialogOpen(false);
+      }
+    } finally {
+      setIsCreatingContract(false);
+    }
+  };
 
   const handleAddSubscription = async () => {
     if (!id || !newSubscription.planName || !newSubscription.value || !newSubscription.dueDate) {
@@ -386,6 +419,11 @@ const ClientProfile = () => {
             <FileText className="w-4 h-4" />
             <span>Pagamentos</span>
           </TabsTrigger>
+          <TabsTrigger value="contracts" className="flex-1 sm:flex-none gap-2">
+            <FileSignature className="w-4 h-4" />
+            <span className="hidden sm:inline">Contratos</span>
+            <span className="sm:hidden">Docs</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="subscriptions">
@@ -684,6 +722,155 @@ const ClientProfile = () => {
                       <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
                         <p className="font-semibold text-primary">{formatCurrency(Number(payment.amount))}</p>
                         <StatusBadge status={payment.status} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="contracts">
+          <Card className="glass-card border-border/50">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="text-lg">Contratos ({contracts.length})</CardTitle>
+              <Dialog open={isContractDialogOpen} onOpenChange={setIsContractDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    Novo Contrato
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="glass-card border-border/50 max-w-[95vw] sm:max-w-lg mx-auto max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle className="font-heading text-xl">Novo Contrato</DialogTitle>
+                    <DialogDescription>
+                      Adicionar contrato para {client?.name}
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="space-y-4 mt-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Título do Contrato *</label>
+                      <Input
+                        placeholder="Ex: Contrato de Prestação de Serviços"
+                        value={newContract.title}
+                        onChange={(e) => setNewContract({ ...newContract, title: e.target.value })}
+                        className="bg-secondary/50 border-border/50"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Documento Assinado (PDF)</label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="file"
+                          accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                          ref={fileInputRef}
+                          onChange={(e) => setContractFile(e.target.files?.[0] || null)}
+                          className="bg-secondary/50 border-border/50"
+                        />
+                        {contractFile && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => {
+                              setContractFile(null);
+                              if (fileInputRef.current) fileInputRef.current.value = '';
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        )}
+                      </div>
+                      {contractFile && (
+                        <p className="text-xs text-muted-foreground">
+                          Arquivo selecionado: {contractFile.name}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Texto do Contrato</label>
+                      <Textarea
+                        placeholder="Digite o conteúdo do contrato aqui..."
+                        value={newContract.content}
+                        onChange={(e) => setNewContract({ ...newContract, content: e.target.value })}
+                        className="bg-secondary/50 border-border/50 min-h-[200px]"
+                      />
+                    </div>
+                    
+                    <div className="flex gap-3 pt-4">
+                      <Button 
+                        variant="outline" 
+                        className="flex-1 border-border/50"
+                        onClick={() => {
+                          setIsContractDialogOpen(false);
+                          setNewContract({ title: '', content: '' });
+                          setContractFile(null);
+                        }}
+                        disabled={isCreatingContract}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button 
+                        className="flex-1" 
+                        onClick={handleAddContract}
+                        disabled={isCreatingContract}
+                      >
+                        {isCreatingContract ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar Contrato'}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              {contractsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                </div>
+              ) : contracts.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">Nenhum contrato encontrado</p>
+              ) : (
+                <div className="space-y-3">
+                  {contracts.map((contract) => (
+                    <div 
+                      key={contract.id} 
+                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg bg-secondary/30 gap-3"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-foreground truncate">{contract.title}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Criado em {format(new Date(contract.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                        </p>
+                        {contract.content && (
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                            {contract.content.substring(0, 100)}...
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {contract.file_path && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-2"
+                            onClick={() => window.open(contract.file_path!, '_blank')}
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                            Ver Documento
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => deleteContract(contract.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     </div>
                   ))}
