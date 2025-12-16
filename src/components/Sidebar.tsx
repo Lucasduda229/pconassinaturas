@@ -8,7 +8,8 @@ import {
   Bell,
   LogOut,
   Menu,
-  X
+  X,
+  FileSignature
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -20,6 +21,7 @@ const navItems = [
   { icon: Users, label: 'Clientes', path: '/clients' },
   { icon: CreditCard, label: 'Assinaturas', path: '/subscriptions' },
   { icon: Receipt, label: 'Pagamentos', path: '/payments' },
+  { icon: FileSignature, label: 'Contratos', path: '/contracts' },
   { icon: FileText, label: 'Notas Fiscais', path: '/invoices' },
   { icon: Bell, label: 'Notificações', path: '/notifications' },
 ];
