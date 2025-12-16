@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useClientAuth } from '@/contexts/ClientAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useAsaas } from '@/hooks/useAsaas';
+import { useContracts, Contract } from '@/hooks/useContracts';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -25,7 +26,10 @@ import {
   X,
   Clock,
   Receipt,
-  FileText
+  FileText,
+  Download,
+  MapPin,
+  FileCheck
 } from 'lucide-react';
 import logo from '@/assets/logo-pcon-grande.png';
 import logoAsaas from '@/assets/logo-asaas-white.png';
@@ -59,6 +63,7 @@ const Checkout = () => {
   const { client, isAuthenticated, isLoading: authLoading, logout } = useClientAuth();
   const navigate = useNavigate();
   const { createCustomer, createPayment, getPixQrCode, getBoletoData, loading: asaasLoading } = useAsaas();
+  const { contracts, loading: contractsLoading } = useContracts(client?.id);
   
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -74,6 +79,8 @@ const Checkout = () => {
   const [boletoData, setBoletoData] = useState<{ identificationField: string; bankSlipUrl: string } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentStep, setPaymentStep] = useState<'select' | 'processing' | 'pix' | 'boleto' | 'success' | 'error'>('select');
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
+  const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -567,6 +574,107 @@ const Checkout = () => {
             </motion.div>
           )}
 
+          {/* Contracts Section - Seu Plano */}
+          {contracts.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25, duration: 0.5 }}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <FileCheck className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-heading font-semibold text-foreground">
+                  Meus Contratos
+                </h2>
+              </div>
+              <div className="space-y-4">
+                {contracts.map((contract, index) => (
+                  <motion.div
+                    key={contract.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 + index * 0.05, duration: 0.5 }}
+                    className="glass-card p-5 sm:p-6"
+                  >
+                    {/* Contract Header with Status Badge */}
+                    <div className="flex items-start justify-between mb-4">
+                      <Badge className="bg-primary/20 text-primary border-primary/30 px-3 py-1 border rounded-full text-xs font-medium">
+                        {contract.status === 'active' ? 'Ativo' : contract.status}
+                      </Badge>
+                    </div>
+
+                    {/* Contract Title */}
+                    <h3 className="text-xl font-heading font-bold text-foreground mb-4">
+                      {contract.title}
+                    </h3>
+
+                    {/* Contract Info */}
+                    <div className="space-y-3 mb-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(30, 79, 163, 0.2)' }}>
+                          <FileText className="h-4 w-4" style={{ color: '#1E4FA3' }} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs text-gray-neutral">Contrato</p>
+                          <p className="text-sm font-medium text-foreground">
+                            {contract.id.split('-')[0].toUpperCase()}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(42, 63, 134, 0.2)' }}>
+                          <Calendar className="h-4 w-4" style={{ color: '#2A3F86' }} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs text-gray-neutral">Data do Contrato</p>
+                          <p className="text-sm font-medium text-foreground">
+                            {formatBrazilDate(contract.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="h-px bg-border/30 mb-4" />
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-3">
+                      {contract.content && (
+                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
+                          <Button
+                            size="default"
+                            variant="outline"
+                            className="w-full h-10 text-sm"
+                            onClick={() => {
+                              setSelectedContract(contract);
+                              setIsContractDialogOpen(true);
+                            }}
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            Ver Contrato
+                          </Button>
+                        </motion.div>
+                      )}
+                      {contract.file_path && (
+                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
+                          <Button
+                            size="default"
+                            className="w-full h-10 btn-blue text-sm"
+                            onClick={() => window.open(contract.file_path!, '_blank')}
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Baixar PDF
+                          </Button>
+                        </motion.div>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
           {/* Empty State */}
           {subscriptions.length === 0 && pendingCharges.length === 0 && (
             <motion.div
@@ -1032,6 +1140,52 @@ const Checkout = () => {
                   </div>
                 </div>
               </div>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* Contract Content Dialog */}
+        {selectedContract && (
+          <Dialog open={isContractDialogOpen} onOpenChange={setIsContractDialogOpen}>
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden">
+              <div className="flex items-center justify-between border-b border-border/30 pb-4 mb-4">
+                <div>
+                  <h3 className="text-xl font-heading font-bold text-foreground">
+                    {selectedContract.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Contrato #{selectedContract.id.split('-')[0].toUpperCase()}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsContractDialogOpen(false)}
+                  className="h-8 w-8"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div className="overflow-y-auto max-h-[60vh] pr-2">
+                <div className="prose prose-sm max-w-none text-foreground">
+                  <pre className="whitespace-pre-wrap font-sans text-sm text-foreground bg-secondary/20 p-4 rounded-xl border border-border/30">
+                    {selectedContract.content}
+                  </pre>
+                </div>
+              </div>
+
+              {selectedContract.file_path && (
+                <div className="pt-4 border-t border-border/30 mt-4">
+                  <Button
+                    className="w-full btn-blue"
+                    onClick={() => window.open(selectedContract.file_path!, '_blank')}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Baixar Documento
+                  </Button>
+                </div>
+              )}
             </DialogContent>
           </Dialog>
         )}
