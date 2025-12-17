@@ -114,6 +114,20 @@ const Clients = () => {
     });
 
     if (result) {
+      // Criar cliente automaticamente na ASAAS
+      try {
+        await createCustomer({
+          name: newClient.name,
+          email: newClient.email,
+          cpfCnpj: newClient.document || undefined,
+          phone: newClient.phone || undefined,
+        });
+        toast.success('Cliente criado e sincronizado com ASAAS!');
+      } catch (error) {
+        console.error('Erro ao sincronizar com ASAAS:', error);
+        toast.warning('Cliente criado, mas houve erro ao sincronizar com ASAAS.');
+      }
+      
       setNewClient({ name: '', email: '', phone: '', document: '' });
       setIsDialogOpen(false);
     }
