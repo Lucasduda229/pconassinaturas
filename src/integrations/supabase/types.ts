@@ -297,6 +297,7 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          asaas_id: string | null
           client_id: string
           created_at: string
           id: string
@@ -308,6 +309,7 @@ export type Database = {
           value: number
         }
         Insert: {
+          asaas_id?: string | null
           client_id: string
           created_at?: string
           id?: string
@@ -319,6 +321,7 @@ export type Database = {
           value: number
         }
         Update: {
+          asaas_id?: string | null
           client_id?: string
           created_at?: string
           id?: string
