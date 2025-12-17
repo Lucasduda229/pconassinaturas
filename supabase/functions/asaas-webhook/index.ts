@@ -66,6 +66,21 @@ serve(async (req) => {
       }
     };
 
+    // Helper function to get subscription by asaas_id
+    const getSubscriptionByAsaasId = async (asaasId: string) => {
+      const { data, error } = await supabase
+        .from("subscriptions")
+        .select("id, client_id, plan_name, value")
+        .eq("asaas_id", asaasId)
+        .maybeSingle();
+      
+      if (error) {
+        console.error("Error getting subscription by asaas_id:", error);
+        return null;
+      }
+      return data;
+    };
+
     // Helper function to get client_id from subscription
     const getClientIdFromSubscription = async (subscriptionId: string): Promise<string | null> => {
       const { data, error } = await supabase
@@ -108,16 +123,47 @@ serve(async (req) => {
       return { data, error };
     };
 
-    // Helper function to update payment by subscription_id (for recurring payments)
-    const updatePaymentBySubscriptionId = async (subscriptionId: string, updateData: Record<string, any>) => {
-      const { data, error } = await supabase
+    // Helper function to update or create payment for subscription
+    const upsertSubscriptionPayment = async (paymentData: any, subscriptionData: any) => {
+      // Check if payment already exists
+      const { data: existingPayment } = await supabase
         .from("payments")
-        .update(updateData)
-        .eq("subscription_id", subscriptionId)
-        .select()
+        .select("id")
+        .eq("asaas_id", paymentData.id)
         .maybeSingle();
-      
-      return { data, error };
+
+      if (existingPayment) {
+        // Update existing payment
+        const { data, error } = await supabase
+          .from("payments")
+          .update({
+            status: paymentStatusMap[paymentData.status] || "pending",
+            paid_at: paymentData.paymentDate || null,
+            payment_method: paymentData.billingType?.toLowerCase(),
+          })
+          .eq("asaas_id", paymentData.id)
+          .select()
+          .single();
+        
+        return { data, error, isNew: false };
+      } else {
+        // Create new payment
+        const { data, error } = await supabase
+          .from("payments")
+          .insert({
+            client_id: subscriptionData.client_id,
+            subscription_id: subscriptionData.id,
+            amount: paymentData.value,
+            status: paymentStatusMap[paymentData.status] || "pending",
+            asaas_id: paymentData.id,
+            description: paymentData.description || subscriptionData.plan_name,
+            payment_method: paymentData.billingType?.toLowerCase(),
+          })
+          .select()
+          .single();
+        
+        return { data, error, isNew: true };
+      }
     };
 
     switch (event) {
@@ -134,7 +180,7 @@ serve(async (req) => {
 
         let clientId: string | null = null;
 
-        // Try to update by asaas_id first (single charges)
+        // Try to update by asaas_id first (single charges or subscription payments)
         if (payment?.id) {
           const { data, error } = await updatePaymentByAsaasId(payment.id, updateData);
           if (!error && data) {
@@ -143,14 +189,21 @@ serve(async (req) => {
           }
         }
 
-        // If not found by asaas_id, try by subscription externalReference
-        if (!clientId && payment?.externalReference) {
-          const { error } = await updatePaymentBySubscriptionId(payment.externalReference, updateData);
-          if (!error) {
-            console.log(`Payment for subscription ${payment.externalReference} updated to ${newStatus}`);
-            clientId = await getClientIdFromSubscription(payment.externalReference);
-          } else {
-            console.error("Error updating payment:", error);
+        // If payment not found and it's from a subscription, create/update it
+        if (!clientId && payment?.subscription) {
+          const subscriptionData = await getSubscriptionByAsaasId(payment.subscription);
+          if (subscriptionData) {
+            const { data, error } = await upsertSubscriptionPayment(payment, subscriptionData);
+            if (!error && data) {
+              // Update the status to paid
+              await supabase
+                .from("payments")
+                .update({ status: newStatus, paid_at: payment?.paymentDate || new Date().toISOString() })
+                .eq("id", data.id);
+              
+              clientId = subscriptionData.client_id;
+              console.log(`Subscription payment ${payment.id} created/updated to ${newStatus}`);
+            }
           }
         }
 
@@ -187,14 +240,28 @@ serve(async (req) => {
       case "PAYMENT_CREATED": {
         let clientId: string | null = null;
 
-        // Try to get client from asaas_id first
-        if (payment?.id) {
-          clientId = await getClientIdFromPayment(payment.id);
-        }
-
-        // If not found, try from subscription
-        if (!clientId && payment?.externalReference) {
-          clientId = await getClientIdFromSubscription(payment.externalReference);
+        // Check if this payment is from a subscription
+        if (payment?.subscription) {
+          const subscriptionData = await getSubscriptionByAsaasId(payment.subscription);
+          
+          if (subscriptionData) {
+            // Create payment record for subscription
+            const { data, error, isNew } = await upsertSubscriptionPayment(payment, subscriptionData);
+            
+            if (!error && data) {
+              clientId = subscriptionData.client_id;
+              console.log(`Payment ${payment.id} ${isNew ? 'created' : 'updated'} for subscription ${payment.subscription}`);
+            } else {
+              console.error("Error creating subscription payment:", error);
+            }
+          } else {
+            console.log(`Subscription ${payment.subscription} not found in local database`);
+          }
+        } else {
+          // Try to get client from existing payment
+          if (payment?.id) {
+            clientId = await getClientIdFromPayment(payment.id);
+          }
         }
 
         if (clientId) {
@@ -228,13 +295,17 @@ serve(async (req) => {
           }
         }
 
-        // If not found, try by subscription
-        if (!clientId && payment?.externalReference) {
-          const { error } = await updatePaymentBySubscriptionId(payment.externalReference, updateData);
-          if (!error) {
-            clientId = await getClientIdFromSubscription(payment.externalReference);
-          } else {
-            console.error("Error updating payment:", error);
+        // If payment from subscription
+        if (!clientId && payment?.subscription) {
+          const subscriptionData = await getSubscriptionByAsaasId(payment.subscription);
+          if (subscriptionData) {
+            // Update subscription status
+            await supabase
+              .from("subscriptions")
+              .update({ status: "overdue" })
+              .eq("asaas_id", payment.subscription);
+            
+            clientId = subscriptionData.client_id;
           }
         }
 
@@ -268,16 +339,6 @@ serve(async (req) => {
           }
         }
 
-        // If not found, try by subscription
-        if (!clientId && payment?.externalReference) {
-          const { error } = await updatePaymentBySubscriptionId(payment.externalReference, updateData);
-          if (!error) {
-            clientId = await getClientIdFromSubscription(payment.externalReference);
-          } else {
-            console.error("Error updating payment:", error);
-          }
-        }
-
         // Create notification
         if (clientId) {
           const amount = payment?.value ? 
@@ -308,11 +369,11 @@ serve(async (req) => {
           }
         }
 
-        // Also try by subscription if externalReference exists
-        if (payment?.externalReference) {
-          const { error } = await updatePaymentBySubscriptionId(payment.externalReference, updateData);
-          if (!error) {
-            console.log(`Payment for subscription ${payment.externalReference} updated to ${newStatus}`);
+        // Also check if it's a subscription payment that wasn't created yet
+        if (payment?.subscription) {
+          const subscriptionData = await getSubscriptionByAsaasId(payment.subscription);
+          if (subscriptionData) {
+            await upsertSubscriptionPayment(payment, subscriptionData);
           }
         }
         break;
@@ -320,35 +381,40 @@ serve(async (req) => {
 
       // Subscription events
       case "SUBSCRIPTION_RENEWED": {
-        if (subscription?.externalReference) {
+        // Find subscription by asaas_id
+        const subscriptionData = await getSubscriptionByAsaasId(subscription?.id);
+        
+        if (subscriptionData) {
           const { error } = await supabase
             .from("subscriptions")
             .update({
               status: "active",
               next_payment: subscription.nextDueDate,
             })
-            .eq("id", subscription.externalReference);
+            .eq("id", subscriptionData.id);
 
           if (error) {
             console.error("Error updating subscription:", error);
+          } else {
+            console.log(`Subscription ${subscription.id} renewed`);
           }
 
           // Create notification
-          const clientId = await getClientIdFromSubscription(subscription.externalReference);
-          if (clientId) {
-            await createNotification(
-              clientId,
-              "subscription_renewed",
-              `Sua assinatura foi renovada com sucesso!`
-            );
-          }
+          await createNotification(
+            subscriptionData.client_id,
+            "subscription_renewed",
+            `Sua assinatura foi renovada com sucesso!`
+          );
         }
         break;
       }
 
       case "SUBSCRIPTION_CREATED":
       case "SUBSCRIPTION_UPDATED": {
-        if (subscription?.externalReference) {
+        // Find subscription by asaas_id
+        const subscriptionData = await getSubscriptionByAsaasId(subscription?.id);
+        
+        if (subscriptionData) {
           const newStatus = subscriptionStatusMap[subscription.status] || "active";
           
           const { error } = await supabase
@@ -357,37 +423,41 @@ serve(async (req) => {
               status: newStatus,
               next_payment: subscription.nextDueDate,
             })
-            .eq("id", subscription.externalReference);
+            .eq("id", subscriptionData.id);
 
           if (error) {
             console.error("Error updating subscription:", error);
+          } else {
+            console.log(`Subscription ${subscription.id} updated to ${newStatus}`);
           }
         }
         break;
       }
 
       case "SUBSCRIPTION_DELETED": {
-        if (subscription?.externalReference) {
+        // Find subscription by asaas_id
+        const subscriptionData = await getSubscriptionByAsaasId(subscription?.id);
+        
+        if (subscriptionData) {
           const { error } = await supabase
             .from("subscriptions")
             .update({
               status: "cancelled",
             })
-            .eq("id", subscription.externalReference);
+            .eq("id", subscriptionData.id);
 
           if (error) {
             console.error("Error updating subscription:", error);
+          } else {
+            console.log(`Subscription ${subscription.id} cancelled`);
           }
 
           // Create notification
-          const clientId = await getClientIdFromSubscription(subscription.externalReference);
-          if (clientId) {
-            await createNotification(
-              clientId,
-              "payment_failed",
-              `Sua assinatura foi cancelada.`
-            );
-          }
+          await createNotification(
+            subscriptionData.client_id,
+            "payment_failed",
+            `Sua assinatura foi cancelada.`
+          );
         }
         break;
       }
