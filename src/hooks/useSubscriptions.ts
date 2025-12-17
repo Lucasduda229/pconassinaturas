@@ -12,6 +12,7 @@ export interface Subscription {
   next_payment: string;
   created_at: string;
   updated_at: string;
+  asaas_id?: string;
   clientName?: string;
   clients?: {
     name: string;
@@ -46,7 +47,7 @@ export const useSubscriptions = () => {
     }
   };
 
-  const addSubscription = async (subscription: { client_id: string; plan_name: string; value: number; next_payment?: string }) => {
+  const addSubscription = async (subscription: { client_id: string; plan_name: string; value: number; next_payment?: string; asaas_id?: string }) => {
     try {
       const nextPayment = subscription.next_payment || (() => {
         const date = new Date();
@@ -61,7 +62,8 @@ export const useSubscriptions = () => {
           plan_name: subscription.plan_name,
           value: subscription.value,
           status: 'active',
-          next_payment: nextPayment
+          next_payment: nextPayment,
+          asaas_id: subscription.asaas_id || null
         }])
         .select('*, clients(name)')
         .single();

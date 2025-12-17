@@ -60,7 +60,7 @@ const Subscriptions = () => {
 
   const { subscriptions, loading, addSubscription, updateSubscription, deleteSubscription } = useSubscriptions();
   const { clients } = useClients();
-  const { createPayment, createCustomer, syncCustomerToAsaas, loading: asaasLoading } = useAsaas();
+  const { createPayment, createCustomer, syncCustomerToAsaas, createSubscription: createAsaasSubscription, loading: asaasLoading } = useAsaas();
 
   const filteredSubscriptions = subscriptions.filter(sub =>
     (sub.clients?.name || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -84,16 +84,48 @@ const Subscriptions = () => {
       return;
     }
 
-    const result = await addSubscription({
-      client_id: newSubscription.clientId,
-      plan_name: newSubscription.planName,
-      value: parseFloat(newSubscription.value),
-      next_payment: new Date(newSubscription.dueDate).toISOString(),
-    });
+    try {
+      // First, sync the client with Asaas
+      const customerResult = await syncCustomerToAsaas(newSubscription.clientId);
+      const asaasCustomerId = customerResult?.id;
 
-    if (result) {
-      setNewSubscription({ clientId: '', planName: '', value: '', dueDate: '' });
-      setIsDialogOpen(false);
+      if (!asaasCustomerId) {
+        toast.error('Erro ao sincronizar cliente com Asaas');
+        return;
+      }
+
+      // Create subscription in Asaas
+      const asaasSubscription = await createAsaasSubscription({
+        customer: asaasCustomerId,
+        billingType: 'PIX',
+        value: parseFloat(newSubscription.value),
+        nextDueDate: newSubscription.dueDate,
+        cycle: 'MONTHLY',
+        description: newSubscription.planName,
+      });
+
+      if (!asaasSubscription?.id) {
+        toast.error('Erro ao criar assinatura no Asaas');
+        return;
+      }
+
+      // Save locally with Asaas ID
+      const result = await addSubscription({
+        client_id: newSubscription.clientId,
+        plan_name: newSubscription.planName,
+        value: parseFloat(newSubscription.value),
+        next_payment: new Date(newSubscription.dueDate).toISOString(),
+        asaas_id: asaasSubscription.id,
+      });
+
+      if (result) {
+        toast.success('Assinatura criada e sincronizada com Asaas!');
+        setNewSubscription({ clientId: '', planName: '', value: '', dueDate: '' });
+        setIsDialogOpen(false);
+      }
+    } catch (error: any) {
+      console.error('Error creating subscription:', error);
+      toast.error(error.message || 'Erro ao criar assinatura');
     }
   };
 
