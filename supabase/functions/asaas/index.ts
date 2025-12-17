@@ -54,6 +54,9 @@ serve(async (req) => {
   }
 
   try {
+    console.log("=== ASAAS Edge Function Called ===");
+    console.log("ASAAS_API_KEY configured:", !!ASAAS_API_KEY);
+    
     const url = new URL(req.url);
     const action = url.searchParams.get("action");
     const body = req.method !== "GET" ? await req.json() : null;
@@ -61,6 +64,7 @@ serve(async (req) => {
     const supabase = getSupabaseClient(authHeader);
 
     console.log(`Action: ${action}, Method: ${req.method}`);
+    console.log("Body received:", JSON.stringify(body));
 
     let result;
 
