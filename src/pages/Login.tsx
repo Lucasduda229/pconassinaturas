@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import BlueBackground from '@/components/BlueBackground';
 import { useAuth } from '@/contexts/AuthContext';
-import logo from '@/assets/logo-pcon-notas-contratos.png';
+import logo from '@/assets/logo-pcon-grande.png';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -63,9 +63,15 @@ const Login = () => {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.1, duration: 0.4 }}
         >
-          <div className="inline-flex items-center justify-center gap-3 mb-4 bg-white/95 p-4 rounded-2xl shadow-lg">
-            <img src={logo} alt="P-CON Construnet - Notas e Contratos" className="h-20 sm:h-24 w-auto" />
+          <div className="inline-flex items-center justify-center gap-3 mb-4">
+            <img src={logo} alt="P-CON" className="h-20 sm:h-28 w-auto" />
           </div>
+          <h1 className="font-heading text-2xl sm:text-3xl font-bold text-foreground">
+            P-CON Assinaturas
+          </h1>
+          <p className="text-sm sm:text-base text-gray-neutral mt-2">
+            Sistema de Gestão de Assinaturas
+          </p>
         </motion.div>
 
         {/* Login Card */}
