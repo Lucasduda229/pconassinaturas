@@ -10,7 +10,7 @@ import {
   RotateCcw,
   Loader2,
 } from 'lucide-react';
-import { startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { startOfMonth, endOfMonth, isWithinInterval, isPast, startOfDay } from 'date-fns';
 import DashboardLayout from '@/components/DashboardLayout';
 import MetricCard from '@/components/MetricCard';
 import DataTable from '@/components/DataTable';
@@ -86,27 +86,64 @@ const Dashboard = () => {
   };
 
   // Calculate real metrics from database
-  const activeClients = clients.filter(c => c.status === 'active').length;
-  const inactiveClients = clients.filter(c => c.status === 'inactive').length;
-  const renewedSubscriptions = subscriptions.filter(s => s.status === 'active').length;
-  const expiredSubscriptions = subscriptions.filter(s => s.status === 'overdue' || s.status === 'cancelled').length;
-  const pendingSubscriptions = subscriptions.filter(s => s.status === 'pending').length;
-  const failedPayments = payments.filter(p => p.status === 'failed').length;
-
-  // Calculate monthly revenue from actual paid payments in current month
-  const monthlyRevenue = useMemo(() => {
+  const metrics = useMemo(() => {
     const now = new Date();
+    const today = startOfDay(now);
     const monthStart = startOfMonth(now);
     const monthEnd = endOfMonth(now);
+
+    // Clients
+    const activeClients = clients.filter(c => c.status === 'active').length;
+    const inactiveClients = clients.filter(c => c.status === 'inactive').length;
+    const totalClients = clients.length;
+
+    // Subscriptions - Active ones are "Renovadas"
+    const activeSubscriptions = subscriptions.filter(s => s.status === 'active').length;
     
-    return payments
+    // Subscriptions vencidas - next_payment in the past AND status not cancelled
+    const overdueSubscriptions = subscriptions.filter(s => {
+      if (s.status === 'cancelled') return false;
+      const nextPaymentDate = new Date(s.next_payment);
+      return isPast(nextPaymentDate) && nextPaymentDate < today;
+    }).length;
+
+    // Payments
+    const pendingPayments = payments.filter(p => p.status === 'pending').length;
+    const failedPayments = payments.filter(p => p.status === 'failed' || p.status === 'overdue').length;
+    
+    // Overdue payments (pending but past due date based on created_at + 7 days or explicit check)
+    const overduePayments = payments.filter(p => {
+      if (p.status !== 'pending') return false;
+      const createdDate = new Date(p.created_at);
+      // Consider payment overdue if created more than 7 days ago and still pending
+      const dueDate = new Date(createdDate);
+      dueDate.setDate(dueDate.getDate() + 7);
+      return isPast(dueDate);
+    }).length;
+
+    // Monthly revenue from paid payments in current month
+    const monthlyRevenue = payments
       .filter(p => {
         if (p.status !== 'paid') return false;
         const paidDate = p.paid_at ? new Date(p.paid_at) : new Date(p.created_at);
         return isWithinInterval(paidDate, { start: monthStart, end: monthEnd });
       })
       .reduce((acc, p) => acc + Number(p.amount), 0);
-  }, [payments]);
+
+    return {
+      activeClients,
+      inactiveClients,
+      totalClients,
+      activeSubscriptions,
+      overdueSubscriptions,
+      overduePayments,
+      pendingPayments,
+      failedPayments,
+      monthlyRevenue,
+      // Combined vencidas = overdue subscriptions + overdue payments
+      totalOverdue: overdueSubscriptions + overduePayments,
+    };
+  }, [clients, subscriptions, payments]);
 
   const recentSubscriptions = subscriptions.slice(0, 5);
   const recentPayments = payments.slice(0, 5);
@@ -241,24 +278,24 @@ const Dashboard = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 lg:mb-8">
         <MetricCard
           title="Clientes Ativos"
-          value={isLoading ? '...' : activeClients}
+          value={isLoading ? '...' : metrics.activeClients}
           icon={Users}
           variant="success"
         />
         <MetricCard
           title="Receita do Mês"
-          value={isLoading ? '...' : formatCurrency(monthlyRevenue)}
+          value={isLoading ? '...' : formatCurrency(metrics.monthlyRevenue)}
           icon={DollarSign}
         />
         <MetricCard
           title="Renovadas"
-          value={isLoading ? '...' : renewedSubscriptions}
+          value={isLoading ? '...' : metrics.activeSubscriptions}
           icon={CheckCircle}
           variant="success"
         />
         <MetricCard
           title="Falhas"
-          value={isLoading ? '...' : failedPayments}
+          value={isLoading ? '...' : metrics.failedPayments}
           icon={AlertTriangle}
           variant="danger"
         />
@@ -268,25 +305,26 @@ const Dashboard = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 lg:mb-8">
         <MetricCard
           title="Total Clientes"
-          value={isLoading ? '...' : clients.length}
+          value={isLoading ? '...' : metrics.totalClients}
           icon={Users}
         />
         <MetricCard
           title="Inativos"
-          value={isLoading ? '...' : inactiveClients}
+          value={isLoading ? '...' : metrics.inactiveClients}
           icon={XCircle}
           variant="warning"
         />
         <MetricCard
           title="Vencidas"
-          value={isLoading ? '...' : expiredSubscriptions}
+          value={isLoading ? '...' : metrics.totalOverdue}
           icon={Calendar}
           variant="danger"
         />
         <MetricCard
           title="Pendentes"
-          value={isLoading ? '...' : pendingSubscriptions}
+          value={isLoading ? '...' : metrics.pendingPayments}
           icon={TrendingUp}
+          variant="warning"
         />
       </div>
 
