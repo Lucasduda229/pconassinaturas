@@ -1,15 +1,26 @@
-import { useState } from 'react';
-import { Search, Filter, FileText, Download, Eye, Trash2 } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Search, Filter, FileText, Download, Eye, Trash2, Plus } from 'lucide-react';
+import { startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import DashboardLayout from '@/components/DashboardLayout';
 import StatusBadge from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useInvoices } from '@/hooks/useInvoices';
+import { useClients } from '@/hooks/useClients';
 import { formatBrazilDate } from '@/utils/dateUtils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const Invoices = () => {
   const [search, setSearch] = useState('');
-  const { invoices, loading, deleteInvoice } = useInvoices();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newInvoice, setNewInvoice] = useState({ client_id: '', amount: '' });
+  const [isCreating, setIsCreating] = useState(false);
+  const { invoices, loading, deleteInvoice, refetch } = useInvoices();
+  const { clients } = useClients();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -23,10 +34,58 @@ const Invoices = () => {
     invoice.number.toLowerCase().includes(search.toLowerCase())
   );
 
-  const totalIssued = invoices.reduce((acc, inv) => acc + Number(inv.amount), 0);
+  const stats = useMemo(() => {
+    const now = new Date();
+    const monthStart = startOfMonth(now);
+    const monthEnd = endOfMonth(now);
+
+    const thisMonthInvoices = invoices.filter(inv => {
+      const issuedDate = parseISO(inv.issued_at);
+      return isWithinInterval(issuedDate, { start: monthStart, end: monthEnd });
+    });
+
+    const totalIssued = invoices.reduce((acc, inv) => acc + Number(inv.amount), 0);
+    const thisMonthTotal = thisMonthInvoices.reduce((acc, inv) => acc + Number(inv.amount), 0);
+
+    return {
+      total: invoices.length,
+      totalIssued,
+      thisMonthCount: thisMonthInvoices.length,
+      thisMonthTotal,
+    };
+  }, [invoices]);
 
   const handleDeleteInvoice = async (invoiceId: string) => {
     await deleteInvoice(invoiceId);
+  };
+
+  const handleCreateInvoice = async () => {
+    if (!newInvoice.client_id || !newInvoice.amount) {
+      toast.error('Preencha todos os campos');
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const invoiceNumber = `NF-${Date.now().toString(36).toUpperCase()}`;
+      const { error } = await supabase.from('invoices').insert({
+        client_id: newInvoice.client_id,
+        number: invoiceNumber,
+        amount: parseFloat(newInvoice.amount),
+        status: 'issued',
+      });
+
+      if (error) throw error;
+      toast.success('Nota fiscal criada com sucesso!');
+      setNewInvoice({ client_id: '', amount: '' });
+      setIsDialogOpen(false);
+      refetch();
+    } catch (error) {
+      console.error('Error creating invoice:', error);
+      toast.error('Erro ao criar nota fiscal');
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   return (
@@ -46,24 +105,62 @@ const Invoices = () => {
           />
         </div>
         
-        <Button variant="outline" size="sm" className="h-10 sm:h-11 gap-2 border-border/50 bg-secondary/50">
-          <Filter className="w-4 h-4" />
-          <span className="hidden sm:inline">Filtros</span>
-        </Button>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="h-10 sm:h-11 gap-2">
+              <Plus className="w-4 h-4" />
+              <span>Nova Nota</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="glass-card border-border/50">
+            <DialogHeader>
+              <DialogTitle>Nova Nota Fiscal</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label>Cliente</Label>
+                <Select value={newInvoice.client_id} onValueChange={(v) => setNewInvoice(prev => ({ ...prev, client_id: v }))}>
+                  <SelectTrigger className="bg-secondary/50 border-border/50">
+                    <SelectValue placeholder="Selecione um cliente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map(client => (
+                      <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Valor (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="0,00"
+                  value={newInvoice.amount}
+                  onChange={(e) => setNewInvoice(prev => ({ ...prev, amount: e.target.value }))}
+                  className="bg-secondary/50 border-border/50"
+                />
+              </div>
+              <Button onClick={handleCreateInvoice} disabled={isCreating} className="w-full">
+                {isCreating ? 'Criando...' : 'Criar Nota Fiscal'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
         <div className="glass-card p-3 sm:p-4 text-center">
-          <p className="text-xl sm:text-2xl font-bold text-foreground">{invoices.length}</p>
+          <p className="text-xl sm:text-2xl font-bold text-foreground">{stats.total}</p>
           <p className="text-xs sm:text-sm text-muted-foreground">Emitidas</p>
         </div>
         <div className="glass-card p-3 sm:p-4 text-center">
-          <p className="text-sm sm:text-xl font-bold text-primary">{formatCurrency(totalIssued)}</p>
+          <p className="text-sm sm:text-xl font-bold text-primary">{formatCurrency(stats.totalIssued)}</p>
           <p className="text-xs sm:text-sm text-muted-foreground">Valor Total</p>
         </div>
         <div className="glass-card p-3 sm:p-4 text-center">
-          <p className="text-xl sm:text-2xl font-bold text-success">{invoices.length}</p>
+          <p className="text-xl sm:text-2xl font-bold text-success">{stats.thisMonthCount}</p>
           <p className="text-xs sm:text-sm text-muted-foreground">Este Mês</p>
         </div>
       </div>
