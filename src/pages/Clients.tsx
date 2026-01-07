@@ -704,28 +704,10 @@ const Clients = () => {
               
               <div className="space-y-2">
                 <label className="text-sm font-medium">Método de Pagamento *</label>
-                <Select 
-                  value={newCharge.billingType} 
-                  onValueChange={(value: 'PIX' | 'CREDIT_CARD') => setNewCharge({ ...newCharge, billingType: value })}
-                >
-                  <SelectTrigger className="bg-secondary/50 border-border/50">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="PIX">
-                      <div className="flex items-center gap-2">
-                        <QrCode className="w-4 h-4" />
-                        PIX
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="CREDIT_CARD">
-                      <div className="flex items-center gap-2">
-                        <CreditCard className="w-4 h-4" />
-                        Cartão de Crédito
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2 p-3 bg-secondary/50 border border-border/50 rounded-md">
+                  <QrCode className="w-4 h-4" />
+                  <span>PIX</span>
+                </div>
               </div>
               
               <div className="space-y-2">
