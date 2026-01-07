@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Filter, MoreHorizontal, CreditCard, CheckCircle, XCircle, Clock, Trash2, Download } from 'lucide-react';
+import { Search, MoreHorizontal, CreditCard, CheckCircle, XCircle, Clock, Trash2, Download, Eye, FileText, Loader2 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
@@ -11,17 +11,31 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { usePayments, Payment } from '@/hooks/usePayments';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { useGlobalData, Payment } from '@/contexts/GlobalDataContext';
 import { formatBrazilDate } from '@/utils/dateUtils';
 import { toast } from 'sonner';
 import { exportToCSV, formatCurrencyForExport, formatDateForExport } from '@/utils/exportUtils';
 
 const Payments = () => {
   const [search, setSearch] = useState('');
-  const { payments, loading, deletePayment } = usePayments();
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
+  const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
+  const [invoiceNumber, setInvoiceNumber] = useState('');
+  
+  const { payments, loadingPayments: loading, deletePayment, addInvoice, invoices } = useGlobalData();
 
   const filteredPayments = payments.filter(payment =>
-    (payment.subscriptions?.clients?.name || '').toLowerCase().includes(search.toLowerCase())
+    (payment.subscriptions?.clients?.name || payment.clients?.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (payment.description || '').toLowerCase().includes(search.toLowerCase())
   );
 
   const formatCurrency = (value: number) => {
@@ -43,13 +57,80 @@ const Payments = () => {
     await deletePayment(paymentId);
   };
 
+  const openDetailsDialog = (payment: Payment) => {
+    setSelectedPayment(payment);
+    setIsDetailsDialogOpen(true);
+  };
+
+  const openInvoiceDialog = (payment: Payment) => {
+    setSelectedPayment(payment);
+    // Generate suggested invoice number
+    const year = new Date().getFullYear();
+    const month = String(new Date().getMonth() + 1).padStart(2, '0');
+    const count = invoices.length + 1;
+    setInvoiceNumber(`NF-${year}${month}-${String(count).padStart(4, '0')}`);
+    setIsInvoiceDialogOpen(true);
+  };
+
+  const handleCreateInvoice = async () => {
+    if (!selectedPayment || !invoiceNumber) {
+      toast.error('Preencha o número da nota fiscal');
+      return;
+    }
+
+    // Check if invoice already exists for this payment
+    const existingInvoice = invoices.find(inv => inv.payment_id === selectedPayment.id);
+    if (existingInvoice) {
+      toast.error('Já existe uma nota fiscal para este pagamento');
+      return;
+    }
+
+    // Get client_id from payment
+    const clientId = selectedPayment.client_id || 
+      (selectedPayment.subscriptions && 'clients' in selectedPayment.subscriptions 
+        ? null // We need to get client_id from somewhere else
+        : null);
+
+    if (!clientId) {
+      toast.error('Cliente não encontrado para este pagamento');
+      return;
+    }
+
+    setIsCreatingInvoice(true);
+    try {
+      const result = await addInvoice({
+        payment_id: selectedPayment.id,
+        client_id: clientId,
+        number: invoiceNumber,
+        amount: Number(selectedPayment.amount),
+        status: 'issued',
+      });
+
+      if (result) {
+        setIsInvoiceDialogOpen(false);
+        setSelectedPayment(null);
+        setInvoiceNumber('');
+      }
+    } finally {
+      setIsCreatingInvoice(false);
+    }
+  };
+
+  const getPaymentClientName = (payment: Payment): string => {
+    return payment.subscriptions?.clients?.name || payment.clients?.name || 'N/A';
+  };
+
+  const hasInvoice = (paymentId: string): boolean => {
+    return invoices.some(inv => inv.payment_id === paymentId);
+  };
+
   const columns = [
     {
       key: 'client',
       header: 'Cliente',
       render: (item: Payment) => (
         <div>
-          <span className="font-medium text-foreground text-sm">{item.subscriptions?.clients?.name || 'N/A'}</span>
+          <span className="font-medium text-foreground text-sm">{getPaymentClientName(item)}</span>
           <span className="block text-xs text-muted-foreground sm:hidden">{item.payment_method}</span>
         </div>
       ),
@@ -95,9 +176,17 @@ const Payments = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="glass-card border-border/50">
-            <DropdownMenuItem>Ver detalhes</DropdownMenuItem>
-            <DropdownMenuItem>Emitir nota fiscal</DropdownMenuItem>
-            <DropdownMenuItem>Reenviar cobrança</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => openDetailsDialog(item)}>
+              <Eye className="w-4 h-4 mr-2" />
+              Ver detalhes
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => openInvoiceDialog(item)}
+              disabled={hasInvoice(item.id)}
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              {hasInvoice(item.id) ? 'NF já emitida' : 'Emitir nota fiscal'}
+            </DropdownMenuItem>
             <DropdownMenuItem 
               className="text-destructive"
               onClick={() => handleDeletePayment(item.id)}
@@ -135,7 +224,7 @@ const Payments = () => {
           onClick={() => {
             const exportData = payments.map(p => ({
               ...p,
-              clientName: p.subscriptions?.clients?.name || 'N/A',
+              clientName: getPaymentClientName(p),
               formattedAmount: formatCurrencyForExport(Number(p.amount)),
               formattedDate: formatDateForExport(p.created_at),
             }));
@@ -210,6 +299,183 @@ const Payments = () => {
       ) : (
         <DataTable data={filteredPayments} columns={columns} />
       )}
+
+      {/* Details Dialog */}
+      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+        <DialogContent className="glass-card border-border/50 max-w-[95vw] sm:max-w-md mx-auto">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl">Detalhes do Pagamento</DialogTitle>
+            <DialogDescription>
+              Informações completas do pagamento.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedPayment && (
+            <div className="space-y-4 mt-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Cliente</label>
+                  <p className="text-sm font-medium text-foreground">{getPaymentClientName(selectedPayment)}</p>
+                </div>
+                
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Valor</label>
+                  <p className="text-sm font-medium text-foreground">{formatCurrency(Number(selectedPayment.amount))}</p>
+                </div>
+                
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Método</label>
+                  <p className="text-sm font-medium text-foreground">{selectedPayment.payment_method || 'N/A'}</p>
+                </div>
+                
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Status</label>
+                  <StatusBadge status={selectedPayment.status} />
+                </div>
+                
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Data de Criação</label>
+                  <p className="text-sm font-medium text-foreground">{formatBrazilDate(selectedPayment.created_at)}</p>
+                </div>
+                
+                {selectedPayment.paid_at && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Data de Pagamento</label>
+                    <p className="text-sm font-medium text-foreground">{formatBrazilDate(selectedPayment.paid_at)}</p>
+                  </div>
+                )}
+                
+                {selectedPayment.description && (
+                  <div className="space-y-1 col-span-2">
+                    <label className="text-xs font-medium text-muted-foreground">Descrição</label>
+                    <p className="text-sm font-medium text-foreground">{selectedPayment.description}</p>
+                  </div>
+                )}
+
+                {selectedPayment.subscriptions?.plan_name && (
+                  <div className="space-y-1 col-span-2">
+                    <label className="text-xs font-medium text-muted-foreground">Plano</label>
+                    <p className="text-sm font-medium text-foreground">{selectedPayment.subscriptions.plan_name}</p>
+                  </div>
+                )}
+
+                {selectedPayment.asaas_id && (
+                  <div className="space-y-1 col-span-2">
+                    <label className="text-xs font-medium text-muted-foreground">ID Asaas</label>
+                    <p className="text-sm font-medium text-foreground font-mono text-xs">{selectedPayment.asaas_id}</p>
+                  </div>
+                )}
+
+                <div className="space-y-1 col-span-2">
+                  <label className="text-xs font-medium text-muted-foreground">Nota Fiscal</label>
+                  <p className="text-sm font-medium text-foreground">
+                    {hasInvoice(selectedPayment.id) ? (
+                      <span className="text-success">✓ Emitida</span>
+                    ) : (
+                      <span className="text-muted-foreground">Não emitida</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 pt-4">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 border-border/50"
+                  onClick={() => setIsDetailsDialogOpen(false)}
+                >
+                  Fechar
+                </Button>
+                {!hasInvoice(selectedPayment.id) && (
+                  <Button 
+                    className="flex-1" 
+                    onClick={() => {
+                      setIsDetailsDialogOpen(false);
+                      openInvoiceDialog(selectedPayment);
+                    }}
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Emitir NF
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Invoice Dialog */}
+      <Dialog open={isInvoiceDialogOpen} onOpenChange={setIsInvoiceDialogOpen}>
+        <DialogContent className="glass-card border-border/50 max-w-[95vw] sm:max-w-md mx-auto">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl">Emitir Nota Fiscal</DialogTitle>
+            <DialogDescription>
+              Crie uma nota fiscal para este pagamento.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedPayment && (
+            <div className="space-y-4 mt-4">
+              <div className="p-4 bg-secondary/50 rounded-lg space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Cliente:</span>
+                  <span className="text-sm font-medium text-foreground">{getPaymentClientName(selectedPayment)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Valor:</span>
+                  <span className="text-sm font-medium text-foreground">{formatCurrency(Number(selectedPayment.amount))}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Data:</span>
+                  <span className="text-sm font-medium text-foreground">{formatBrazilDate(selectedPayment.created_at)}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Número da Nota Fiscal *</label>
+                <Input
+                  placeholder="Ex: NF-202401-0001"
+                  value={invoiceNumber}
+                  onChange={(e) => setInvoiceNumber(e.target.value)}
+                  className="bg-secondary/50 border-border/50"
+                />
+              </div>
+              
+              <div className="flex gap-3 pt-4">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 border-border/50"
+                  onClick={() => {
+                    setIsInvoiceDialogOpen(false);
+                    setSelectedPayment(null);
+                    setInvoiceNumber('');
+                  }}
+                  disabled={isCreatingInvoice}
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  className="flex-1" 
+                  onClick={handleCreateInvoice}
+                  disabled={isCreatingInvoice || !invoiceNumber}
+                >
+                  {isCreatingInvoice ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Emitindo...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="w-4 h-4 mr-2" />
+                      Emitir NF
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };

@@ -27,12 +27,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useSubscriptions, Subscription } from '@/hooks/useSubscriptions';
-import { useClients } from '@/hooks/useClients';
+import { useGlobalData, Subscription } from '@/contexts/GlobalDataContext';
 import { useAsaas } from '@/hooks/useAsaas';
 import { supabase } from '@/integrations/supabase/client';
 import { differenceInDays, isPast, isToday, format, addDays } from 'date-fns';
-import { formatBrazilDate, toBrazilTime } from '@/utils/dateUtils';
+import { formatBrazilDate, formatDateForInput, inputDateToISO, toBrazilTime } from '@/utils/dateUtils';
 import { toast } from 'sonner';
 
 const Subscriptions = () => {
@@ -58,8 +57,7 @@ const Subscriptions = () => {
   });
   const [isCreatingCharge, setIsCreatingCharge] = useState(false);
 
-  const { subscriptions, loading, addSubscription, updateSubscription, deleteSubscription } = useSubscriptions();
-  const { clients } = useClients();
+  const { subscriptions, clients, loadingSubscriptions: loading, addSubscription, updateSubscription, deleteSubscription } = useGlobalData();
   const { createPayment, createCustomer, syncCustomerToAsaas, createSubscription: createAsaasSubscription, loading: asaasLoading } = useAsaas();
 
   const filteredSubscriptions = subscriptions.filter(sub =>
@@ -114,8 +112,9 @@ const Subscriptions = () => {
         client_id: newSubscription.clientId,
         plan_name: newSubscription.planName,
         value: parseFloat(newSubscription.value),
-        next_payment: new Date(newSubscription.dueDate).toISOString(),
+        next_payment: inputDateToISO(newSubscription.dueDate),
         asaas_id: asaasSubscription.id,
+        status: 'active',
       });
 
       if (result) {
@@ -664,8 +663,8 @@ const Subscriptions = () => {
                 <label className="text-sm font-medium">Data de Vencimento *</label>
                 <Input
                   type="date"
-                  value={formatBrazilDate(editingSubscription.next_payment, 'yyyy-MM-dd')}
-                  onChange={(e) => setEditingSubscription({ ...editingSubscription, next_payment: new Date(e.target.value).toISOString() })}
+                  value={formatDateForInput(editingSubscription.next_payment)}
+                  onChange={(e) => setEditingSubscription({ ...editingSubscription, next_payment: inputDateToISO(e.target.value) })}
                   className="bg-secondary/50 border-border/50"
                 />
               </div>
