@@ -1,5 +1,26 @@
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+
+/**
+ * Converte uma string de data para Date de forma segura, evitando problemas de timezone
+ */
+export const parseDate = (date: Date | string): Date => {
+  if (!date) return new Date();
+  
+  if (date instanceof Date) return date;
+  
+  // Se for uma string no formato ISO (YYYY-MM-DD ou YYYY-MM-DDTHH:mm:ss)
+  if (typeof date === 'string') {
+    // Se contém 'T', é um datetime completo - usa parseISO
+    if (date.includes('T')) {
+      return parseISO(date);
+    }
+    // Se é apenas uma data (YYYY-MM-DD), adiciona horário de meio-dia para evitar problemas de timezone
+    return new Date(date + 'T12:00:00');
+  }
+  
+  return new Date(date);
+};
 
 /**
  * Formata uma data no padrão brasileiro sem alterar o dia
@@ -8,21 +29,7 @@ import { ptBR } from 'date-fns/locale';
 export const formatBrazilDate = (date: Date | string, formatStr: string = 'dd/MM/yyyy'): string => {
   if (!date) return '';
   
-  let dateObj: Date;
-  
-  if (typeof date === 'string') {
-    // Se for uma string no formato ISO (YYYY-MM-DD ou YYYY-MM-DDTHH:mm:ss)
-    // Adiciona o horário de meio-dia para evitar problemas de timezone
-    if (date.includes('T')) {
-      // É um datetime completo, usa direto
-      dateObj = new Date(date);
-    } else {
-      // É apenas uma data, adiciona horário para evitar offset
-      dateObj = new Date(date + 'T12:00:00');
-    }
-  } else {
-    dateObj = date;
-  }
+  const dateObj = parseDate(date);
   
   return format(dateObj, formatStr, { locale: ptBR });
 };
@@ -45,20 +52,14 @@ export const getBrazilNow = (): Date => {
  * Converte para Date object de forma segura
  */
 export const toBrazilTime = (date: Date | string): Date => {
-  if (typeof date === 'string') {
-    if (date.includes('T')) {
-      return new Date(date);
-    }
-    return new Date(date + 'T12:00:00');
-  }
-  return date;
+  return parseDate(date);
 };
 
 /**
  * Formata data para exibição relativa (ex: "há 2 dias")
  */
 export const formatRelativeDate = (date: Date | string): string => {
-  const dateObj = toBrazilTime(date);
+  const dateObj = parseDate(date);
   const now = new Date();
   const diffMs = now.getTime() - dateObj.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -68,4 +69,32 @@ export const formatRelativeDate = (date: Date | string): string => {
   if (diffDays < 7) return `${diffDays} dias atrás`;
   if (diffDays < 30) return `${Math.floor(diffDays / 7)} semanas atrás`;
   return formatBrazilDate(date);
+};
+
+/**
+ * Formata uma data para o formato aceito pelo input type="date" (yyyy-MM-dd)
+ * Corrige problemas de timezone ao converter para string de input
+ */
+export const formatDateForInput = (date: Date | string): string => {
+  if (!date) return '';
+  
+  const dateObj = parseDate(date);
+  
+  // Usa getFullYear, getMonth, getDate para evitar problemas de timezone
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
+};
+
+/**
+ * Converte uma data de input type="date" para ISO string segura
+ */
+export const inputDateToISO = (inputDate: string): string => {
+  if (!inputDate) return '';
+  
+  // inputDate está no formato yyyy-MM-dd
+  // Adiciona horário de meio-dia para evitar problemas de timezone
+  return new Date(inputDate + 'T12:00:00').toISOString();
 };

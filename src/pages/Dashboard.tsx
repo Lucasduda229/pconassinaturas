@@ -28,18 +28,22 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { useClients } from '@/hooks/useClients';
-import { useSubscriptions } from '@/hooks/useSubscriptions';
-import { usePayments } from '@/hooks/usePayments';
+import { useGlobalData } from '@/contexts/GlobalDataContext';
 import { supabase } from '@/integrations/supabase/client';
 import { formatBrazilDate } from '@/utils/dateUtils';
 import { toast } from 'sonner';
 
 const Dashboard = () => {
   const [isResetting, setIsResetting] = useState(false);
-  const { clients, loading: loadingClients, refetch: refetchClients } = useClients();
-  const { subscriptions, loading: loadingSubscriptions, refetch: refetchSubscriptions } = useSubscriptions();
-  const { payments, loading: loadingPayments, refetch: refetchPayments } = usePayments();
+  const { 
+    clients, 
+    subscriptions, 
+    payments, 
+    loadingClients, 
+    loadingSubscriptions, 
+    loadingPayments,
+    refetchAll 
+  } = useGlobalData();
 
   const handleResetAllData = async () => {
     setIsResetting(true);
@@ -67,7 +71,7 @@ const Dashboard = () => {
       if (clientsError) throw clientsError;
 
       // Refetch all data
-      await Promise.all([refetchClients(), refetchSubscriptions(), refetchPayments()]);
+      await refetchAll();
 
       toast.success('Todos os dados foram removidos com sucesso!');
     } catch (error) {
