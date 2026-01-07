@@ -878,21 +878,6 @@ const Checkout = () => {
                         <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                       </motion.button>
 
-                      <motion.button
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.99 }}
-                        onClick={() => handlePayment('CREDIT_CARD')}
-                        className="w-full p-4 rounded-xl bg-secondary/30 border border-border/30 hover:border-primary/40 transition-all duration-200 flex items-center gap-4 group"
-                      >
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(42, 63, 134, 0.15)' }}>
-                          <CreditCard className="h-6 w-6" style={{ color: '#2A3F86' }} />
-                        </div>
-                        <div className="text-left flex-1">
-                          <p className="font-medium text-foreground">Cartão de Crédito</p>
-                          <p className="text-xs text-gray-neutral">Parcele em até 12x</p>
-                        </div>
-                        <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </motion.button>
                     </div>
                   </motion.div>
                 )}
