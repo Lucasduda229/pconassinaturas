@@ -102,6 +102,7 @@ interface GlobalDataContextType {
   deleteSubscription: (id: string) => Promise<boolean>;
   
   // CRUD operations - Payments
+  markPaymentAsPaid: (id: string) => Promise<boolean>;
   deletePayment: (id: string) => Promise<boolean>;
   
   // CRUD operations - Invoices
@@ -320,6 +321,27 @@ export const GlobalDataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // CRUD - Payments
+  const markPaymentAsPaid = async (id: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('payments')
+        .update({ 
+          status: 'paid', 
+          paid_at: new Date().toISOString() 
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+      toast.success('Pagamento marcado como pago!');
+      await fetchPayments(); // Refresh data
+      return true;
+    } catch (error) {
+      console.error('Error marking payment as paid:', error);
+      toast.error('Erro ao marcar pagamento como pago');
+      return false;
+    }
+  };
+
   const deletePayment = async (id: string): Promise<boolean> => {
     try {
       const { error } = await supabase
@@ -437,6 +459,7 @@ export const GlobalDataProvider = ({ children }: { children: ReactNode }) => {
         addSubscription,
         updateSubscription,
         deleteSubscription,
+        markPaymentAsPaid,
         deletePayment,
         addInvoice,
         deleteInvoice,

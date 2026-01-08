@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, MoreHorizontal, CreditCard, CheckCircle, XCircle, Clock, Trash2, Download, Eye, FileText, Loader2 } from 'lucide-react';
+import { Search, MoreHorizontal, CreditCard, CheckCircle, XCircle, Clock, Trash2, Download, Eye, FileText, Loader2, Check } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
@@ -31,7 +31,7 @@ const Payments = () => {
   const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
   const [invoiceNumber, setInvoiceNumber] = useState('');
   
-  const { payments, loadingPayments: loading, deletePayment, addInvoice, invoices } = useGlobalData();
+  const { payments, loadingPayments: loading, deletePayment, markPaymentAsPaid, addInvoice, invoices } = useGlobalData();
 
   const filteredPayments = payments.filter(payment =>
     (payment.subscriptions?.clients?.name || payment.clients?.name || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -55,6 +55,10 @@ const Payments = () => {
 
   const handleDeletePayment = async (paymentId: string) => {
     await deletePayment(paymentId);
+  };
+
+  const handleMarkAsPaid = async (paymentId: string) => {
+    await markPaymentAsPaid(paymentId);
   };
 
   const openDetailsDialog = (payment: Payment) => {
@@ -180,6 +184,15 @@ const Payments = () => {
               <Eye className="w-4 h-4 mr-2" />
               Ver detalhes
             </DropdownMenuItem>
+            {item.status !== 'paid' && (
+              <DropdownMenuItem 
+                className="text-success"
+                onClick={() => handleMarkAsPaid(item.id)}
+              >
+                <Check className="w-4 h-4 mr-2" />
+                Marcar como pago
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem 
               onClick={() => openInvoiceDialog(item)}
               disabled={hasInvoice(item.id)}
@@ -378,7 +391,7 @@ const Payments = () => {
                 </div>
               </div>
               
-              <div className="flex gap-3 pt-4">
+              <div className="flex flex-wrap gap-3 pt-4">
                 <Button 
                   variant="outline" 
                   className="flex-1 border-border/50"
@@ -386,6 +399,18 @@ const Payments = () => {
                 >
                   Fechar
                 </Button>
+                {selectedPayment.status !== 'paid' && (
+                  <Button 
+                    className="flex-1 bg-success hover:bg-success/90 text-success-foreground" 
+                    onClick={async () => {
+                      await handleMarkAsPaid(selectedPayment.id);
+                      setIsDetailsDialogOpen(false);
+                    }}
+                  >
+                    <Check className="w-4 h-4 mr-2" />
+                    Marcar Pago
+                  </Button>
+                )}
                 {!hasInvoice(selectedPayment.id) && (
                   <Button 
                     className="flex-1" 
