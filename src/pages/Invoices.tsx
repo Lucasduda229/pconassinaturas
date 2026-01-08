@@ -1,26 +1,40 @@
 import { useState, useMemo } from 'react';
-import { Search, Filter, FileText, Download, Eye, Trash2, Plus } from 'lucide-react';
-import { startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
+import { Search, FileText, Download, Eye, Trash2, Plus, Calendar, User, DollarSign } from 'lucide-react';
+import { startOfMonth, endOfMonth, isWithinInterval, parseISO, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import DashboardLayout from '@/components/DashboardLayout';
 import StatusBadge from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useInvoices } from '@/hooks/useInvoices';
-import { useClients } from '@/hooks/useClients';
+import { useGlobalData } from '@/contexts/GlobalDataContext';
 import { formatBrazilDate } from '@/utils/dateUtils';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+interface InvoiceWithClient {
+  id: string;
+  payment_id: string | null;
+  client_id: string;
+  number: string;
+  amount: number;
+  status: string;
+  issued_at: string;
+  clientName?: string;
+}
+
 const Invoices = () => {
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceWithClient | null>(null);
   const [newInvoice, setNewInvoice] = useState({ client_id: '', amount: '' });
   const [isCreating, setIsCreating] = useState(false);
-  const { invoices, loading, deleteInvoice, refetch } = useInvoices();
-  const { clients } = useClients();
+  const { invoices, clients, loadingInvoices, loadingClients, refetchAll, deleteInvoice } = useGlobalData();
+
+  const loading = loadingInvoices || loadingClients;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -29,8 +43,16 @@ const Invoices = () => {
     }).format(value);
   };
 
-  const filteredInvoices = invoices.filter(invoice =>
-    (invoice.clients?.name || '').toLowerCase().includes(search.toLowerCase()) ||
+  // Enrich invoices with client names
+  const enrichedInvoices = useMemo(() => {
+    return invoices.map(inv => ({
+      ...inv,
+      clientName: clients.find(c => c.id === inv.client_id)?.name || 'Cliente não encontrado'
+    }));
+  }, [invoices, clients]);
+
+  const filteredInvoices = enrichedInvoices.filter(invoice =>
+    invoice.clientName.toLowerCase().includes(search.toLowerCase()) ||
     invoice.number.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -56,7 +78,15 @@ const Invoices = () => {
   }, [invoices]);
 
   const handleDeleteInvoice = async (invoiceId: string) => {
-    await deleteInvoice(invoiceId);
+    try {
+      const { error } = await supabase.from('invoices').delete().eq('id', invoiceId);
+      if (error) throw error;
+      toast.success('Nota fiscal removida com sucesso!');
+      refetchAll();
+    } catch (error) {
+      console.error('Error deleting invoice:', error);
+      toast.error('Erro ao remover nota fiscal');
+    }
   };
 
   const handleCreateInvoice = async () => {
@@ -79,13 +109,52 @@ const Invoices = () => {
       toast.success('Nota fiscal criada com sucesso!');
       setNewInvoice({ client_id: '', amount: '' });
       setIsDialogOpen(false);
-      refetch();
+      refetchAll();
     } catch (error) {
       console.error('Error creating invoice:', error);
       toast.error('Erro ao criar nota fiscal');
     } finally {
       setIsCreating(false);
     }
+  };
+
+  const handleViewDetails = (invoice: InvoiceWithClient) => {
+    setSelectedInvoice(invoice);
+    setIsDetailsOpen(true);
+  };
+
+  const handleDownloadPDF = (invoice: InvoiceWithClient) => {
+    // Create a simple PDF-like content and download
+    const content = `
+NOTA FISCAL
+===========
+
+Número: ${invoice.number}
+Data de Emissão: ${formatBrazilDate(invoice.issued_at)}
+Status: ${invoice.status === 'issued' ? 'Emitida' : invoice.status}
+
+CLIENTE
+-------
+Nome: ${invoice.clientName}
+
+VALORES
+-------
+Valor Total: ${formatCurrency(invoice.amount)}
+
+---
+Documento gerado automaticamente pelo sistema P-CON
+    `.trim();
+
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${invoice.number}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success('Nota fiscal baixada!');
   };
 
   return (
@@ -150,18 +219,34 @@ const Invoices = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
         <div className="glass-card p-3 sm:p-4 text-center">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <FileText className="w-4 h-4 text-primary" />
+          </div>
           <p className="text-xl sm:text-2xl font-bold text-foreground">{stats.total}</p>
-          <p className="text-xs sm:text-sm text-muted-foreground">Emitidas</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Total Emitidas</p>
         </div>
         <div className="glass-card p-3 sm:p-4 text-center">
-          <p className="text-sm sm:text-xl font-bold text-primary">{formatCurrency(stats.totalIssued)}</p>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <DollarSign className="w-4 h-4 text-success" />
+          </div>
+          <p className="text-sm sm:text-xl font-bold text-success">{formatCurrency(stats.totalIssued)}</p>
           <p className="text-xs sm:text-sm text-muted-foreground">Valor Total</p>
         </div>
         <div className="glass-card p-3 sm:p-4 text-center">
-          <p className="text-xl sm:text-2xl font-bold text-success">{stats.thisMonthCount}</p>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Calendar className="w-4 h-4 text-primary" />
+          </div>
+          <p className="text-xl sm:text-2xl font-bold text-primary">{stats.thisMonthCount}</p>
           <p className="text-xs sm:text-sm text-muted-foreground">Este Mês</p>
+        </div>
+        <div className="glass-card p-3 sm:p-4 text-center">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <DollarSign className="w-4 h-4 text-primary" />
+          </div>
+          <p className="text-sm sm:text-xl font-bold text-primary">{formatCurrency(stats.thisMonthTotal)}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Total Este Mês</p>
         </div>
       </div>
 
@@ -184,12 +269,14 @@ const Invoices = () => {
               <h3 className="font-heading font-semibold text-foreground text-sm sm:text-base mb-1">
                 {invoice.number}
               </h3>
-              <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 truncate">
-                {invoice.clients?.name || 'N/A'}
+              <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 truncate flex items-center gap-1">
+                <User className="w-3 h-3" />
+                {invoice.clientName}
               </p>
               
               <div className="flex items-center justify-between text-xs sm:text-sm mb-3 sm:mb-4">
-                <span className="text-muted-foreground">
+                <span className="text-muted-foreground flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
                   {formatBrazilDate(invoice.issued_at)}
                 </span>
                 <span className="font-semibold text-foreground">
@@ -198,11 +285,21 @@ const Invoices = () => {
               </div>
               
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="flex-1 gap-1 sm:gap-2 border-border/50 text-xs sm:text-sm h-8 sm:h-9">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1 gap-1 sm:gap-2 border-border/50 text-xs sm:text-sm h-8 sm:h-9"
+                  onClick={() => handleViewDetails(invoice)}
+                >
                   <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
                   Ver
                 </Button>
-                <Button variant="outline" size="sm" className="flex-1 gap-1 sm:gap-2 border-border/50 text-xs sm:text-sm h-8 sm:h-9">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1 gap-1 sm:gap-2 border-border/50 text-xs sm:text-sm h-8 sm:h-9"
+                  onClick={() => handleDownloadPDF(invoice)}
+                >
                   <Download className="w-3 h-3 sm:w-4 sm:h-4" />
                   PDF
                 </Button>
@@ -231,6 +328,64 @@ const Invoices = () => {
           </p>
         </div>
       )}
+
+      {/* Details Dialog */}
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="glass-card border-border/50 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary" />
+              Detalhes da Nota Fiscal
+            </DialogTitle>
+          </DialogHeader>
+          {selectedInvoice && (
+            <div className="space-y-4 pt-2">
+              <div className="glass-card p-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground text-sm">Número:</span>
+                  <span className="font-semibold text-foreground">{selectedInvoice.number}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground text-sm">Cliente:</span>
+                  <span className="font-medium text-foreground">{selectedInvoice.clientName}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground text-sm">Valor:</span>
+                  <span className="font-bold text-success text-lg">{formatCurrency(selectedInvoice.amount)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground text-sm">Data de Emissão:</span>
+                  <span className="font-medium text-foreground">{formatBrazilDate(selectedInvoice.issued_at)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground text-sm">Status:</span>
+                  <StatusBadge status={selectedInvoice.status} />
+                </div>
+              </div>
+              
+              <DialogFooter className="gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDetailsOpen(false)}
+                  className="flex-1"
+                >
+                  Fechar
+                </Button>
+                <Button
+                  onClick={() => {
+                    handleDownloadPDF(selectedInvoice);
+                    setIsDetailsOpen(false);
+                  }}
+                  className="flex-1 gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Baixar PDF
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
