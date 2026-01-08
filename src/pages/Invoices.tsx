@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Search, FileText, Download, Eye, Trash2, Plus, Calendar, User, DollarSign } from 'lucide-react';
 import { startOfMonth, endOfMonth, isWithinInterval, parseISO, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { jsPDF } from 'jspdf';
 import DashboardLayout from '@/components/DashboardLayout';
 import StatusBadge from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
@@ -124,37 +125,77 @@ const Invoices = () => {
   };
 
   const handleDownloadPDF = (invoice: InvoiceWithClient) => {
-    // Create a simple PDF-like content and download
-    const content = `
-NOTA FISCAL
-===========
-
-Número: ${invoice.number}
-Data de Emissão: ${formatBrazilDate(invoice.issued_at)}
-Status: ${invoice.status === 'issued' ? 'Emitida' : invoice.status}
-
-CLIENTE
--------
-Nome: ${invoice.clientName}
-
-VALORES
--------
-Valor Total: ${formatCurrency(invoice.amount)}
-
----
-Documento gerado automaticamente pelo sistema P-CON
-    `.trim();
-
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${invoice.number}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    toast.success('Nota fiscal baixada!');
+    try {
+      const doc = new jsPDF();
+      
+      // Header
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('NOTA FISCAL', 105, 30, { align: 'center' });
+      
+      // Line separator
+      doc.setLineWidth(0.5);
+      doc.line(20, 40, 190, 40);
+      
+      // Invoice number and date
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Numero:', 20, 55);
+      doc.setFont('helvetica', 'normal');
+      doc.text(invoice.number, 55, 55);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Data de Emissao:', 110, 55);
+      doc.setFont('helvetica', 'normal');
+      doc.text(formatBrazilDate(invoice.issued_at), 160, 55);
+      
+      // Status
+      doc.setFont('helvetica', 'bold');
+      doc.text('Status:', 20, 70);
+      doc.setFont('helvetica', 'normal');
+      doc.text(invoice.status === 'issued' ? 'Emitida' : invoice.status, 55, 70);
+      
+      // Line separator
+      doc.line(20, 80, 190, 80);
+      
+      // Client section
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DADOS DO CLIENTE', 20, 95);
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Nome:', 20, 110);
+      doc.setFont('helvetica', 'normal');
+      doc.text(invoice.clientName || 'N/A', 55, 110);
+      
+      // Line separator
+      doc.line(20, 120, 190, 120);
+      
+      // Values section
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('VALORES', 20, 135);
+      
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Valor Total:', 20, 155);
+      doc.setFont('helvetica', 'normal');
+      doc.text(formatCurrency(invoice.amount), 70, 155);
+      
+      // Footer
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'italic');
+      doc.text('Documento gerado automaticamente pelo sistema P-CON', 105, 280, { align: 'center' });
+      doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR })}`, 105, 287, { align: 'center' });
+      
+      // Save PDF
+      doc.save(`${invoice.number}.pdf`);
+      toast.success('PDF baixado com sucesso!');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Erro ao gerar PDF');
+    }
   };
 
   return (
