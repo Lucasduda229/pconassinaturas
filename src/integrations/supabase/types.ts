@@ -14,6 +14,283 @@ export type Database = {
   }
   public: {
     Tables: {
+      affiliate_clicks: {
+        Row: {
+          affiliate_link_id: string
+          created_at: string
+          id: string
+          ip_hash: string | null
+          referer: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          affiliate_link_id: string
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          referer?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          affiliate_link_id?: string
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          referer?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_clicks_affiliate_link_id_fkey"
+            columns: ["affiliate_link_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_leads: {
+        Row: {
+          affiliate_link_id: string
+          converted_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          is_converted: boolean
+          lead_email: string | null
+          lead_name: string
+          lead_phone: string | null
+          source: string | null
+        }
+        Insert: {
+          affiliate_link_id: string
+          converted_at?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          is_converted?: boolean
+          lead_email?: string | null
+          lead_name: string
+          lead_phone?: string | null
+          source?: string | null
+        }
+        Update: {
+          affiliate_link_id?: string
+          converted_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          is_converted?: boolean
+          lead_email?: string | null
+          lead_name?: string
+          lead_phone?: string | null
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_leads_affiliate_link_id_fkey"
+            columns: ["affiliate_link_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_links: {
+        Row: {
+          affiliate_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          affiliate_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          affiliate_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_links_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: true
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_rewards: {
+        Row: {
+          affiliate_lead_id: string
+          affiliate_link_id: string
+          amount: number
+          approved_at: string | null
+          created_at: string
+          id: string
+          paid_at: string | null
+          status: Database["public"]["Enums"]["referral_reward_status"]
+          updated_at: string
+        }
+        Insert: {
+          affiliate_lead_id: string
+          affiliate_link_id: string
+          amount?: number
+          approved_at?: string | null
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          status?: Database["public"]["Enums"]["referral_reward_status"]
+          updated_at?: string
+        }
+        Update: {
+          affiliate_lead_id?: string
+          affiliate_link_id?: string
+          amount?: number
+          approved_at?: string | null
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          status?: Database["public"]["Enums"]["referral_reward_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_rewards_affiliate_lead_id_fkey"
+            columns: ["affiliate_lead_id"]
+            isOneToOne: true
+            referencedRelation: "affiliate_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_rewards_affiliate_link_id_fkey"
+            columns: ["affiliate_link_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_sessions: {
+        Row: {
+          affiliate_user_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          token: string
+        }
+        Insert: {
+          affiliate_user_id: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          token: string
+        }
+        Update: {
+          affiliate_user_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_sessions_affiliate_user_id_fkey"
+            columns: ["affiliate_user_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_users: {
+        Row: {
+          affiliate_id: string
+          created_at: string
+          email: string
+          id: string
+          last_login: string | null
+          password_hash: string
+          updated_at: string
+        }
+        Insert: {
+          affiliate_id: string
+          created_at?: string
+          email: string
+          id?: string
+          last_login?: string | null
+          password_hash: string
+          updated_at?: string
+        }
+        Update: {
+          affiliate_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          last_login?: string | null
+          password_hash?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_users_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliates: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          email: string
+          id: string
+          name: string
+          phone: string | null
+          pix_key: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          phone?: string | null
+          pix_key?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          pix_key?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       client_sessions: {
         Row: {
           client_user_id: string
