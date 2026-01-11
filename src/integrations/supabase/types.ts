@@ -138,8 +138,10 @@ export type Database = {
           amount: number
           approved_at: string | null
           created_at: string
+          description: string | null
           id: string
           paid_at: string | null
+          reward_type: string
           status: Database["public"]["Enums"]["referral_reward_status"]
           updated_at: string
         }
@@ -149,8 +151,10 @@ export type Database = {
           amount?: number
           approved_at?: string | null
           created_at?: string
+          description?: string | null
           id?: string
           paid_at?: string | null
+          reward_type?: string
           status?: Database["public"]["Enums"]["referral_reward_status"]
           updated_at?: string
         }
@@ -160,8 +164,10 @@ export type Database = {
           amount?: number
           approved_at?: string | null
           created_at?: string
+          description?: string | null
           id?: string
           paid_at?: string | null
+          reward_type?: string
           status?: Database["public"]["Enums"]["referral_reward_status"]
           updated_at?: string
         }
@@ -694,10 +700,12 @@ export type Database = {
           amount: number
           approved_at: string | null
           created_at: string
+          description: string | null
           id: string
           paid_at: string | null
           referral_lead_id: string
           referral_link_id: string
+          reward_type: string
           status: Database["public"]["Enums"]["referral_reward_status"]
           updated_at: string
         }
@@ -705,10 +713,12 @@ export type Database = {
           amount?: number
           approved_at?: string | null
           created_at?: string
+          description?: string | null
           id?: string
           paid_at?: string | null
           referral_lead_id: string
           referral_link_id: string
+          reward_type?: string
           status?: Database["public"]["Enums"]["referral_reward_status"]
           updated_at?: string
         }
@@ -716,10 +726,12 @@ export type Database = {
           amount?: number
           approved_at?: string | null
           created_at?: string
+          description?: string | null
           id?: string
           paid_at?: string | null
           referral_lead_id?: string
           referral_link_id?: string
+          reward_type?: string
           status?: Database["public"]["Enums"]["referral_reward_status"]
           updated_at?: string
         }
@@ -742,6 +754,8 @@ export type Database = {
       }
       referral_settings: {
         Row: {
+          client_reward_description: string
+          client_reward_value: number
           created_at: string
           id: string
           is_active: boolean
@@ -750,6 +764,8 @@ export type Database = {
           validity_days: number
         }
         Insert: {
+          client_reward_description?: string
+          client_reward_value?: number
           created_at?: string
           id?: string
           is_active?: boolean
@@ -758,6 +774,8 @@ export type Database = {
           validity_days?: number
         }
         Update: {
+          client_reward_description?: string
+          client_reward_value?: number
           created_at?: string
           id?: string
           is_active?: boolean
