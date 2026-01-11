@@ -216,7 +216,7 @@ const PixQRCode = ({
       <CardContent className="space-y-4">
         {/* QR Code Image with Logo */}
         <div className="flex justify-center">
-          <div className="relative bg-background/95 p-4 rounded-xl border border-border/50 shadow-lg">
+          <div className="relative bg-secondary/50 p-4 rounded-xl border border-primary/30 shadow-lg backdrop-blur-sm">
             {/* Logo PCON no topo */}
             <div className="flex justify-center mb-3">
               <img 
@@ -227,15 +227,21 @@ const PixQRCode = ({
             </div>
             
             {qrCodeBase64 ? (
-              <div className="relative">
+              <div className="relative rounded-lg overflow-hidden">
+                {/* Fundo do QR Code com gradiente do tema */}
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-secondary/20 rounded-lg" />
                 <img
                   src={`data:image/png;base64,${qrCodeBase64}`}
                   alt="QR Code PIX"
-                  className="w-48 h-48 rounded-lg"
+                  className="w-48 h-48 rounded-lg relative z-10"
+                  style={{ 
+                    filter: 'invert(1) hue-rotate(180deg)',
+                    mixBlendMode: 'difference'
+                  }}
                 />
                 {/* Logo pequena no centro do QR Code */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="bg-background p-1 rounded-md shadow-sm">
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                  <div className="bg-secondary/90 p-1.5 rounded-md shadow-sm border border-primary/30">
                     <img 
                       src={logoPcon} 
                       alt="PCON" 
@@ -245,7 +251,7 @@ const PixQRCode = ({
                 </div>
               </div>
             ) : (
-              <div className="w-48 h-48 bg-muted rounded-lg flex items-center justify-center">
+              <div className="w-48 h-48 bg-secondary/30 rounded-lg flex items-center justify-center border border-border/30">
                 <QrCode className="w-16 h-16 text-muted-foreground" />
               </div>
             )}
