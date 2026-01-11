@@ -4,6 +4,7 @@ import { QrCode, Copy, CheckCircle, Clock, RefreshCw, ExternalLink } from 'lucid
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
+import logoPcon from '@/assets/logo-pcon.png';
 
 interface PixQRCodeProps {
   qrCode: string;
@@ -103,19 +104,47 @@ const PixQRCode = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* QR Code Image */}
+        {/* QR Code Image with Logo */}
         <div className="flex justify-center">
-          {qrCodeBase64 ? (
-            <img
-              src={`data:image/png;base64,${qrCodeBase64}`}
-              alt="QR Code PIX"
-              className="w-48 h-48 rounded-lg"
-            />
-          ) : (
-            <div className="w-48 h-48 bg-muted rounded-lg flex items-center justify-center">
-              <QrCode className="w-16 h-16 text-muted-foreground" />
+          <div className="relative bg-background/95 p-4 rounded-xl border border-border/50 shadow-lg">
+            {/* Logo PCON no topo */}
+            <div className="flex justify-center mb-3">
+              <img 
+                src={logoPcon} 
+                alt="PCON Construnet" 
+                className="h-8 object-contain"
+              />
             </div>
-          )}
+            
+            {qrCodeBase64 ? (
+              <div className="relative">
+                <img
+                  src={`data:image/png;base64,${qrCodeBase64}`}
+                  alt="QR Code PIX"
+                  className="w-48 h-48 rounded-lg"
+                />
+                {/* Logo pequena no centro do QR Code */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="bg-background p-1 rounded-md shadow-sm">
+                    <img 
+                      src={logoPcon} 
+                      alt="PCON" 
+                      className="h-6 w-6 object-contain"
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="w-48 h-48 bg-muted rounded-lg flex items-center justify-center">
+                <QrCode className="w-16 h-16 text-muted-foreground" />
+              </div>
+            )}
+            
+            {/* Texto Mercado Pago */}
+            <p className="text-xs text-muted-foreground text-center mt-2">
+              Processado por Mercado Pago
+            </p>
+          </div>
         </div>
 
         {/* PIX Code (Copia e Cola) */}
