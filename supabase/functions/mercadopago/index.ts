@@ -70,6 +70,8 @@ serve(async (req: Request) => {
         notification_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/mercadopago-webhook`,
       };
 
+      console.log("Sending to Mercado Pago API:", JSON.stringify(paymentData));
+
       const response = await fetch(`${MERCADOPAGO_API_URL}/v1/payments`, {
         method: "POST",
         headers: {
@@ -80,11 +82,28 @@ serve(async (req: Request) => {
         body: JSON.stringify(paymentData),
       });
 
-      const result = await response.json();
+      // Check for empty response
+      const responseText = await response.text();
+      console.log("Mercado Pago response status:", response.status);
+      console.log("Mercado Pago response body:", responseText);
+
+      if (!responseText) {
+        console.error("Empty response from Mercado Pago - check if access token is valid");
+        throw new Error("Resposta vazia do Mercado Pago. Verifique se o token de acesso está correto.");
+      }
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (e) {
+        console.error("Failed to parse Mercado Pago response:", responseText);
+        throw new Error("Resposta inválida do Mercado Pago");
+      }
 
       if (!response.ok) {
         console.error("Mercado Pago error:", result);
-        throw new Error(result.message || "Erro ao criar pagamento PIX");
+        const errorMsg = result.message || result.error || (result.cause && result.cause[0]?.description) || "Erro ao criar pagamento PIX";
+        throw new Error(errorMsg);
       }
 
       console.log("PIX payment created:", result.id);
