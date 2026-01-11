@@ -15,8 +15,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { useAsaas } from '@/hooks/useAsaas';
+import { useMercadoPago } from '@/hooks/useMercadoPago';
 import { useContracts } from '@/hooks/useContracts';
+import PixQRCode from '@/components/PixQRCode';
 
 interface Client {
   id: string;
@@ -76,9 +77,19 @@ const ClientProfile = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [isChargeDialogOpen, setIsChargeDialogOpen] = useState(false);
-  const [newCharge, setNewCharge] = useState({ value: '', description: '', dueDate: '', billingType: 'PIX' as 'PIX' | 'CREDIT_CARD' });
+  const [newCharge, setNewCharge] = useState({ value: '', description: '' });
   const [isCreatingCharge, setIsCreatingCharge] = useState(false);
-  const { createCustomer, createPayment } = useAsaas();
+  const { createPixPayment, checkPaymentStatus, loading: mpLoading } = useMercadoPago();
+  
+  // PIX QR Code state
+  const [pixData, setPixData] = useState<{
+    paymentId: string;
+    qrCode: string;
+    qrCodeBase64?: string;
+    ticketUrl?: string;
+    expirationDate?: string;
+  } | null>(null);
+  const [showPixModal, setShowPixModal] = useState(false);
   
   // Contracts
   const { contracts, loading: contractsLoading, addContract, deleteContract } = useContracts(id);
@@ -147,63 +158,56 @@ const ClientProfile = () => {
   };
 
   const handleCreateCharge = async () => {
-    if (!client || !newCharge.value || !newCharge.dueDate) {
-      toast.error('Preencha todos os campos obrigatórios');
+    if (!client || !newCharge.value) {
+      toast.error('Preencha o valor da cobrança');
       return;
     }
 
     setIsCreatingCharge(true);
     try {
-      // First sync client with ASAAS
-      const customer = await createCustomer({
-        name: client.name,
-        email: client.email,
-        cpfCnpj: client.document?.replace(/[^\d]/g, '') || '',
-        phone: client.phone?.replace(/[^\d]/g, '') || undefined,
-      });
-
-      if (!customer?.id) {
-        toast.error('Erro ao criar/buscar cliente na ASAAS');
-        return;
-      }
-
-      // Create the payment in ASAAS
-      const asaasPayment = await createPayment({
-        customer: customer.id,
-        billingType: newCharge.billingType,
-        value: parseFloat(newCharge.value),
-        dueDate: newCharge.dueDate,
+      // Create PIX payment via Mercado Pago
+      const result = await createPixPayment({
+        amount: parseFloat(newCharge.value),
         description: newCharge.description || `Cobrança para ${client.name}`,
+        clientId: client.id,
+        clientEmail: client.email,
+        clientName: client.name,
+        clientDocument: client.document || undefined,
       });
 
-      if (asaasPayment) {
-        // Save the payment to local database
-        const { data: savedPayment, error } = await supabase
-          .from('payments')
-          .insert({
-            client_id: client.id,
-            amount: parseFloat(newCharge.value),
-            status: 'pending',
-            payment_method: newCharge.billingType,
-            description: newCharge.description || `Cobrança única para ${client.name}`,
-            asaas_id: asaasPayment.id,
-          })
-          .select()
-          .single();
-
-        if (error) {
-          console.error('Error saving payment locally:', error);
-        } else if (savedPayment) {
-          // Add to local payments state
-          setPayments(prev => [{
-            ...savedPayment,
-            subscription: null
-          } as Payment, ...prev]);
-        }
-
-        toast.success('Cobrança criada com sucesso!');
+      if (result?.success && result.qrCode) {
+        // Show PIX QR Code modal
+        setPixData({
+          paymentId: result.paymentId!,
+          qrCode: result.qrCode,
+          qrCodeBase64: result.qrCodeBase64,
+          ticketUrl: result.ticketUrl,
+          expirationDate: result.expirationDate,
+        });
+        setShowPixModal(true);
         setIsChargeDialogOpen(false);
-        setNewCharge({ value: '', description: '', dueDate: '', billingType: 'PIX' });
+        setNewCharge({ value: '', description: '' });
+        
+        // Refresh payments list
+        const { data: newPayments } = await supabase
+          .from('payments')
+          .select('*')
+          .eq('client_id', client.id)
+          .is('subscription_id', null)
+          .order('created_at', { ascending: false });
+        
+        if (newPayments) {
+          const formattedCharges = newPayments.map(p => ({
+            ...p,
+            subscription: null
+          })) as Payment[];
+          
+          // Merge with subscription payments
+          const subPayments = payments.filter(p => p.subscription !== null);
+          setPayments([...formattedCharges, ...subPayments].sort(
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          ));
+        }
       }
     } catch (error) {
       console.error('Error creating charge:', error);
@@ -211,6 +215,18 @@ const ClientProfile = () => {
     } finally {
       setIsCreatingCharge(false);
     }
+  };
+
+  const handleCheckPixStatus = async () => {
+    if (!pixData?.paymentId) return null;
+    return await checkPaymentStatus(pixData.paymentId);
+  };
+
+  const handlePixPaymentConfirmed = () => {
+    setShowPixModal(false);
+    setPixData(null);
+    // Refresh the page to update payment status
+    window.location.reload();
   };
 
   useEffect(() => {
@@ -619,21 +635,14 @@ const ClientProfile = () => {
                       </div>
                       
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">Vencimento *</label>
-                        <Input
-                          type="date"
-                          value={newCharge.dueDate}
-                          onChange={(e) => setNewCharge({ ...newCharge, dueDate: e.target.value })}
-                          className="bg-secondary/50 border-border/50"
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Método de Pagamento *</label>
-                        <div className="flex items-center gap-2 p-3 bg-secondary/50 border border-border/50 rounded-md">
-                          <QrCode className="w-4 h-4" />
-                          <span>PIX</span>
+                        <label className="text-sm font-medium">Método de Pagamento</label>
+                        <div className="flex items-center gap-2 p-3 bg-success/10 border border-success/30 rounded-md">
+                          <QrCode className="w-4 h-4 text-success" />
+                          <span className="text-success font-medium">PIX via Mercado Pago</span>
                         </div>
+                        <p className="text-xs text-muted-foreground">
+                          O QR Code PIX será gerado automaticamente
+                        </p>
                       </div>
                       
                       <div className="space-y-2">
@@ -1007,6 +1016,32 @@ const ClientProfile = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* PIX QR Code Modal */}
+      <Dialog open={showPixModal} onOpenChange={setShowPixModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="h-5 w-5" />
+              Pagamento PIX
+            </DialogTitle>
+            <DialogDescription>
+              Escaneie o QR Code ou copie o código para pagar
+            </DialogDescription>
+          </DialogHeader>
+          {pixData && (
+            <PixQRCode
+              qrCode={pixData.qrCode}
+              qrCodeBase64={pixData.qrCodeBase64}
+              ticketUrl={pixData.ticketUrl}
+              expirationDate={pixData.expirationDate}
+              paymentId={pixData.paymentId}
+              onCheckStatus={handleCheckPixStatus}
+              onPaymentConfirmed={handlePixPaymentConfirmed}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
