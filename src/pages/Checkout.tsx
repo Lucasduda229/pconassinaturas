@@ -11,12 +11,12 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { formatBrazilDate } from '@/utils/dateUtils';
-import { 
-  Loader2, 
-  LogOut, 
-  CreditCard, 
-  QrCode, 
-  Calendar, 
+import {
+  Loader2,
+  LogOut,
+  CreditCard,
+  QrCode,
+  Calendar,
   DollarSign,
   CheckCircle,
   AlertCircle,
@@ -29,8 +29,9 @@ import {
   FileText,
   Download,
   MapPin,
-  FileCheck
+  FileCheck,
 } from 'lucide-react';
+import QRCode from 'react-qr-code';
 import logo from '@/assets/logo-pcon-grande.png';
 
 import BlueBackground from '@/components/BlueBackground';
@@ -873,12 +874,17 @@ const Checkout = () => {
                       </p>
                     </div>
 
-                    <div className="flex justify-center p-4 bg-white rounded-xl">
-                      <img 
-                        src={`data:image/png;base64,${pixData.qrCode}`} 
-                        alt="QR Code PIX" 
-                        className="w-44 h-44"
-                      />
+                    <div className="flex justify-center p-4 bg-secondary/30 rounded-xl border border-border/30">
+                      <div className="relative w-44 h-44">
+                        <QRCode
+                          value={pixData.copyPaste}
+                          size={176}
+                          bgColor="transparent"
+                          fgColor="hsl(var(--foreground))"
+                          level="M"
+                          className="w-full h-full"
+                        />
+                      </div>
                     </div>
 
                     <div className="space-y-2">
