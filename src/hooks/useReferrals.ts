@@ -263,6 +263,32 @@ export function useReferrals() {
     return true;
   };
 
+  const createLinksForAllClients = async (clientIds: string[]) => {
+    if (clientIds.length === 0) {
+      toast.info('Todos os clientes já possuem links de indicação');
+      return 0;
+    }
+
+    const linksToCreate = clientIds.map(clientId => ({
+      client_id: clientId,
+      slug: Math.random().toString(36).substring(2, 10),
+    }));
+
+    const { error } = await supabase
+      .from('referral_links')
+      .insert(linksToCreate);
+
+    if (error) {
+      console.error('Error creating links:', error);
+      toast.error('Erro ao criar links de indicação');
+      return 0;
+    }
+
+    await fetchLinks();
+    toast.success(`${clientIds.length} links criados com sucesso!`);
+    return clientIds.length;
+  };
+
   const toggleLinkActive = async (linkId: string, isActive: boolean) => {
     const { error } = await supabase
       .from('referral_links')
@@ -467,6 +493,7 @@ export function useReferrals() {
     fetchAll,
     updateSettings,
     createLink,
+    createLinksForAllClients,
     toggleLinkActive,
     updateRewardStatus,
     convertLead,

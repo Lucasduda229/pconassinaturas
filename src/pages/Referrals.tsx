@@ -22,6 +22,7 @@ import {
   Trash2,
   Phone,
   Mail,
+  Wand2,
 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -86,6 +87,7 @@ const Referrals = () => {
     deleteLink,
     deleteLead,
     deleteReward,
+    createLinksForAllClients,
   } = useReferrals();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -129,6 +131,11 @@ const Referrals = () => {
     await createLink(selectedClientId);
     setIsCreateLinkOpen(false);
     setSelectedClientId('');
+  };
+
+  const handleCreateAllLinks = async () => {
+    const clientIds = clientsWithoutLinks.map(c => c.id);
+    await createLinksForAllClients(clientIds);
   };
 
   const getRewardStatusBadge = (status: string) => {
@@ -215,6 +222,18 @@ const Referrals = () => {
               <Settings className="h-4 w-4 mr-2" />
               Configurações
             </Button>
+            {clientsWithoutLinks.length > 0 && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleCreateAllLinks}
+                className="text-xs text-muted-foreground hover:text-primary"
+                title={`Criar links para ${clientsWithoutLinks.length} clientes`}
+              >
+                <Wand2 className="h-3 w-3 mr-1" />
+                +{clientsWithoutLinks.length}
+              </Button>
+            )}
           </div>
         </motion.div>
 
