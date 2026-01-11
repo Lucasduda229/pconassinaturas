@@ -39,12 +39,14 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
+const REFERRAL_DOMAIN = 'https://assinaturaspcon.sbs';
+
 const ClientReferrals = ({ clientId }: ClientReferralsProps) => {
   const { link, clicks, leads, rewards, settings, stats, loading } = useClientReferrals(clientId);
 
   const handleCopyLink = () => {
     if (link) {
-      const url = `${window.location.origin}/r/${link.slug}`;
+      const url = `${REFERRAL_DOMAIN}/r/${link.slug}`;
       navigator.clipboard.writeText(url);
       toast.success('Link copiado!');
     }
@@ -136,9 +138,9 @@ const ClientReferrals = ({ clientId }: ClientReferralsProps) => {
           <CardContent>
             <div className="flex items-center gap-2">
               <div className="flex-1 bg-secondary/30 rounded-lg px-4 py-3 border border-border/30">
-                <code className="text-sm text-foreground break-all">
-                  {window.location.origin}/r/{link.slug}
-                </code>
+              <code className="text-sm text-foreground break-all">
+                {REFERRAL_DOMAIN}/r/{link.slug}
+              </code>
               </div>
               <Button onClick={handleCopyLink} size="icon" variant="outline">
                 <Copy className="h-4 w-4" />
