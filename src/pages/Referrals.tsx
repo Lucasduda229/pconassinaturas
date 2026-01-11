@@ -20,6 +20,8 @@ import {
   Gift,
   AlertCircle,
   Trash2,
+  Phone,
+  Mail,
 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -443,18 +445,18 @@ const Referrals = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Lead</TableHead>
+                        <TableHead>Contato</TableHead>
                         <TableHead>Indicador</TableHead>
                         <TableHead>Origem</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Expira em</TableHead>
-                        <TableHead>Criado em</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredLeads.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                             Nenhum lead encontrado
                           </TableCell>
                         </TableRow>
@@ -464,18 +466,42 @@ const Referrals = () => {
                           
                           return (
                             <TableRow key={lead.id}>
-                              <TableCell>
-                                <div>
-                                  <p className="font-medium">{lead.lead_name}</p>
-                                  <p className="text-xs text-muted-foreground">{lead.lead_email || lead.lead_phone}</p>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <p className="text-sm">{lead.referral_link?.client?.name || 'N/A'}</p>
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant="outline" className="capitalize">{lead.source}</Badge>
-                              </TableCell>
+                            <TableCell>
+                              <p className="font-medium">{lead.lead_name}</p>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col gap-1">
+                                {lead.lead_email && (
+                                  <a 
+                                    href={`mailto:${lead.lead_email}`}
+                                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                  >
+                                    <Mail className="h-3 w-3" />
+                                    {lead.lead_email}
+                                  </a>
+                                )}
+                                {lead.lead_phone && (
+                                  <a 
+                                    href={`https://wa.me/55${lead.lead_phone.replace(/\D/g, '')}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1.5 text-xs text-success hover:text-success/80 transition-colors"
+                                  >
+                                    <Phone className="h-3 w-3" />
+                                    {lead.lead_phone}
+                                  </a>
+                                )}
+                                {!lead.lead_email && !lead.lead_phone && (
+                                  <span className="text-xs text-muted-foreground">-</span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <p className="text-sm">{lead.referral_link?.client?.name || 'N/A'}</p>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="capitalize">{lead.source}</Badge>
+                            </TableCell>
                               <TableCell>
                                 {lead.is_converted ? (
                                   <Badge className="bg-success/20 text-success border-success/30 border">
@@ -493,9 +519,6 @@ const Referrals = () => {
                               </TableCell>
                               <TableCell className="text-sm text-muted-foreground">
                                 {format(new Date(lead.expires_at), 'dd/MM/yyyy', { locale: ptBR })}
-                              </TableCell>
-                              <TableCell className="text-sm text-muted-foreground">
-                                {formatDate(lead.created_at)}
                               </TableCell>
                               <TableCell className="text-right">
                                 <div className="flex items-center justify-end gap-2">
