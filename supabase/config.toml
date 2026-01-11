@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.payment-reminders]
 verify_jwt = false
+
+[functions.affiliate-auth]
+verify_jwt = false
+
+[functions.affiliate-approval-email]
+verify_jwt = false
