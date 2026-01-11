@@ -19,6 +19,7 @@ import {
   Phone,
   Mail,
   Key,
+  MessageCircle,
 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -642,18 +643,22 @@ const Affiliates = () => {
                         <TableHead>Status</TableHead>
                         <TableHead>Expira em</TableHead>
                         <TableHead>Cadastrado em</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredLeads.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                             Nenhum lead encontrado
                           </TableCell>
                         </TableRow>
                       ) : (
                         filteredLeads.map((lead) => {
                           const isExpired = new Date(lead.expires_at) < new Date();
+                          const phoneClean = lead.lead_phone?.replace(/\D/g, '') || '';
+                          const whatsappUrl = phoneClean ? `https://wa.me/55${phoneClean}?text=${encodeURIComponent(`Olá ${lead.lead_name}! Tudo bem? Você foi indicado por ${lead.affiliate_name} e gostaríamos de conversar sobre nossos serviços.`)}` : null;
+                          
                           return (
                             <TableRow key={lead.id}>
                               <TableCell>
@@ -702,6 +707,21 @@ const Affiliates = () => {
                                 </span>
                               </TableCell>
                               <TableCell>{formatDate(lead.created_at)}</TableCell>
+                              <TableCell className="text-right">
+                                {whatsappUrl ? (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="bg-green-500/10 hover:bg-green-500/20 border-green-500/30 text-green-500"
+                                    onClick={() => window.open(whatsappUrl, '_blank')}
+                                  >
+                                    <MessageCircle className="h-4 w-4 mr-1" />
+                                    WhatsApp
+                                  </Button>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">Sem telefone</span>
+                                )}
+                              </TableCell>
                             </TableRow>
                           );
                         })
