@@ -21,6 +21,8 @@ import {
   Key,
   MessageCircle,
   Trash2,
+  Copy,
+  ExternalLink,
 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -508,6 +510,51 @@ const Affiliates = () => {
                 <div>
                   <p className="text-xs text-muted-foreground">Pagos</p>
                   <p className="text-lg font-bold">{formatCurrency(totalPaid)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Affiliate Registration Link */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+        >
+          <Card className="glass-card border-primary/30">
+            <CardContent className="p-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                    <Link2 className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Link de Cadastro de Afiliados</p>
+                    <p className="text-xs text-muted-foreground">Compartilhe este link para novos afiliados se cadastrarem</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <div className="flex-1 sm:flex-initial bg-secondary/30 rounded-lg px-3 py-2 text-sm font-mono truncate max-w-[300px]">
+                    {`${window.location.origin}/afiliados/cadastro`}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/afiliados/cadastro`);
+                      toast.success('Link copiado!');
+                    }}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => window.open('/afiliados/cadastro', '_blank')}
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             </CardContent>
