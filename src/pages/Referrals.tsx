@@ -90,12 +90,17 @@ const Referrals = () => {
     deleteLead,
     deleteReward,
     createLinksForAllClients,
+    createManualReward,
   } = useReferrals();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isCreateLinkOpen, setIsCreateLinkOpen] = useState(false);
+  const [isCreateRewardOpen, setIsCreateRewardOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [rewardClientId, setRewardClientId] = useState<string>('');
+  const [rewardAmount, setRewardAmount] = useState<string>('');
+  const [rewardDescription, setRewardDescription] = useState<string>('');
   const [tempSettings, setTempSettings] = useState({
     reward_value: 100,
     validity_days: 60,
@@ -138,6 +143,19 @@ const Referrals = () => {
   const handleCreateAllLinks = async () => {
     const clientIds = clientsWithoutLinks.map(c => c.id);
     await createLinksForAllClients(clientIds);
+  };
+
+  const handleCreateManualReward = async () => {
+    if (!rewardClientId) {
+      toast.error('Selecione um cliente');
+      return;
+    }
+    const amount = parseFloat(rewardAmount) || settings?.reward_value || 100;
+    await createManualReward(rewardClientId, amount, rewardDescription || undefined);
+    setIsCreateRewardOpen(false);
+    setRewardClientId('');
+    setRewardAmount('');
+    setRewardDescription('');
   };
 
   const getRewardStatusBadge = (status: string) => {
@@ -432,6 +450,10 @@ const Referrals = () => {
                     className="pl-9"
                   />
                 </div>
+                <Button variant="outline" onClick={() => setIsCreateRewardOpen(true)}>
+                  <Gift className="h-4 w-4 mr-2" />
+                  Nova Recompensa
+                </Button>
                 <Button onClick={() => setIsCreateLinkOpen(true)}>
                   <Link2 className="h-4 w-4 mr-2" />
                   Novo Link
@@ -828,6 +850,68 @@ const Referrals = () => {
             </Button>
             <Button onClick={handleCreateLink} disabled={clientsWithoutLinks.length === 0}>
               Criar Link
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Manual Reward Dialog */}
+      <Dialog open={isCreateRewardOpen} onOpenChange={setIsCreateRewardOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Gift className="h-5 w-5" />
+              Criar Recompensa Manual
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Use esta opção para registrar indicações feitas fora do sistema (por fora, boca a boca, etc.)
+            </p>
+            <div className="space-y-2">
+              <Label>Cliente que Indicou *</Label>
+              <Select value={rewardClientId} onValueChange={setRewardClientId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Escolha o cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reward_amount">Valor da Recompensa (R$)</Label>
+              <Input
+                id="reward_amount"
+                type="number"
+                placeholder={String(settings?.reward_value || 100)}
+                value={rewardAmount}
+                onChange={(e) => setRewardAmount(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Deixe em branco para usar o valor padrão: {formatCurrency(settings?.reward_value || 100)}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reward_description">Descrição / Nome do Indicado</Label>
+              <Input
+                id="reward_description"
+                placeholder="Ex: João da Silva (indicado por telefone)"
+                value={rewardDescription}
+                onChange={(e) => setRewardDescription(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateRewardOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateManualReward}>
+              Criar Recompensa
             </Button>
           </DialogFooter>
         </DialogContent>

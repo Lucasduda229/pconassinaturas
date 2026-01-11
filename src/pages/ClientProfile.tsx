@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, FileText, CreditCard, Calendar, User, Loader2, Plus, QrCode, Receipt, Upload, Trash2, ExternalLink, FileSignature } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, FileText, CreditCard, Calendar, User, Loader2, Plus, QrCode, Receipt, Upload, Trash2, ExternalLink, FileSignature, Gift, Clock, CheckCircle, DollarSign } from 'lucide-react';
 import { useEffect, useState, useMemo, useRef } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import StatusBadge from '@/components/StatusBadge';
@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -49,12 +50,25 @@ interface Payment {
   } | null;
 }
 
+interface ReferralReward {
+  id: string;
+  amount: number;
+  status: 'pending' | 'approved' | 'paid';
+  created_at: string;
+  approved_at: string | null;
+  paid_at: string | null;
+  referral_lead?: {
+    lead_name: string;
+  };
+}
+
 const ClientProfile = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [client, setClient] = useState<Client | null>(null);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [rewards, setRewards] = useState<ReferralReward[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -276,6 +290,30 @@ const ClientProfile = () => {
       allPayments.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setPayments(allPayments);
 
+      // Fetch referral rewards for this client
+      const { data: linkData } = await supabase
+        .from('referral_links')
+        .select('id')
+        .eq('client_id', id)
+        .maybeSingle();
+
+      if (linkData) {
+        const { data: rewardsData } = await supabase
+          .from('referral_rewards')
+          .select('*, referral_leads(lead_name)')
+          .eq('referral_link_id', linkData.id)
+          .order('created_at', { ascending: false });
+        
+        if (rewardsData) {
+          const formattedRewards = rewardsData.map(r => ({
+            ...r,
+            status: r.status as 'pending' | 'approved' | 'paid',
+            referral_lead: r.referral_leads ? { lead_name: (r.referral_leads as any).lead_name } : undefined,
+          }));
+          setRewards(formattedRewards);
+        }
+      }
+
       setLoading(false);
     };
 
@@ -423,6 +461,11 @@ const ClientProfile = () => {
             <FileSignature className="w-4 h-4" />
             <span className="hidden sm:inline">Contratos</span>
             <span className="sm:hidden">Docs</span>
+          </TabsTrigger>
+          <TabsTrigger value="rewards" className="flex-1 sm:flex-none gap-2">
+            <Gift className="w-4 h-4" />
+            <span className="hidden sm:inline">Recompensas</span>
+            <span className="sm:hidden">Bônus</span>
           </TabsTrigger>
         </TabsList>
 
@@ -857,6 +900,107 @@ const ClientProfile = () => {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Rewards Tab */}
+        <TabsContent value="rewards">
+          <Card className="glass-card border-border/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Gift className="w-5 h-5 text-primary" />
+                Recompensas por Indicação ({rewards.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {rewards.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">
+                  Nenhuma recompensa de indicação encontrada
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {rewards.map((reward) => {
+                    const getStatusBadge = (status: string) => {
+                      const configs: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
+                        pending: { 
+                          label: 'Pendente', 
+                          className: 'bg-warning/20 text-warning border-warning/30',
+                          icon: <Clock className="w-3 h-3" />
+                        },
+                        approved: { 
+                          label: 'Aprovado', 
+                          className: 'bg-primary/20 text-primary border-primary/30',
+                          icon: <CheckCircle className="w-3 h-3" />
+                        },
+                        paid: { 
+                          label: 'Pago', 
+                          className: 'bg-success/20 text-success border-success/30',
+                          icon: <DollarSign className="w-3 h-3" />
+                        },
+                      };
+                      const config = configs[status] || { label: status, className: 'bg-muted', icon: null };
+                      return (
+                        <Badge className={`${config.className} border flex items-center gap-1`}>
+                          {config.icon}
+                          {config.label}
+                        </Badge>
+                      );
+                    };
+
+                    return (
+                      <div 
+                        key={reward.id} 
+                        className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg bg-secondary/30 gap-3"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-foreground">
+                              {formatCurrency(Number(reward.amount))}
+                            </p>
+                            {getStatusBadge(reward.status)}
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Indicado: {reward.referral_lead?.lead_name || 'N/A'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Criado em {format(new Date(reward.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                          {reward.paid_at && (
+                            <p className="text-xs text-success">
+                              Pago em {format(new Date(reward.paid_at), "dd/MM/yyyy", { locale: ptBR })}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  
+                  {/* Summary */}
+                  <div className="mt-4 pt-4 border-t border-border/50">
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <p className="text-lg font-bold text-warning">
+                          {formatCurrency(rewards.filter(r => r.status === 'pending').reduce((sum, r) => sum + Number(r.amount), 0))}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Pendente</p>
+                      </div>
+                      <div>
+                        <p className="text-lg font-bold text-primary">
+                          {formatCurrency(rewards.filter(r => r.status === 'approved').reduce((sum, r) => sum + Number(r.amount), 0))}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Aprovado</p>
+                      </div>
+                      <div>
+                        <p className="text-lg font-bold text-success">
+                          {formatCurrency(rewards.filter(r => r.status === 'paid').reduce((sum, r) => sum + Number(r.amount), 0))}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Pago</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </CardContent>
