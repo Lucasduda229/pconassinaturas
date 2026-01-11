@@ -24,6 +24,9 @@ interface InvoiceWithClient {
   status: string;
   issued_at: string;
   clientName?: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  clientDocument?: string;
 }
 
 const Invoices = () => {
@@ -44,12 +47,18 @@ const Invoices = () => {
     }).format(value);
   };
 
-  // Enrich invoices with client names
+  // Enrich invoices with client data
   const enrichedInvoices = useMemo(() => {
-    return invoices.map(inv => ({
-      ...inv,
-      clientName: clients.find(c => c.id === inv.client_id)?.name || 'Cliente não encontrado'
-    }));
+    return invoices.map(inv => {
+      const client = clients.find(c => c.id === inv.client_id);
+      return {
+        ...inv,
+        clientName: client?.name || 'Cliente não encontrado',
+        clientEmail: client?.email || '',
+        clientPhone: client?.phone || '',
+        clientDocument: client?.document || '',
+      };
+    });
   }, [invoices, clients]);
 
   const filteredInvoices = enrichedInvoices.filter(invoice =>
@@ -127,67 +136,144 @@ const Invoices = () => {
   const handleDownloadPDF = (invoice: InvoiceWithClient) => {
     try {
       const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
       
-      // Header
-      doc.setFontSize(20);
+      // Colors
+      const primaryColor: [number, number, number] = [30, 79, 163]; // Blue
+      const darkColor: [number, number, number] = [33, 37, 41];
+      const grayColor: [number, number, number] = [108, 117, 125];
+      const lightGray: [number, number, number] = [248, 249, 250];
+      
+      // Header background
+      doc.setFillColor(...primaryColor);
+      doc.rect(0, 0, pageWidth, 50, 'F');
+      
+      // Company name
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(24);
       doc.setFont('helvetica', 'bold');
-      doc.text('NOTA FISCAL', 105, 30, { align: 'center' });
+      doc.text('P-CON', 20, 25);
       
-      // Line separator
-      doc.setLineWidth(0.5);
-      doc.line(20, 40, 190, 40);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Sistema de Gestao de Assinaturas', 20, 35);
       
-      // Invoice number and date
+      // Invoice label
+      doc.setFontSize(28);
+      doc.setFont('helvetica', 'bold');
+      doc.text('NOTA FISCAL', pageWidth - 20, 30, { align: 'right' });
+      
+      // Invoice info box
+      doc.setTextColor(...darkColor);
+      doc.setFillColor(...lightGray);
+      doc.roundedRect(20, 60, pageWidth - 40, 35, 3, 3, 'F');
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...grayColor);
+      doc.text('NUMERO', 30, 72);
+      doc.text('DATA DE EMISSAO', 90, 72);
+      doc.text('STATUS', 160, 72);
+      
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text('Numero:', 20, 55);
-      doc.setFont('helvetica', 'normal');
-      doc.text(invoice.number, 55, 55);
-      
-      doc.setFont('helvetica', 'bold');
-      doc.text('Data de Emissao:', 110, 55);
-      doc.setFont('helvetica', 'normal');
-      doc.text(formatBrazilDate(invoice.issued_at), 160, 55);
-      
-      // Status
-      doc.setFont('helvetica', 'bold');
-      doc.text('Status:', 20, 70);
-      doc.setFont('helvetica', 'normal');
-      doc.text(invoice.status === 'issued' ? 'Emitida' : invoice.status, 55, 70);
-      
-      // Line separator
-      doc.line(20, 80, 190, 80);
+      doc.setTextColor(...darkColor);
+      doc.text(invoice.number, 30, 85);
+      doc.text(formatBrazilDate(invoice.issued_at), 90, 85);
+      doc.text(invoice.status === 'issued' ? 'EMITIDA' : invoice.status.toUpperCase(), 160, 85);
       
       // Client section
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('DADOS DO CLIENTE', 20, 95);
-      
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text('Nome:', 20, 110);
-      doc.setFont('helvetica', 'normal');
-      doc.text(invoice.clientName || 'N/A', 55, 110);
+      doc.setTextColor(...primaryColor);
+      doc.text('DADOS DO CLIENTE', 20, 115);
       
-      // Line separator
-      doc.line(20, 120, 190, 120);
+      doc.setDrawColor(...primaryColor);
+      doc.setLineWidth(0.5);
+      doc.line(20, 118, pageWidth - 20, 118);
       
-      // Values section
-      doc.setFontSize(14);
+      doc.setTextColor(...darkColor);
+      doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
-      doc.text('VALORES', 20, 135);
+      doc.text('Nome:', 20, 130);
+      doc.setFont('helvetica', 'normal');
+      doc.text(invoice.clientName || 'N/A', 50, 130);
+      
+      if (invoice.clientDocument) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('CPF/CNPJ:', 20, 140);
+        doc.setFont('helvetica', 'normal');
+        doc.text(invoice.clientDocument, 50, 140);
+      }
+      
+      if (invoice.clientEmail) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('Email:', 20, 150);
+        doc.setFont('helvetica', 'normal');
+        doc.text(invoice.clientEmail, 50, 150);
+      }
+      
+      if (invoice.clientPhone) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('Telefone:', 110, 150);
+        doc.setFont('helvetica', 'normal');
+        doc.text(invoice.clientPhone, 140, 150);
+      }
+      
+      // Services section
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...primaryColor);
+      doc.text('DESCRICAO DOS SERVICOS', 20, 175);
+      
+      doc.setDrawColor(...primaryColor);
+      doc.line(20, 178, pageWidth - 20, 178);
+      
+      // Table header
+      doc.setFillColor(...lightGray);
+      doc.rect(20, 185, pageWidth - 40, 12, 'F');
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...darkColor);
+      doc.text('DESCRICAO', 25, 193);
+      doc.text('VALOR', pageWidth - 25, 193, { align: 'right' });
+      
+      // Table row
+      doc.setFont('helvetica', 'normal');
+      doc.text('Servico conforme contrato', 25, 208);
+      doc.setFont('helvetica', 'bold');
+      doc.text(formatCurrency(invoice.amount), pageWidth - 25, 208, { align: 'right' });
+      
+      // Table border
+      doc.setDrawColor(...grayColor);
+      doc.setLineWidth(0.2);
+      doc.line(20, 215, pageWidth - 20, 215);
+      
+      // Total section
+      doc.setFillColor(...primaryColor);
+      doc.roundedRect(pageWidth - 100, 225, 80, 30, 3, 3, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('VALOR TOTAL', pageWidth - 60, 237, { align: 'center' });
       
       doc.setFontSize(16);
       doc.setFont('helvetica', 'bold');
-      doc.text('Valor Total:', 20, 155);
-      doc.setFont('helvetica', 'normal');
-      doc.text(formatCurrency(invoice.amount), 70, 155);
+      doc.text(formatCurrency(invoice.amount), pageWidth - 60, 250, { align: 'center' });
       
       // Footer
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'italic');
-      doc.text('Documento gerado automaticamente pelo sistema P-CON', 105, 280, { align: 'center' });
-      doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR })}`, 105, 287, { align: 'center' });
+      doc.setTextColor(...grayColor);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      
+      const footerY = 270;
+      doc.line(20, footerY - 5, pageWidth - 20, footerY - 5);
+      
+      doc.text('Documento gerado automaticamente pelo sistema P-CON', pageWidth / 2, footerY, { align: 'center' });
+      doc.text(`Emitido em: ${format(new Date(), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR })}`, pageWidth / 2, footerY + 7, { align: 'center' });
+      doc.text('www.pconconstrunet.site', pageWidth / 2, footerY + 14, { align: 'center' });
       
       // Save PDF
       doc.save(`${invoice.number}.pdf`);
