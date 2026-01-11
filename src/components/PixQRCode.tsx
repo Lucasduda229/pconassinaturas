@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QrCode, Copy, CheckCircle, Clock, RefreshCw, ExternalLink, Loader2 } from 'lucide-react';
+import QRCode from 'react-qr-code';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -219,47 +220,40 @@ const PixQRCode = ({
           <div className="relative bg-secondary/50 p-4 rounded-xl border border-primary/30 shadow-lg backdrop-blur-sm">
             {/* Logo PCON no topo */}
             <div className="flex justify-center mb-3">
-              <img 
-                src={logoPcon} 
-                alt="PCON Construnet" 
+              <img
+                src={logoPcon}
+                alt="PCON Construnet"
                 className="h-8 object-contain"
               />
             </div>
-            
-            {qrCodeBase64 ? (
-              <div className="relative rounded-lg overflow-hidden">
-                {/* Fundo do QR Code com gradiente do tema */}
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-secondary/20 rounded-lg" />
-                <img
-                  src={`data:image/png;base64,${qrCodeBase64}`}
-                  alt="QR Code PIX"
-                  className="w-48 h-48 rounded-lg relative z-10"
-                  style={{ 
-                    filter: 'invert(1) hue-rotate(180deg)',
-                    mixBlendMode: 'difference'
-                  }}
-                />
-                {/* Logo pequena no centro do QR Code */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-                  <div className="bg-secondary/90 p-1.5 rounded-md shadow-sm border border-primary/30">
-                    <img 
-                      src={logoPcon} 
-                      alt="PCON" 
-                      className="h-6 w-6 object-contain"
-                    />
+
+            {/* QR Code gerado no front (sem fundo branco) */}
+            <div className="rounded-lg overflow-hidden">
+              <div className="bg-secondary/40 p-3 rounded-lg border border-border/30">
+                <div className="relative w-48 h-48">
+                  <QRCode
+                    value={qrCode}
+                    size={192}
+                    bgColor="transparent"
+                    fgColor="hsl(var(--foreground))"
+                    level="M"
+                    className="w-full h-full"
+                  />
+
+                  {/* Logo pequena no centro do QR Code */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="bg-secondary/90 p-1.5 rounded-md shadow-sm border border-primary/30">
+                      <img src={logoPcon} alt="PCON" className="h-6 w-6 object-contain" />
+                    </div>
                   </div>
                 </div>
               </div>
-            ) : (
-              <div className="w-48 h-48 bg-secondary/30 rounded-lg flex items-center justify-center border border-border/30">
-                <QrCode className="w-16 h-16 text-muted-foreground" />
-              </div>
-            )}
-            
-            {/* Texto Mercado Pago */}
-            <p className="text-xs text-muted-foreground text-center mt-2">
-              Processado por Mercado Pago
-            </p>
+
+              {/* Texto Mercado Pago */}
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                Processado por Mercado Pago
+              </p>
+            </div>
           </div>
         </div>
 
