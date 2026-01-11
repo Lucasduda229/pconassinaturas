@@ -36,7 +36,7 @@ const AffiliateDashboard = () => {
   });
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
-  const AFFILIATE_DOMAIN = 'https://assinaturaspcon.sbs';
+  const AFFILIATE_DOMAIN = 'https://www.assinaturaspcon.sbs';
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
