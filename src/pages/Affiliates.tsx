@@ -302,6 +302,66 @@ const Affiliates = () => {
     }
   };
 
+  const handleDeleteAffiliate = async (affiliate: Affiliate) => {
+    try {
+      // Get affiliate link
+      const link = links.find(l => l.affiliate_id === affiliate.id);
+      
+      if (link) {
+        // Delete rewards
+        await supabase
+          .from('affiliate_rewards')
+          .delete()
+          .eq('affiliate_link_id', link.id);
+
+        // Delete leads
+        await supabase
+          .from('affiliate_leads')
+          .delete()
+          .eq('affiliate_link_id', link.id);
+
+        // Delete clicks
+        await supabase
+          .from('affiliate_clicks')
+          .delete()
+          .eq('affiliate_link_id', link.id);
+
+        // Delete link
+        await supabase
+          .from('affiliate_links')
+          .delete()
+          .eq('id', link.id);
+      }
+
+      // Delete affiliate user if exists
+      await supabase
+        .from('affiliate_sessions')
+        .delete()
+        .in('affiliate_user_id', 
+          (await supabase.from('affiliate_users').select('id').eq('affiliate_id', affiliate.id)).data?.map(u => u.id) || []
+        );
+
+      await supabase
+        .from('affiliate_users')
+        .delete()
+        .eq('affiliate_id', affiliate.id);
+
+      // Delete affiliate
+      const { error } = await supabase
+        .from('affiliates')
+        .delete()
+        .eq('id', affiliate.id);
+
+      if (error) throw error;
+
+      toast.success('Afiliado removido com sucesso!');
+      loadData();
+    } catch (error) {
+      console.error('Error deleting affiliate:', error);
+      toast.error('Erro ao remover afiliado');
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const configs: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
       pending: { label: 'Pendente', className: 'bg-warning/20 text-warning border-warning/30', icon: <Clock className="h-3 w-3" /> },
@@ -552,6 +612,18 @@ const Affiliates = () => {
                                   <XCircle className="h-4 w-4 mr-1" />
                                   Rejeitar
                                 </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-destructive hover:bg-destructive/10"
+                                  onClick={() => {
+                                    if (confirm(`Tem certeza que deseja excluir o afiliado "${affiliate.name}"?`)) {
+                                      handleDeleteAffiliate(affiliate);
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -641,6 +713,17 @@ const Affiliates = () => {
                                     <DropdownMenuItem onClick={() => handleToggleActive(affiliate)}>
                                       <UserX className="h-4 w-4 mr-2" />
                                       Desativar
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                      className="text-destructive focus:text-destructive"
+                                      onClick={() => {
+                                        if (confirm(`Tem certeza que deseja excluir o afiliado "${affiliate.name}"? Esta ação não pode ser desfeita.`)) {
+                                          handleDeleteAffiliate(affiliate);
+                                        }
+                                      }}
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Excluir
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
@@ -799,16 +882,30 @@ const Affiliates = () => {
                             <TableCell>{getStatusBadge(affiliate.status)}</TableCell>
                             <TableCell>{formatDate(affiliate.created_at)}</TableCell>
                             <TableCell className="text-right">
-                              {affiliate.status === 'inactive' && (
+                              <div className="flex items-center justify-end gap-2">
+                                {affiliate.status === 'inactive' && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleToggleActive(affiliate)}
+                                  >
+                                    <UserCheck className="h-4 w-4 mr-1" />
+                                    Reativar
+                                  </Button>
+                                )}
                                 <Button
                                   size="sm"
-                                  variant="outline"
-                                  onClick={() => handleToggleActive(affiliate)}
+                                  variant="ghost"
+                                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => {
+                                    if (confirm(`Tem certeza que deseja excluir o afiliado "${affiliate.name}"?`)) {
+                                      handleDeleteAffiliate(affiliate);
+                                    }
+                                  }}
                                 >
-                                  <UserCheck className="h-4 w-4 mr-1" />
-                                  Reativar
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
-                              )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))
