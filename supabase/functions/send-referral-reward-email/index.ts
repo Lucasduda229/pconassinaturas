@@ -34,7 +34,7 @@ const handler = async (req: Request): Promise<Response> => {
     }).format(rewardAmount);
 
     const emailResponse = await resend.emails.send({
-      from: "P-CON <noreply@pconconstrunet.site>",
+      from: "P-CON <onboarding@resend.dev>",
       to: [clientEmail],
       subject: "🎉 Parabéns! Você ganhou uma recompensa de indicação!",
       html: `
