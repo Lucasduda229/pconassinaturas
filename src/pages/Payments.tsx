@@ -68,11 +68,23 @@ const Payments = () => {
 
   const openInvoiceDialog = (payment: Payment) => {
     setSelectedPayment(payment);
-    // Generate suggested invoice number
+    // Generate suggested invoice number based on existing invoices
     const year = new Date().getFullYear();
     const month = String(new Date().getMonth() + 1).padStart(2, '0');
-    const count = invoices.length + 1;
-    setInvoiceNumber(`NF-${year}${month}-${String(count).padStart(4, '0')}`);
+    
+    // Find the highest invoice number for this year/month pattern
+    const prefix = `NF-${year}${month}-`;
+    const existingNumbers = invoices
+      .filter(inv => inv.number.startsWith(prefix))
+      .map(inv => {
+        const numPart = inv.number.replace(prefix, '');
+        return parseInt(numPart, 10) || 0;
+      });
+    
+    const maxNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+    const nextNumber = maxNumber + 1;
+    
+    setInvoiceNumber(`${prefix}${String(nextNumber).padStart(4, '0')}`);
     setIsInvoiceDialogOpen(true);
   };
 
