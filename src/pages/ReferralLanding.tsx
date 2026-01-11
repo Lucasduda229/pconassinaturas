@@ -168,7 +168,7 @@ const ReferralLanding = () => {
 
     // Redirect to WhatsApp (update with your number)
     const message = `Olá! Vim através de uma indicação de ${linkData?.clients?.name || 'um cliente'}.`;
-    window.open(`https://wa.me/5500000000000?text=${encodeURIComponent(message)}`, '_blank');
+    window.open(`https://wa.me/5511978363600?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   if (loading) {
