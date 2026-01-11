@@ -63,12 +63,12 @@ const ClientReferrals = ({ clientId }: ClientReferralsProps) => {
       approved: { 
         label: 'Aprovado', 
         icon: <CheckCircle className="h-3 w-3" />,
-        className: 'bg-primary/20 text-primary border-primary/30' 
+        className: 'bg-success/20 text-success border-success/30' 
       },
       paid: { 
         label: 'Pago', 
         icon: <DollarSign className="h-3 w-3" />,
-        className: 'bg-success/20 text-success border-success/30' 
+        className: 'bg-primary/20 text-primary border-primary/30' 
       },
     };
     const config = configs[status] || { label: status, icon: null, className: 'bg-muted' };
