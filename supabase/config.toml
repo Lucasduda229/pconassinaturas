@@ -17,3 +17,9 @@ verify_jwt = false
 
 [functions.affiliate-approval-email]
 verify_jwt = false
+
+[functions.mercadopago]
+verify_jwt = false
+
+[functions.mercadopago-webhook]
+verify_jwt = false
