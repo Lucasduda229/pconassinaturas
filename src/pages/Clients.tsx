@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Trash2, RefreshCw, CreditCard, QrCode, FileText, Loader2, Link2, Send, Eye, EyeOff, Pencil, Download, User, Receipt, Calendar } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Trash2, RefreshCw, CreditCard, QrCode, FileText, Loader2, Link2, Send, Eye, EyeOff, Pencil, Download, User, Receipt, Calendar, Gift } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
+import ClientReferralStats from '@/components/ClientReferralStats';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -29,6 +30,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useClients, Client } from '@/hooks/useClients';
+import { useReferrals } from '@/hooks/useReferrals';
 import { supabase } from '@/integrations/supabase/client';
 import { useAsaas } from '@/hooks/useAsaas';
 import { format } from 'date-fns';
@@ -70,7 +72,10 @@ const Clients = () => {
   const [isCreatingAccess, setIsCreatingAccess] = useState(false);
 
   const { clients, loading, addClient, updateClient, deleteClient } = useClients();
+  const { links, clicks, leads, rewards } = useReferrals();
   const { createCustomer, createPayment, syncCustomerToAsaas, createSubscription } = useAsaas();
+
+  const referralData = { links, clicks, leads, rewards };
 
   const openEditDialog = (client: Client) => {
     setEditingClient(client);
@@ -462,6 +467,14 @@ const Clients = () => {
         <span className="text-muted-foreground">
           {format(new Date(item.created_at), 'dd/MM/yyyy', { locale: ptBR })}
         </span>
+      ),
+    },
+    {
+      key: 'referrals',
+      header: 'Indicações',
+      hideOnMobile: true,
+      render: (item: Client) => (
+        <ClientReferralStats clientId={item.id} referralData={referralData} />
       ),
     },
     {
