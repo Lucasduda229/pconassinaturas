@@ -112,7 +112,7 @@ const Referrals = () => {
     (client) => !links.some((link) => link.client_id === client.id)
   );
 
-  const REFERRAL_DOMAIN = 'https://assinaturaspcon.sbs';
+  const REFERRAL_DOMAIN = 'https://www.assinaturaspcon.sbs';
 
   const handleCopyLink = (slug: string) => {
     const url = `${REFERRAL_DOMAIN}/r/${slug}`;
