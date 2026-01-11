@@ -482,6 +482,79 @@ export function useReferrals() {
     return true;
   };
 
+  const createManualReward = async (clientId: string, amount: number, description?: string) => {
+    // First get or create the referral link for this client
+    let linkId: string;
+    
+    const existingLink = links.find(l => l.client_id === clientId);
+    
+    if (existingLink) {
+      linkId = existingLink.id;
+    } else {
+      // Create a new link for this client
+      const slug = Math.random().toString(36).substring(2, 10);
+      const { data: newLink, error: linkError } = await supabase
+        .from('referral_links')
+        .insert({ client_id: clientId, slug })
+        .select()
+        .single();
+      
+      if (linkError || !newLink) {
+        console.error('Error creating link:', linkError);
+        toast.error('Erro ao criar link de indicação');
+        return false;
+      }
+      
+      linkId = newLink.id;
+    }
+    
+    // Create a manual lead (marked as external)
+    const validityDays = settings?.validity_days || 60;
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + validityDays);
+    
+    const { data: newLead, error: leadError } = await supabase
+      .from('referral_leads')
+      .insert({
+        referral_link_id: linkId,
+        lead_name: description || 'Indicação externa',
+        lead_email: null,
+        lead_phone: null,
+        source: 'manual',
+        is_converted: true,
+        converted_at: new Date().toISOString(),
+        expires_at: expiresAt.toISOString(),
+      })
+      .select()
+      .single();
+    
+    if (leadError || !newLead) {
+      console.error('Error creating lead:', leadError);
+      toast.error('Erro ao criar lead');
+      return false;
+    }
+    
+    // Create the reward
+    const { error: rewardError } = await supabase
+      .from('referral_rewards')
+      .insert({
+        referral_link_id: linkId,
+        referral_lead_id: newLead.id,
+        amount: amount,
+        status: 'pending',
+      });
+    
+    if (rewardError) {
+      console.error('Error creating reward:', rewardError);
+      toast.error('Erro ao criar recompensa');
+      return false;
+    }
+    
+    await fetchAll();
+    toast.success('Recompensa manual criada com sucesso!');
+    return true;
+  };
+
   return {
     settings,
     links,
@@ -500,6 +573,7 @@ export function useReferrals() {
     deleteLink,
     deleteLead,
     deleteReward,
+    createManualReward,
   };
 }
 
