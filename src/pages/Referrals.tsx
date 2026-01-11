@@ -1,0 +1,674 @@
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import {
+  Link2,
+  MousePointerClick,
+  Users,
+  DollarSign,
+  CheckCircle,
+  Clock,
+  Settings,
+  ToggleLeft,
+  ToggleRight,
+  Search,
+  Copy,
+  ExternalLink,
+  UserCheck,
+  TrendingUp,
+  Gift,
+  AlertCircle,
+} from 'lucide-react';
+import DashboardLayout from '@/components/DashboardLayout';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { toast } from 'sonner';
+import { useReferrals, ReferralLead, ReferralReward } from '@/hooks/useReferrals';
+import { useGlobalData } from '@/contexts/GlobalDataContext';
+
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(value);
+};
+
+const formatDate = (date: string) => {
+  return format(new Date(date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+};
+
+const Referrals = () => {
+  const { clients } = useGlobalData();
+  const {
+    settings,
+    links,
+    clicks,
+    leads,
+    rewards,
+    stats,
+    loading,
+    updateSettings,
+    createLink,
+    toggleLinkActive,
+    updateRewardStatus,
+    convertLead,
+  } = useReferrals();
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isCreateLinkOpen, setIsCreateLinkOpen] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [tempSettings, setTempSettings] = useState({
+    reward_value: 100,
+    validity_days: 60,
+  });
+
+  // Clients without referral links
+  const clientsWithoutLinks = clients.filter(
+    (client) => !links.some((link) => link.client_id === client.id)
+  );
+
+  const handleCopyLink = (slug: string) => {
+    const url = `${window.location.origin}/r/${slug}`;
+    navigator.clipboard.writeText(url);
+    toast.success('Link copiado!');
+  };
+
+  const handleToggleSystem = async () => {
+    if (settings) {
+      await updateSettings({ is_active: !settings.is_active });
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    await updateSettings(tempSettings);
+    setIsSettingsOpen(false);
+  };
+
+  const handleCreateLink = async () => {
+    if (!selectedClientId) {
+      toast.error('Selecione um cliente');
+      return;
+    }
+    await createLink(selectedClientId);
+    setIsCreateLinkOpen(false);
+    setSelectedClientId('');
+  };
+
+  const getRewardStatusBadge = (status: string) => {
+    const configs: Record<string, { label: string; className: string }> = {
+      pending: { label: 'Pendente', className: 'bg-warning/20 text-warning border-warning/30' },
+      approved: { label: 'Aprovado', className: 'bg-primary/20 text-primary border-primary/30' },
+      paid: { label: 'Pago', className: 'bg-success/20 text-success border-success/30' },
+    };
+    const config = configs[status] || { label: status, className: 'bg-muted' };
+    return <Badge className={`${config.className} border`}>{config.label}</Badge>;
+  };
+
+  const filteredLinks = links.filter((link) =>
+    link.client?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    link.slug.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredLeads = leads.filter((lead) =>
+    lead.lead_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    lead.lead_email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredRewards = rewards.filter((reward) =>
+    reward.referral_link?.client?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    reward.referral_lead?.lead_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (loading) {
+    return (
+      <DashboardLayout title="Sistema de Indicação" subtitle="Carregando...">
+        <div className="flex items-center justify-center h-64">
+          <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  return (
+    <DashboardLayout title="Sistema de Indicação" subtitle="Gerencie o programa de indicações e recompensas">
+      <div className="space-y-6">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+        >
+          <div>
+            <h1 className="text-2xl font-heading font-bold text-foreground">
+              Sistema de Indicação
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              Gerencie o programa de indicações e recompensas
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Sistema:</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleToggleSystem}
+                className={settings?.is_active ? 'text-success' : 'text-muted-foreground'}
+              >
+                {settings?.is_active ? (
+                  <>
+                    <ToggleRight className="h-5 w-5 mr-1" />
+                    Ativo
+                  </>
+                ) : (
+                  <>
+                    <ToggleLeft className="h-5 w-5 mr-1" />
+                    Inativo
+                  </>
+                )}
+              </Button>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => {
+              setTempSettings({
+                reward_value: settings?.reward_value || 100,
+                validity_days: settings?.validity_days || 60,
+              });
+              setIsSettingsOpen(true);
+            }}>
+              <Settings className="h-4 w-4 mr-2" />
+              Configurações
+            </Button>
+          </div>
+        </motion.div>
+
+        {/* Stats Cards */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"
+        >
+          <Card className="glass-card">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                  <MousePointerClick className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Cliques</p>
+                  <p className="text-xl font-bold">{stats.totalClicks}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="glass-card">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-secondary/50 flex items-center justify-center">
+                  <Users className="h-5 w-5 text-foreground" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Leads</p>
+                  <p className="text-xl font-bold">{stats.totalLeads}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-success/20 flex items-center justify-center">
+                  <TrendingUp className="h-5 w-5 text-success" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Conversões</p>
+                  <p className="text-xl font-bold">{stats.totalConversions}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-warning/20 flex items-center justify-center">
+                  <Clock className="h-5 w-5 text-warning" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Pendentes</p>
+                  <p className="text-xl font-bold">{stats.totalPending}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-success/20 flex items-center justify-center">
+                  <CheckCircle className="h-5 w-5 text-success" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Pagos</p>
+                  <p className="text-xl font-bold">{stats.totalPaid}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-destructive/20 flex items-center justify-center">
+                  <DollarSign className="h-5 w-5 text-destructive" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">A Pagar</p>
+                  <p className="text-xl font-bold">{formatCurrency(stats.totalToPay)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Tabs */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Tabs defaultValue="links" className="space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <TabsList className="glass-card">
+                <TabsTrigger value="links">Links ({links.length})</TabsTrigger>
+                <TabsTrigger value="leads">Leads ({leads.length})</TabsTrigger>
+                <TabsTrigger value="rewards">Recompensas ({rewards.length})</TabsTrigger>
+              </TabsList>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-1 sm:w-64">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Button onClick={() => setIsCreateLinkOpen(true)}>
+                  <Link2 className="h-4 w-4 mr-2" />
+                  Novo Link
+                </Button>
+              </div>
+            </div>
+
+            {/* Links Tab */}
+            <TabsContent value="links">
+              <Card className="glass-card">
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Cliente</TableHead>
+                        <TableHead>Slug</TableHead>
+                        <TableHead>Cliques</TableHead>
+                        <TableHead>Leads</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Criado em</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredLinks.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                            Nenhum link de indicação encontrado
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredLinks.map((link) => {
+                          const linkClicks = clicks.filter(c => c.referral_link_id === link.id).length;
+                          const linkLeads = leads.filter(l => l.referral_link_id === link.id).length;
+                          
+                          return (
+                            <TableRow key={link.id}>
+                              <TableCell>
+                                <div>
+                                  <p className="font-medium">{link.client?.name || 'N/A'}</p>
+                                  <p className="text-xs text-muted-foreground">{link.client?.email}</p>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <code className="text-xs bg-muted px-2 py-1 rounded">/r/{link.slug}</code>
+                              </TableCell>
+                              <TableCell>{linkClicks}</TableCell>
+                              <TableCell>{linkLeads}</TableCell>
+                              <TableCell>
+                                <Badge className={link.is_active 
+                                  ? 'bg-success/20 text-success border-success/30 border' 
+                                  : 'bg-muted text-muted-foreground border'
+                                }>
+                                  {link.is_active ? 'Ativo' : 'Inativo'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {formatDate(link.created_at)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleCopyLink(link.slug)}
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => toggleLinkActive(link.id, !link.is_active)}
+                                  >
+                                    {link.is_active ? (
+                                      <ToggleRight className="h-4 w-4 text-success" />
+                                    ) : (
+                                      <ToggleLeft className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Leads Tab */}
+            <TabsContent value="leads">
+              <Card className="glass-card">
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Lead</TableHead>
+                        <TableHead>Indicador</TableHead>
+                        <TableHead>Origem</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Expira em</TableHead>
+                        <TableHead>Criado em</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredLeads.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                            Nenhum lead encontrado
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredLeads.map((lead) => {
+                          const isExpired = new Date(lead.expires_at) < new Date();
+                          
+                          return (
+                            <TableRow key={lead.id}>
+                              <TableCell>
+                                <div>
+                                  <p className="font-medium">{lead.lead_name}</p>
+                                  <p className="text-xs text-muted-foreground">{lead.lead_email || lead.lead_phone}</p>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <p className="text-sm">{lead.referral_link?.client?.name || 'N/A'}</p>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="capitalize">{lead.source}</Badge>
+                              </TableCell>
+                              <TableCell>
+                                {lead.is_converted ? (
+                                  <Badge className="bg-success/20 text-success border-success/30 border">
+                                    Convertido
+                                  </Badge>
+                                ) : isExpired ? (
+                                  <Badge className="bg-destructive/20 text-destructive border-destructive/30 border">
+                                    Expirado
+                                  </Badge>
+                                ) : (
+                                  <Badge className="bg-warning/20 text-warning border-warning/30 border">
+                                    Ativo
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {format(new Date(lead.expires_at), 'dd/MM/yyyy', { locale: ptBR })}
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {formatDate(lead.created_at)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {!lead.is_converted && !isExpired && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => convertLead(lead.id)}
+                                  >
+                                    <UserCheck className="h-4 w-4 mr-1" />
+                                    Fechar Projeto
+                                  </Button>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Rewards Tab */}
+            <TabsContent value="rewards">
+              <Card className="glass-card">
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Indicador</TableHead>
+                        <TableHead>Lead Convertido</TableHead>
+                        <TableHead>Valor</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Criado em</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredRewards.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            Nenhuma recompensa encontrada
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredRewards.map((reward) => (
+                          <TableRow key={reward.id}>
+                            <TableCell>
+                              <p className="font-medium">{reward.referral_link?.client?.name || 'N/A'}</p>
+                            </TableCell>
+                            <TableCell>
+                              <p className="text-sm">{reward.referral_lead?.lead_name || 'N/A'}</p>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              {formatCurrency(Number(reward.amount))}
+                            </TableCell>
+                            <TableCell>{getRewardStatusBadge(reward.status)}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {formatDate(reward.created_at)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                {reward.status === 'pending' && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => updateRewardStatus(reward.id, 'approved')}
+                                  >
+                                    Aprovar
+                                  </Button>
+                                )}
+                                {reward.status === 'approved' && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => updateRewardStatus(reward.id, 'paid')}
+                                  >
+                                    <DollarSign className="h-4 w-4 mr-1" />
+                                    Marcar Pago
+                                  </Button>
+                                )}
+                                {reward.status === 'paid' && (
+                                  <Badge className="bg-success/20 text-success border-success/30 border">
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Pago
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </motion.div>
+      </div>
+
+      {/* Settings Dialog */}
+      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Configurações do Sistema
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="reward_value">Valor da Recompensa (R$)</Label>
+              <Input
+                id="reward_value"
+                type="number"
+                value={tempSettings.reward_value}
+                onChange={(e) => setTempSettings({ ...tempSettings, reward_value: Number(e.target.value) })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="validity_days">Validade da Indicação (dias)</Label>
+              <Input
+                id="validity_days"
+                type="number"
+                value={tempSettings.validity_days}
+                onChange={(e) => setTempSettings({ ...tempSettings, validity_days: Number(e.target.value) })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSettingsOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveSettings}>
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Link Dialog */}
+      <Dialog open={isCreateLinkOpen} onOpenChange={setIsCreateLinkOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Link2 className="h-5 w-5" />
+              Criar Link de Indicação
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Selecione o Cliente</Label>
+              <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Escolha um cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clientsWithoutLinks.length === 0 ? (
+                    <SelectItem value="none" disabled>
+                      Todos os clientes já possuem link
+                    </SelectItem>
+                  ) : (
+                    clientsWithoutLinks.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            {clientsWithoutLinks.length === 0 && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <AlertCircle className="h-4 w-4" />
+                Todos os clientes ativos já possuem um link de indicação.
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateLinkOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateLink} disabled={clientsWithoutLinks.length === 0}>
+              Criar Link
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </DashboardLayout>
+  );
+};
+
+export default Referrals;

@@ -295,6 +295,201 @@ export type Database = {
           },
         ]
       }
+      referral_clicks: {
+        Row: {
+          created_at: string
+          id: string
+          ip_hash: string | null
+          referer: string | null
+          referral_link_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          referer?: string | null
+          referral_link_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          referer?: string | null
+          referral_link_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_clicks_referral_link_id_fkey"
+            columns: ["referral_link_id"]
+            isOneToOne: false
+            referencedRelation: "referral_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_leads: {
+        Row: {
+          converted_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          is_converted: boolean
+          lead_email: string | null
+          lead_name: string
+          lead_phone: string | null
+          referral_link_id: string
+          source: string | null
+        }
+        Insert: {
+          converted_at?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          is_converted?: boolean
+          lead_email?: string | null
+          lead_name: string
+          lead_phone?: string | null
+          referral_link_id: string
+          source?: string | null
+        }
+        Update: {
+          converted_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          is_converted?: boolean
+          lead_email?: string | null
+          lead_name?: string
+          lead_phone?: string | null
+          referral_link_id?: string
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_leads_referral_link_id_fkey"
+            columns: ["referral_link_id"]
+            isOneToOne: false
+            referencedRelation: "referral_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_links: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_links_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_rewards: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          created_at: string
+          id: string
+          paid_at: string | null
+          referral_lead_id: string
+          referral_link_id: string
+          status: Database["public"]["Enums"]["referral_reward_status"]
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          approved_at?: string | null
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          referral_lead_id: string
+          referral_link_id: string
+          status?: Database["public"]["Enums"]["referral_reward_status"]
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          referral_lead_id?: string
+          referral_link_id?: string
+          status?: Database["public"]["Enums"]["referral_reward_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_rewards_referral_lead_id_fkey"
+            columns: ["referral_lead_id"]
+            isOneToOne: true
+            referencedRelation: "referral_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_rewards_referral_link_id_fkey"
+            columns: ["referral_link_id"]
+            isOneToOne: false
+            referencedRelation: "referral_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_settings: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          reward_value: number
+          updated_at: string
+          validity_days: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          reward_value?: number
+          updated_at?: string
+          validity_days?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          reward_value?: number
+          updated_at?: string
+          validity_days?: number
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           asaas_id: string | null
@@ -347,10 +542,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_referral_slug: { Args: never; Returns: string }
     }
     Enums: {
-      [_ in never]: never
+      referral_reward_status: "pending" | "approved" | "paid"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -477,6 +672,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      referral_reward_status: ["pending", "approved", "paid"],
+    },
   },
 } as const
