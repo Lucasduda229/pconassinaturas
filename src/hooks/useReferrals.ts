@@ -384,30 +384,6 @@ export function useReferrals() {
       return false;
     }
     
-    // Send email notification to the referring client
-    try {
-      const clientEmail = lead.referral_link?.client?.email;
-      const clientName = lead.referral_link?.client?.name;
-      
-      if (clientEmail && clientName) {
-        console.log('Sending reward notification email to:', clientEmail);
-        
-        await supabase.functions.invoke('send-referral-reward-email', {
-          body: {
-            clientEmail,
-            clientName,
-            leadName: lead.lead_name,
-            rewardAmount: rewardValue,
-          },
-        });
-        
-        console.log('Reward notification email sent successfully');
-      }
-    } catch (emailError) {
-      // Don't fail the conversion if email fails, just log it
-      console.error('Error sending reward email:', emailError);
-    }
-    
     await Promise.all([fetchLeads(), fetchRewards()]);
     toast.success('Projeto fechado! Recompensa de indicação criada.');
     return true;
