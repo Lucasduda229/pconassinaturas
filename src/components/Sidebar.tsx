@@ -10,7 +10,8 @@ import {
   Menu,
   X,
   FileSignature,
-  Gift
+  Gift,
+  UserPlus
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -25,6 +26,7 @@ const navItems = [
   { icon: FileSignature, label: 'Contratos', path: '/contracts' },
   { icon: FileText, label: 'Notas Fiscais', path: '/invoices' },
   { icon: Gift, label: 'Indicações', path: '/referrals' },
+  { icon: UserPlus, label: 'Afiliados', path: '/affiliates' },
   { icon: Bell, label: 'Notificações', path: '/notifications' },
 ];
 
