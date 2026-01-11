@@ -18,6 +18,7 @@ import Invoices from "./pages/Invoices";
 import Notifications from "./pages/Notifications";
 import Contracts from "./pages/Contracts";
 import Referrals from "./pages/Referrals";
+import Affiliates from "./pages/Affiliates";
 import ReferralLanding from "./pages/ReferralLanding";
 
 import ClientLogin from "./pages/ClientLogin";
@@ -54,6 +55,7 @@ const App = () => (
                   <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
                   <Route path="/contracts" element={<ProtectedRoute><Contracts /></ProtectedRoute>} />
                   <Route path="/referrals" element={<ProtectedRoute><Referrals /></ProtectedRoute>} />
+                  <Route path="/affiliates" element={<ProtectedRoute><Affiliates /></ProtectedRoute>} />
                   
                   {/* Referral Landing Page (Public) - Clients */}
                   <Route path="/r/:slug" element={<ReferralLanding />} />

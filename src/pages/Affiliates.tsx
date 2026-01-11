@@ -1,0 +1,752 @@
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import {
+  Users,
+  UserCheck,
+  UserX,
+  Clock,
+  DollarSign,
+  MousePointerClick,
+  Search,
+  CheckCircle,
+  XCircle,
+  Eye,
+  MoreHorizontal,
+  Link2,
+  TrendingUp,
+  Phone,
+  Mail,
+  Key,
+} from 'lucide-react';
+import DashboardLayout from '@/components/DashboardLayout';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+
+interface Affiliate {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  pix_key: string | null;
+  status: string;
+  created_at: string;
+  approved_at: string | null;
+}
+
+interface AffiliateLink {
+  id: string;
+  affiliate_id: string;
+  slug: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+interface AffiliateStats {
+  affiliate_id: string;
+  clicks: number;
+  leads: number;
+  conversions: number;
+  pending_rewards: number;
+  paid_rewards: number;
+}
+
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(value);
+};
+
+const formatDate = (date: string) => {
+  return format(new Date(date), "dd/MM/yyyy", { locale: ptBR });
+};
+
+const Affiliates = () => {
+  const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
+  const [links, setLinks] = useState<AffiliateLink[]>([]);
+  const [stats, setStats] = useState<Record<string, AffiliateStats>>({});
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedAffiliate, setSelectedAffiliate] = useState<Affiliate | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{ type: 'approve' | 'reject'; affiliate: Affiliate } | null>(null);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      // Load affiliates
+      const { data: affiliatesData, error: affiliatesError } = await supabase
+        .from('affiliates')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (affiliatesError) throw affiliatesError;
+      setAffiliates(affiliatesData || []);
+
+      // Load links
+      const { data: linksData } = await supabase
+        .from('affiliate_links')
+        .select('*');
+      setLinks(linksData || []);
+
+      // Load stats for each affiliate
+      const statsMap: Record<string, AffiliateStats> = {};
+      
+      for (const affiliate of affiliatesData || []) {
+        const link = linksData?.find(l => l.affiliate_id === affiliate.id);
+        
+        if (link) {
+          // Clicks
+          const { count: clicksCount } = await supabase
+            .from('affiliate_clicks')
+            .select('*', { count: 'exact', head: true })
+            .eq('affiliate_link_id', link.id);
+
+          // Leads
+          const { data: leadsData } = await supabase
+            .from('affiliate_leads')
+            .select('*')
+            .eq('affiliate_link_id', link.id);
+
+          const leads = leadsData || [];
+          const conversions = leads.filter(l => l.is_converted).length;
+
+          // Rewards
+          const { data: rewardsData } = await supabase
+            .from('affiliate_rewards')
+            .select('*')
+            .eq('affiliate_link_id', link.id);
+
+          const rewards = rewardsData || [];
+          const pendingRewards = rewards
+            .filter(r => r.status === 'pending' || r.status === 'approved')
+            .reduce((sum, r) => sum + Number(r.amount), 0);
+          const paidRewards = rewards
+            .filter(r => r.status === 'paid')
+            .reduce((sum, r) => sum + Number(r.amount), 0);
+
+          statsMap[affiliate.id] = {
+            affiliate_id: affiliate.id,
+            clicks: clicksCount || 0,
+            leads: leads.length,
+            conversions,
+            pending_rewards: pendingRewards,
+            paid_rewards: paidRewards,
+          };
+        } else {
+          statsMap[affiliate.id] = {
+            affiliate_id: affiliate.id,
+            clicks: 0,
+            leads: 0,
+            conversions: 0,
+            pending_rewards: 0,
+            paid_rewards: 0,
+          };
+        }
+      }
+      
+      setStats(statsMap);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast.error('Erro ao carregar dados');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApprove = async (affiliate: Affiliate) => {
+    try {
+      const { error } = await supabase
+        .from('affiliates')
+        .update({ status: 'approved' })
+        .eq('id', affiliate.id);
+
+      if (error) throw error;
+      
+      toast.success(`${affiliate.name} foi aprovado!`);
+      loadData();
+    } catch (error) {
+      console.error('Error approving affiliate:', error);
+      toast.error('Erro ao aprovar afiliado');
+    }
+    setIsConfirmOpen(false);
+    setConfirmAction(null);
+  };
+
+  const handleReject = async (affiliate: Affiliate) => {
+    try {
+      const { error } = await supabase
+        .from('affiliates')
+        .update({ status: 'rejected' })
+        .eq('id', affiliate.id);
+
+      if (error) throw error;
+      
+      toast.success(`${affiliate.name} foi rejeitado`);
+      loadData();
+    } catch (error) {
+      console.error('Error rejecting affiliate:', error);
+      toast.error('Erro ao rejeitar afiliado');
+    }
+    setIsConfirmOpen(false);
+    setConfirmAction(null);
+  };
+
+  const handleToggleActive = async (affiliate: Affiliate) => {
+    const newStatus = affiliate.status === 'approved' ? 'inactive' : 'approved';
+    try {
+      const { error } = await supabase
+        .from('affiliates')
+        .update({ status: newStatus })
+        .eq('id', affiliate.id);
+
+      if (error) throw error;
+      
+      toast.success(newStatus === 'approved' ? 'Afiliado ativado' : 'Afiliado desativado');
+      loadData();
+    } catch (error) {
+      console.error('Error toggling affiliate:', error);
+      toast.error('Erro ao alterar status');
+    }
+  };
+
+  const openConfirmDialog = (type: 'approve' | 'reject', affiliate: Affiliate) => {
+    setConfirmAction({ type, affiliate });
+    setIsConfirmOpen(true);
+  };
+
+  const getStatusBadge = (status: string) => {
+    const configs: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
+      pending: { label: 'Pendente', className: 'bg-warning/20 text-warning border-warning/30', icon: <Clock className="h-3 w-3" /> },
+      approved: { label: 'Aprovado', className: 'bg-success/20 text-success border-success/30', icon: <CheckCircle className="h-3 w-3" /> },
+      rejected: { label: 'Rejeitado', className: 'bg-destructive/20 text-destructive border-destructive/30', icon: <XCircle className="h-3 w-3" /> },
+      inactive: { label: 'Inativo', className: 'bg-muted text-muted-foreground border-muted', icon: <XCircle className="h-3 w-3" /> },
+    };
+    const config = configs[status] || { label: status, className: 'bg-muted', icon: null };
+    return (
+      <Badge className={`${config.className} border flex items-center gap-1`}>
+        {config.icon}
+        {config.label}
+      </Badge>
+    );
+  };
+
+  const pendingAffiliates = affiliates.filter(a => a.status === 'pending');
+  const approvedAffiliates = affiliates.filter(a => a.status === 'approved');
+  const otherAffiliates = affiliates.filter(a => a.status !== 'pending' && a.status !== 'approved');
+
+  const filteredPending = pendingAffiliates.filter(a =>
+    a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    a.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredApproved = approvedAffiliates.filter(a =>
+    a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    a.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredOthers = otherAffiliates.filter(a =>
+    a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    a.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Calculate totals
+  const totalClicks = Object.values(stats).reduce((sum, s) => sum + s.clicks, 0);
+  const totalLeads = Object.values(stats).reduce((sum, s) => sum + s.leads, 0);
+  const totalConversions = Object.values(stats).reduce((sum, s) => sum + s.conversions, 0);
+  const totalPending = Object.values(stats).reduce((sum, s) => sum + s.pending_rewards, 0);
+  const totalPaid = Object.values(stats).reduce((sum, s) => sum + s.paid_rewards, 0);
+
+  if (loading) {
+    return (
+      <DashboardLayout title="Afiliados" subtitle="Carregando...">
+        <div className="flex items-center justify-center h-64">
+          <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  return (
+    <DashboardLayout title="Afiliados" subtitle="Gerencie os afiliados externos do programa de indicações">
+      <div className="space-y-6">
+        {/* Stats Cards */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
+        >
+          <Card className="glass-card">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-warning/20 flex items-center justify-center">
+                  <Clock className="h-5 w-5 text-warning" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Pendentes</p>
+                  <p className="text-xl font-bold">{pendingAffiliates.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-success/20 flex items-center justify-center">
+                  <UserCheck className="h-5 w-5 text-success" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Aprovados</p>
+                  <p className="text-xl font-bold">{approvedAffiliates.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                  <MousePointerClick className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Cliques</p>
+                  <p className="text-xl font-bold">{totalClicks}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-secondary/50 flex items-center justify-center">
+                  <Users className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Leads</p>
+                  <p className="text-xl font-bold">{totalLeads}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-warning/20 flex items-center justify-center">
+                  <DollarSign className="h-5 w-5 text-warning" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">A Pagar</p>
+                  <p className="text-lg font-bold">{formatCurrency(totalPending)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-success/20 flex items-center justify-center">
+                  <DollarSign className="h-5 w-5 text-success" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Pagos</p>
+                  <p className="text-lg font-bold">{formatCurrency(totalPaid)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Tabs */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Tabs defaultValue="pending" className="space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <TabsList className="glass-card">
+                <TabsTrigger value="pending" className="relative">
+                  Pendentes
+                  {pendingAffiliates.length > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-warning text-warning-foreground text-xs rounded-full flex items-center justify-center">
+                      {pendingAffiliates.length}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="approved">Aprovados ({approvedAffiliates.length})</TabsTrigger>
+                <TabsTrigger value="others">Outros ({otherAffiliates.length})</TabsTrigger>
+              </TabsList>
+
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar afiliado..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+
+            {/* Pending Tab */}
+            <TabsContent value="pending">
+              <Card className="glass-card">
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Telefone</TableHead>
+                        <TableHead>PIX</TableHead>
+                        <TableHead>Cadastro</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredPending.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            Nenhum afiliado pendente
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredPending.map((affiliate) => (
+                          <TableRow key={affiliate.id}>
+                            <TableCell className="font-medium">{affiliate.name}</TableCell>
+                            <TableCell>{affiliate.email}</TableCell>
+                            <TableCell>{affiliate.phone || '-'}</TableCell>
+                            <TableCell>
+                              {affiliate.pix_key ? (
+                                <span className="text-xs bg-secondary/50 px-2 py-1 rounded">
+                                  {affiliate.pix_key.length > 20 
+                                    ? affiliate.pix_key.substring(0, 20) + '...' 
+                                    : affiliate.pix_key}
+                                </span>
+                              ) : '-'}
+                            </TableCell>
+                            <TableCell>{formatDate(affiliate.created_at)}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-success hover:bg-success/10"
+                                  onClick={() => openConfirmDialog('approve', affiliate)}
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Aprovar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-destructive hover:bg-destructive/10"
+                                  onClick={() => openConfirmDialog('reject', affiliate)}
+                                >
+                                  <XCircle className="h-4 w-4 mr-1" />
+                                  Rejeitar
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Approved Tab */}
+            <TabsContent value="approved">
+              <Card className="glass-card">
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Link</TableHead>
+                        <TableHead>Cliques</TableHead>
+                        <TableHead>Leads</TableHead>
+                        <TableHead>Conversões</TableHead>
+                        <TableHead>A Pagar</TableHead>
+                        <TableHead>Pago</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredApproved.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                            Nenhum afiliado aprovado
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredApproved.map((affiliate) => {
+                          const link = links.find(l => l.affiliate_id === affiliate.id);
+                          const affiliateStats = stats[affiliate.id] || { clicks: 0, leads: 0, conversions: 0, pending_rewards: 0, paid_rewards: 0 };
+                          
+                          return (
+                            <TableRow key={affiliate.id}>
+                              <TableCell>
+                                <div>
+                                  <p className="font-medium">{affiliate.name}</p>
+                                  <p className="text-xs text-muted-foreground">{affiliate.email}</p>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {link ? (
+                                  <code className="text-xs bg-secondary/50 px-2 py-1 rounded">
+                                    /a/{link.slug}
+                                  </code>
+                                ) : (
+                                  <span className="text-muted-foreground text-xs">-</span>
+                                )}</TableCell>
+                              <TableCell>{affiliateStats.clicks}</TableCell>
+                              <TableCell>{affiliateStats.leads}</TableCell>
+                              <TableCell>
+                                <span className="text-success font-medium">{affiliateStats.conversions}</span>
+                              </TableCell>
+                              <TableCell>
+                                <span className="text-warning font-medium">
+                                  {formatCurrency(affiliateStats.pending_rewards)}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <span className="text-success font-medium">
+                                  {formatCurrency(affiliateStats.paid_rewards)}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button size="icon" variant="ghost">
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => {
+                                      setSelectedAffiliate(affiliate);
+                                      setIsDetailsOpen(true);
+                                    }}>
+                                      <Eye className="h-4 w-4 mr-2" />
+                                      Ver Detalhes
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleToggleActive(affiliate)}>
+                                      <UserX className="h-4 w-4 mr-2" />
+                                      Desativar
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Others Tab */}
+            <TabsContent value="others">
+              <Card className="glass-card">
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Cadastro</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredOthers.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                            Nenhum afiliado encontrado
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredOthers.map((affiliate) => (
+                          <TableRow key={affiliate.id}>
+                            <TableCell className="font-medium">{affiliate.name}</TableCell>
+                            <TableCell>{affiliate.email}</TableCell>
+                            <TableCell>{getStatusBadge(affiliate.status)}</TableCell>
+                            <TableCell>{formatDate(affiliate.created_at)}</TableCell>
+                            <TableCell className="text-right">
+                              {affiliate.status === 'inactive' && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleToggleActive(affiliate)}
+                                >
+                                  <UserCheck className="h-4 w-4 mr-1" />
+                                  Reativar
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </motion.div>
+      </div>
+
+      {/* Confirm Dialog */}
+      <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {confirmAction?.type === 'approve' ? 'Aprovar Afiliado' : 'Rejeitar Afiliado'}
+            </DialogTitle>
+            <DialogDescription>
+              {confirmAction?.type === 'approve' 
+                ? `Deseja aprovar ${confirmAction?.affiliate.name}? Um link de indicação será criado automaticamente.`
+                : `Deseja rejeitar ${confirmAction?.affiliate.name}? Esta pessoa não poderá acessar o sistema.`
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsConfirmOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant={confirmAction?.type === 'approve' ? 'default' : 'destructive'}
+              onClick={() => {
+                if (confirmAction?.type === 'approve') {
+                  handleApprove(confirmAction.affiliate);
+                } else if (confirmAction) {
+                  handleReject(confirmAction.affiliate);
+                }
+              }}
+            >
+              {confirmAction?.type === 'approve' ? 'Aprovar' : 'Rejeitar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Details Dialog */}
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Afiliado</DialogTitle>
+          </DialogHeader>
+          {selectedAffiliate && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                  <Users className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">{selectedAffiliate.name}</h3>
+                  {getStatusBadge(selectedAffiliate.status)}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 text-sm">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <span>{selectedAffiliate.email}</span>
+                </div>
+                {selectedAffiliate.phone && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span>{selectedAffiliate.phone}</span>
+                  </div>
+                )}
+                {selectedAffiliate.pix_key && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <Key className="h-4 w-4 text-muted-foreground" />
+                    <span className="break-all">{selectedAffiliate.pix_key}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="text-sm font-medium mb-3">Estatísticas</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-secondary/30 rounded-lg p-3 text-center">
+                    <p className="text-xs text-muted-foreground">Cliques</p>
+                    <p className="text-lg font-bold">{stats[selectedAffiliate.id]?.clicks || 0}</p>
+                  </div>
+                  <div className="bg-secondary/30 rounded-lg p-3 text-center">
+                    <p className="text-xs text-muted-foreground">Leads</p>
+                    <p className="text-lg font-bold">{stats[selectedAffiliate.id]?.leads || 0}</p>
+                  </div>
+                  <div className="bg-success/10 rounded-lg p-3 text-center">
+                    <p className="text-xs text-muted-foreground">Conversões</p>
+                    <p className="text-lg font-bold text-success">{stats[selectedAffiliate.id]?.conversions || 0}</p>
+                  </div>
+                  <div className="bg-warning/10 rounded-lg p-3 text-center">
+                    <p className="text-xs text-muted-foreground">A Pagar</p>
+                    <p className="text-lg font-bold text-warning">
+                      {formatCurrency(stats[selectedAffiliate.id]?.pending_rewards || 0)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-xs text-muted-foreground">
+                Cadastrado em {formatDate(selectedAffiliate.created_at)}
+                {selectedAffiliate.approved_at && (
+                  <> • Aprovado em {formatDate(selectedAffiliate.approved_at)}</>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </DashboardLayout>
+  );
+};
+
+export default Affiliates;
