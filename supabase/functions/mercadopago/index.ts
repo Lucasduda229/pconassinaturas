@@ -164,6 +164,30 @@ serve(async (req: Request) => {
         throw new Error(result.message || "Erro ao verificar status");
       }
 
+      console.log("Payment status result:", { id: paymentId, status: result.status });
+
+      // If payment is approved, update the database
+      if (result.status === "approved") {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        // Update payment status in database
+        const { error: updateError } = await supabase
+          .from("payments")
+          .update({ 
+            status: "paid",
+            paid_at: result.date_approved || new Date().toISOString()
+          })
+          .eq("transaction_id", paymentId.toString());
+
+        if (updateError) {
+          console.error("Error updating payment in DB:", updateError);
+        } else {
+          console.log("Payment marked as paid in database:", paymentId);
+        }
+      }
+
       return new Response(
         JSON.stringify({
           success: true,
