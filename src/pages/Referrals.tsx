@@ -100,10 +100,12 @@ const Referrals = () => {
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [rewardClientId, setRewardClientId] = useState<string>('');
   const [rewardAmount, setRewardAmount] = useState<string>('');
-  const [rewardType, setRewardType] = useState<string>('');
+  const [rewardTypeCategory, setRewardTypeCategory] = useState<'cash' | 'coupon'>('cash');
   const [rewardDescription, setRewardDescription] = useState<string>('');
   const [tempSettings, setTempSettings] = useState({
     reward_value: 100,
+    client_reward_value: 150,
+    client_reward_description: 'Cupom de desconto para projetos futuros',
     validity_days: 60,
   });
 
@@ -151,20 +153,32 @@ const Referrals = () => {
       toast.error('Selecione um cliente');
       return;
     }
-    if (!rewardType) {
-      toast.error('Informe o tipo da recompensa');
-      return;
-    }
-    const amount = parseFloat(rewardAmount) || settings?.reward_value || 100;
-    const fullDescription = rewardDescription 
-      ? `${rewardType} - ${rewardDescription}` 
-      : rewardType;
-    await createManualReward(rewardClientId, amount, fullDescription);
+    const defaultAmount = rewardTypeCategory === 'coupon' 
+      ? (settings?.client_reward_value || 150) 
+      : (settings?.reward_value || 100);
+    const amount = parseFloat(rewardAmount) || defaultAmount;
+    const fullDescription = rewardDescription || 'Indicação externa';
+    await createManualReward(rewardClientId, amount, fullDescription, rewardTypeCategory);
     setIsCreateRewardOpen(false);
     setRewardClientId('');
     setRewardAmount('');
-    setRewardType('');
+    setRewardTypeCategory('cash');
     setRewardDescription('');
+  };
+
+  const getRewardTypeBadge = (type: 'cash' | 'coupon') => {
+    if (type === 'coupon') {
+      return (
+        <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 border text-xs">
+          Cupom
+        </Badge>
+      );
+    }
+    return (
+      <Badge className="bg-green-500/20 text-green-400 border-green-500/30 border text-xs">
+        Dinheiro
+      </Badge>
+    );
   };
 
   const getRewardStatusBadge = (status: string) => {
@@ -244,6 +258,8 @@ const Referrals = () => {
             <Button variant="outline" size="sm" onClick={() => {
               setTempSettings({
                 reward_value: settings?.reward_value || 100,
+                client_reward_value: settings?.client_reward_value || 150,
+                client_reward_description: settings?.client_reward_description || 'Cupom de desconto para projetos futuros',
                 validity_days: settings?.validity_days || 60,
               });
               setIsSettingsOpen(true);
@@ -694,6 +710,7 @@ const Referrals = () => {
                       <TableRow>
                         <TableHead>Indicador</TableHead>
                         <TableHead>Lead Convertido</TableHead>
+                        <TableHead>Tipo</TableHead>
                         <TableHead>Valor</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Criado em</TableHead>
@@ -703,7 +720,7 @@ const Referrals = () => {
                     <TableBody>
                       {filteredRewards.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                             Nenhuma recompensa encontrada
                           </TableCell>
                         </TableRow>
@@ -714,7 +731,15 @@ const Referrals = () => {
                               <p className="font-medium">{reward.referral_link?.client?.name || 'N/A'}</p>
                             </TableCell>
                             <TableCell>
-                              <p className="text-sm">{reward.referral_lead?.lead_name || 'N/A'}</p>
+                              <div>
+                                <p className="text-sm">{reward.referral_lead?.lead_name || 'N/A'}</p>
+                                {reward.description && (
+                                  <p className="text-xs text-muted-foreground">{reward.description}</p>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {getRewardTypeBadge(reward.reward_type || 'cash')}
                             </TableCell>
                             <TableCell className="font-medium">
                               {formatCurrency(Number(reward.amount))}
@@ -785,15 +810,47 @@ const Referrals = () => {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="reward_value">Valor da Recompensa (R$)</Label>
-              <Input
-                id="reward_value"
-                type="number"
-                value={tempSettings.reward_value}
-                onChange={(e) => setTempSettings({ ...tempSettings, reward_value: Number(e.target.value) })}
-              />
+            <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+              <h4 className="text-sm font-medium text-green-400 mb-2">💵 Afiliados (Dinheiro)</h4>
+              <p className="text-xs text-muted-foreground mb-2">
+                Afiliados externos recebem dinheiro em PIX
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="reward_value">Valor em Dinheiro (R$)</Label>
+                <Input
+                  id="reward_value"
+                  type="number"
+                  value={tempSettings.reward_value}
+                  onChange={(e) => setTempSettings({ ...tempSettings, reward_value: Number(e.target.value) })}
+                />
+              </div>
             </div>
+            
+            <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+              <h4 className="text-sm font-medium text-purple-400 mb-2">🎫 Clientes Ativos (Cupom)</h4>
+              <p className="text-xs text-muted-foreground mb-2">
+                Clientes com assinatura ativa recebem cupom de desconto
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="client_reward_value">Valor do Cupom (R$)</Label>
+                <Input
+                  id="client_reward_value"
+                  type="number"
+                  value={tempSettings.client_reward_value}
+                  onChange={(e) => setTempSettings({ ...tempSettings, client_reward_value: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2 mt-2">
+                <Label htmlFor="client_reward_description">Descrição do Cupom</Label>
+                <Input
+                  id="client_reward_description"
+                  value={tempSettings.client_reward_description}
+                  onChange={(e) => setTempSettings({ ...tempSettings, client_reward_description: e.target.value })}
+                  placeholder="Ex: Cupom de desconto para projetos futuros"
+                />
+              </div>
+            </div>
+            
             <div className="space-y-2">
               <Label htmlFor="validity_days">Validade da Indicação (dias)</Label>
               <Input
@@ -893,15 +950,30 @@ const Referrals = () => {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="reward_type">Tipo da Recompensa *</Label>
-              <Input
-                id="reward_type"
-                placeholder="Ex: 150 REAIS EM CUPOM PARA IMPLANTAÇÕES FUTURAS"
-                value={rewardType}
-                onChange={(e) => setRewardType(e.target.value)}
-              />
+              <Label>Tipo de Recompensa *</Label>
+              <Select value={rewardTypeCategory} onValueChange={(v) => setRewardTypeCategory(v as 'cash' | 'coupon')}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Escolha o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-400">💵</span>
+                      <span>Dinheiro (R$ {settings?.reward_value || 100})</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="coupon">
+                    <div className="flex items-center gap-2">
+                      <span className="text-purple-400">🎫</span>
+                      <span>Cupom (R$ {settings?.client_reward_value || 150})</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
               <p className="text-xs text-muted-foreground">
-                Descreva qual é a recompensa (ex: cupom, desconto, dinheiro, etc.)
+                {rewardTypeCategory === 'coupon' 
+                  ? 'Cupom de desconto para projetos ou aplicações futuras' 
+                  : 'Pagamento em dinheiro via PIX'}
               </p>
             </div>
             <div className="space-y-2">
@@ -909,12 +981,12 @@ const Referrals = () => {
               <Input
                 id="reward_amount"
                 type="number"
-                placeholder={String(settings?.reward_value || 100)}
+                placeholder={String(rewardTypeCategory === 'coupon' ? (settings?.client_reward_value || 150) : (settings?.reward_value || 100))}
                 value={rewardAmount}
                 onChange={(e) => setRewardAmount(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Deixe em branco para usar o valor padrão: {formatCurrency(settings?.reward_value || 100)}
+                Deixe em branco para usar o valor padrão: {formatCurrency(rewardTypeCategory === 'coupon' ? (settings?.client_reward_value || 150) : (settings?.reward_value || 100))}
               </p>
             </div>
             <div className="space-y-2">

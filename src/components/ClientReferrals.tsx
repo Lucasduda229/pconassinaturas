@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { useClientReferrals } from '@/hooks/useReferrals';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ClientReferralsProps {
   clientId: string;
@@ -44,6 +45,34 @@ const REFERRAL_DOMAIN = 'https://www.assinaturaspcon.sbs';
 
 const ClientReferrals = ({ clientId }: ClientReferralsProps) => {
   const { link, clicks, leads, rewards, settings, stats, loading } = useClientReferrals(clientId);
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+  
+  // Check if client has active subscription
+  React.useEffect(() => {
+    const checkSubscription = async () => {
+      const { data } = await supabase
+        .from('subscriptions')
+        .select('id')
+        .eq('client_id', clientId)
+        .eq('status', 'active')
+        .limit(1);
+      
+      setHasActiveSubscription((data && data.length > 0) || false);
+    };
+    
+    if (clientId) {
+      checkSubscription();
+    }
+  }, [clientId]);
+  
+  // Determine reward info based on subscription status
+  const rewardValue = hasActiveSubscription 
+    ? (settings?.client_reward_value || 150) 
+    : (settings?.reward_value || 100);
+  const rewardType = hasActiveSubscription ? 'coupon' : 'cash';
+  const rewardDescription = hasActiveSubscription 
+    ? 'Cupom de desconto para projetos futuros' 
+    : 'Recompensa em dinheiro via PIX';
 
   const handleCopyLink = () => {
     if (link) {
@@ -108,20 +137,28 @@ const ClientReferrals = ({ clientId }: ClientReferralsProps) => {
       </div>
 
       {/* Info Banner */}
-      <Card className="glass-card border-primary/20 bg-primary/5">
+      <Card className={`glass-card border-primary/20 ${hasActiveSubscription ? 'bg-purple-500/5' : 'bg-primary/5'}`}>
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
-              <Gift className="h-5 w-5 text-primary" />
+            <div className={`w-10 h-10 rounded-lg ${hasActiveSubscription ? 'bg-purple-500/20' : 'bg-primary/20'} flex items-center justify-center flex-shrink-0`}>
+              <Gift className={`h-5 w-5 ${hasActiveSubscription ? 'text-purple-400' : 'text-primary'}`} />
             </div>
             <div>
               <h3 className="font-medium text-foreground mb-1">
-                Ganhe {formatCurrency(settings?.reward_value || 100)} por indicação!
+                Ganhe {formatCurrency(rewardValue)} por indicação!
               </h3>
               <p className="text-sm text-muted-foreground">
-                Indique novos clientes e receba uma recompensa quando o projeto for fechado. 
-                A indicação é válida por {settings?.validity_days || 60} dias.
+                {hasActiveSubscription 
+                  ? `Como cliente ativo, você recebe um cupom de ${formatCurrency(rewardValue)} para projetos ou aplicações futuras quando sua indicação fechar.`
+                  : `Indique novos clientes e receba ${formatCurrency(rewardValue)} em dinheiro quando o projeto for fechado.`
+                }
+                {' '}A indicação é válida por {settings?.validity_days || 60} dias.
               </p>
+              {hasActiveSubscription && (
+                <div className="mt-2 inline-flex items-center gap-1 px-2 py-1 rounded-full bg-purple-500/20 text-purple-400 text-xs">
+                  🎫 Cupom de Desconto
+                </div>
+              )}
             </div>
           </div>
         </CardContent>

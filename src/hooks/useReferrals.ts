@@ -5,7 +5,9 @@ import { toast } from 'sonner';
 export interface ReferralSettings {
   id: string;
   is_active: boolean;
-  reward_value: number;
+  reward_value: number; // R$100 for affiliates (cash)
+  client_reward_value: number; // R$150 for clients with active subscription (coupon)
+  client_reward_description: string;
   validity_days: number;
   created_at: string;
   updated_at: string;
@@ -52,6 +54,8 @@ export interface ReferralReward {
   referral_link_id: string;
   referral_lead_id: string;
   amount: number;
+  reward_type: 'cash' | 'coupon'; // cash = R$100, coupon = R$150 discount
+  description: string | null;
   status: 'pending' | 'approved' | 'paid';
   approved_at: string | null;
   paid_at: string | null;
@@ -175,6 +179,7 @@ export function useReferrals() {
     const formattedData = data?.map(reward => ({
       ...reward,
       status: reward.status as 'pending' | 'approved' | 'paid',
+      reward_type: (reward.reward_type || 'cash') as 'cash' | 'coupon',
       referral_link: reward.referral_links ? {
         ...reward.referral_links,
         client: (reward.referral_links as any).clients as { name: string; email: string } | undefined,
@@ -366,8 +371,30 @@ export function useReferrals() {
       return false;
     }
     
-    // Create reward
-    const rewardValue = settings?.reward_value || 100;
+    // Check if the referrer (client) has an active subscription
+    const clientId = lead.referral_link?.client_id;
+    let hasActiveSubscription = false;
+    
+    if (clientId) {
+      const { data: subscriptions } = await supabase
+        .from('subscriptions')
+        .select('id, status')
+        .eq('client_id', clientId)
+        .eq('status', 'active');
+      
+      hasActiveSubscription = (subscriptions && subscriptions.length > 0);
+    }
+    
+    // Determine reward type and value based on subscription status
+    // Clients with active subscription get R$150 coupon
+    // Others (affiliates or inactive clients) get R$100 cash
+    const rewardType = hasActiveSubscription ? 'coupon' : 'cash';
+    const rewardValue = hasActiveSubscription 
+      ? (settings?.client_reward_value || 150) 
+      : (settings?.reward_value || 100);
+    const rewardDescription = hasActiveSubscription 
+      ? (settings?.client_reward_description || 'Cupom de desconto para projetos futuros')
+      : null;
     
     const { error: rewardError } = await supabase
       .from('referral_rewards')
@@ -375,6 +402,8 @@ export function useReferrals() {
         referral_link_id: lead.referral_link_id,
         referral_lead_id: leadId,
         amount: rewardValue,
+        reward_type: rewardType,
+        description: rewardDescription,
         status: 'pending',
       });
     
@@ -385,8 +414,18 @@ export function useReferrals() {
     }
     
     await Promise.all([fetchLeads(), fetchRewards()]);
-    toast.success('Projeto fechado! Recompensa de indicação criada.');
+    const rewardMessage = hasActiveSubscription 
+      ? `Projeto fechado! Cupom de ${formatCurrency(rewardValue)} criado.`
+      : `Projeto fechado! Recompensa de ${formatCurrency(rewardValue)} criada.`;
+    toast.success(rewardMessage);
     return true;
+  };
+  
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value);
   };
 
   const deleteLink = async (linkId: string) => {
@@ -482,7 +521,12 @@ export function useReferrals() {
     return true;
   };
 
-  const createManualReward = async (clientId: string, amount: number, description?: string) => {
+  const createManualReward = async (
+    clientId: string, 
+    amount: number, 
+    description?: string,
+    rewardType: 'cash' | 'coupon' = 'cash'
+  ) => {
     // First get or create the referral link for this client
     let linkId: string;
     
@@ -534,13 +578,15 @@ export function useReferrals() {
       return false;
     }
     
-    // Create the reward
+    // Create the reward with type
     const { error: rewardError } = await supabase
       .from('referral_rewards')
       .insert({
         referral_link_id: linkId,
         referral_lead_id: newLead.id,
         amount: amount,
+        reward_type: rewardType,
+        description: rewardType === 'coupon' ? 'Cupom de desconto para projetos futuros' : null,
         status: 'pending',
       });
     
@@ -551,7 +597,10 @@ export function useReferrals() {
     }
     
     await fetchAll();
-    toast.success('Recompensa manual criada com sucesso!');
+    const message = rewardType === 'coupon' 
+      ? 'Cupom de desconto criado com sucesso!' 
+      : 'Recompensa manual criada com sucesso!';
+    toast.success(message);
     return true;
   };
 
@@ -640,6 +689,7 @@ export function useClientReferrals(clientId: string | undefined) {
         const formattedRewards = rewardsData?.map(r => ({
           ...r,
           status: r.status as 'pending' | 'approved' | 'paid',
+          reward_type: (r.reward_type || 'cash') as 'cash' | 'coupon',
           referral_lead: r.referral_leads || undefined,
         })) || [];
         
