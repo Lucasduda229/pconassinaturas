@@ -16,6 +16,8 @@ import Payments from "./pages/Payments";
 import Invoices from "./pages/Invoices";
 import Notifications from "./pages/Notifications";
 import Contracts from "./pages/Contracts";
+import Referrals from "./pages/Referrals";
+import ReferralLanding from "./pages/ReferralLanding";
 
 import ClientLogin from "./pages/ClientLogin";
 import Checkout from "./pages/Checkout";
@@ -43,7 +45,10 @@ const App = () => (
                 <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
                 <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
                 <Route path="/contracts" element={<ProtectedRoute><Contracts /></ProtectedRoute>} />
+                <Route path="/referrals" element={<ProtectedRoute><Referrals /></ProtectedRoute>} />
                 
+                {/* Referral Landing Page (Public) */}
+                <Route path="/r/:slug" element={<ReferralLanding />} />
                 
                 {/* Client Routes - Isolated Checkout */}
                 <Route path="/cliente" element={<ClientLogin />} />
