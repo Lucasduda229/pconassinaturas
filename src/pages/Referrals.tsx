@@ -96,8 +96,10 @@ const Referrals = () => {
     (client) => !links.some((link) => link.client_id === client.id)
   );
 
+  const REFERRAL_DOMAIN = 'https://assinaturaspcon.sbs';
+
   const handleCopyLink = (slug: string) => {
-    const url = `${window.location.origin}/r/${slug}`;
+    const url = `${REFERRAL_DOMAIN}/r/${slug}`;
     navigator.clipboard.writeText(url);
     toast.success('Link copiado!');
   };
