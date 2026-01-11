@@ -40,7 +40,7 @@ const AffiliateDashboard = () => {
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      navigate('/afiliado');
+      navigate('/afiliados/login');
     }
   }, [authLoading, isAuthenticated, navigate]);
 
@@ -148,7 +148,7 @@ const AffiliateDashboard = () => {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/afiliado');
+    navigate('/afiliados/login');
   };
 
   if (authLoading) {

@@ -75,7 +75,7 @@ const AffiliateRegister = () => {
 
     if (registerResult.success) {
       toast.success('Cadastro realizado! Aguarde aprovação para acessar.');
-      navigate('/afiliado');
+      navigate('/afiliados/login');
     } else {
       toast.error(registerResult.error || 'Erro ao cadastrar');
     }
@@ -276,7 +276,7 @@ const AffiliateRegister = () => {
             transition={{ delay: 0.3, duration: 0.4 }}
           >
             <Link 
-              to="/afiliado" 
+              to="/afiliados/login" 
               className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
