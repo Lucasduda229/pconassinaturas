@@ -230,7 +230,7 @@ const Affiliates = () => {
       
       // Send approval email notification
       try {
-        const loginUrl = `${window.location.origin}/afiliados/login`;
+        const loginUrl = 'https://www.assinaturaspcon.sbs/afiliados/login';
         await supabase.functions.invoke('affiliate-approval-email', {
           body: {
             affiliateId: affiliate.id,

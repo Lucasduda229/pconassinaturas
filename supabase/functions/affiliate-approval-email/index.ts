@@ -39,7 +39,7 @@ const handler = async (req: Request): Promise<Response> => {
       .maybeSingle();
 
     const affiliateLinkUrl = affiliateLink 
-      ? `${loginUrl.replace('/afiliados/login', '')}/r/${affiliateLink.slug}`
+      ? `${loginUrl.replace('/afiliados/login', '')}/a/${affiliateLink.slug}`
       : 'Será gerado após o primeiro login';
 
     const emailHtml = `
