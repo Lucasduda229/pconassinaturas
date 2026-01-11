@@ -228,7 +228,23 @@ const Affiliates = () => {
 
       if (error) throw error;
       
-      toast.success(`${affiliate.name} foi aprovado!`);
+      // Send approval email notification
+      try {
+        const loginUrl = `${window.location.origin}/afiliados/login`;
+        await supabase.functions.invoke('affiliate-approval-email', {
+          body: {
+            affiliateId: affiliate.id,
+            affiliateName: affiliate.name,
+            affiliateEmail: affiliate.email,
+            loginUrl
+          }
+        });
+        toast.success(`${affiliate.name} foi aprovado e notificado por email!`);
+      } catch (emailError) {
+        console.error('Error sending approval email:', emailError);
+        toast.success(`${affiliate.name} foi aprovado! (Falha ao enviar email)`);
+      }
+      
       loadData();
     } catch (error) {
       console.error('Error approving affiliate:', error);
