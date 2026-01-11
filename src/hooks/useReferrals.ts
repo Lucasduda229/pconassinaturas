@@ -363,6 +363,99 @@ export function useReferrals() {
     return true;
   };
 
+  const deleteLink = async (linkId: string) => {
+    // First delete associated rewards
+    const { error: rewardsError } = await supabase
+      .from('referral_rewards')
+      .delete()
+      .eq('referral_link_id', linkId);
+    
+    if (rewardsError) {
+      console.error('Error deleting rewards:', rewardsError);
+    }
+
+    // Delete associated leads
+    const { error: leadsError } = await supabase
+      .from('referral_leads')
+      .delete()
+      .eq('referral_link_id', linkId);
+    
+    if (leadsError) {
+      console.error('Error deleting leads:', leadsError);
+    }
+
+    // Delete associated clicks
+    const { error: clicksError } = await supabase
+      .from('referral_clicks')
+      .delete()
+      .eq('referral_link_id', linkId);
+    
+    if (clicksError) {
+      console.error('Error deleting clicks:', clicksError);
+    }
+
+    // Delete the link
+    const { error } = await supabase
+      .from('referral_links')
+      .delete()
+      .eq('id', linkId);
+    
+    if (error) {
+      console.error('Error deleting link:', error);
+      toast.error('Erro ao remover link');
+      return false;
+    }
+    
+    await fetchAll();
+    toast.success('Link removido!');
+    return true;
+  };
+
+  const deleteLead = async (leadId: string) => {
+    // First delete associated reward if exists
+    const { error: rewardError } = await supabase
+      .from('referral_rewards')
+      .delete()
+      .eq('referral_lead_id', leadId);
+    
+    if (rewardError) {
+      console.error('Error deleting reward:', rewardError);
+    }
+
+    // Delete the lead
+    const { error } = await supabase
+      .from('referral_leads')
+      .delete()
+      .eq('id', leadId);
+    
+    if (error) {
+      console.error('Error deleting lead:', error);
+      toast.error('Erro ao remover lead');
+      return false;
+    }
+    
+    await Promise.all([fetchLeads(), fetchRewards()]);
+    toast.success('Lead removido!');
+    return true;
+  };
+
+  const deleteReward = async (rewardId: string) => {
+    const { error } = await supabase
+      .from('referral_rewards')
+      .delete()
+      .eq('id', rewardId);
+    
+    if (error) {
+      console.error('Error deleting reward:', error);
+      toast.error('Erro ao remover recompensa');
+      return false;
+    }
+    
+    await fetchRewards();
+    toast.success('Recompensa removida!');
+    return true;
+  };
+
   return {
     settings,
     links,
@@ -377,6 +470,9 @@ export function useReferrals() {
     toggleLinkActive,
     updateRewardStatus,
     convertLead,
+    deleteLink,
+    deleteLead,
+    deleteReward,
   };
 }
 
