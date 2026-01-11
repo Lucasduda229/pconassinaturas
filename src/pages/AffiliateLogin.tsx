@@ -19,7 +19,7 @@ const AffiliateLogin = () => {
 
   // Redirect if already authenticated
   if (isAuthenticated) {
-    navigate('/afiliado/dashboard');
+    navigate('/afiliados/dashboard');
     return null;
   }
 
@@ -37,7 +37,7 @@ const AffiliateLogin = () => {
 
     if (result.success) {
       toast.success('Login realizado com sucesso!');
-      navigate('/afiliado/dashboard');
+      navigate('/afiliados/dashboard');
     } else {
       toast.error(result.error || 'Erro ao fazer login');
     }
@@ -156,7 +156,7 @@ const AffiliateLogin = () => {
             transition={{ delay: 0.3, duration: 0.4 }}
           >
             <Link 
-              to="/afiliado/cadastro" 
+              to="/afiliados/cadastro" 
               className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
             >
               <UserPlus className="h-4 w-4" />

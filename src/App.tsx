@@ -65,10 +65,16 @@ const App = () => (
                   <Route path="/checkout" element={<Checkout />} />
                   
                   {/* Affiliate Routes */}
+                  <Route path="/afiliados" element={<AffiliateLogin />} />
+                  <Route path="/afiliados/login" element={<AffiliateLogin />} />
+                  <Route path="/afiliados/cadastro" element={<AffiliateRegister />} />
+                  <Route path="/afiliados/dashboard" element={<AffiliateDashboard />} />
+                  <Route path="/a/:slug" element={<AffiliateLanding />} />
+                  
+                  {/* Legacy routes - redirect to new */}
                   <Route path="/afiliado" element={<AffiliateLogin />} />
                   <Route path="/afiliado/cadastro" element={<AffiliateRegister />} />
                   <Route path="/afiliado/dashboard" element={<AffiliateDashboard />} />
-                  <Route path="/a/:slug" element={<AffiliateLanding />} />
                   
                   <Route path="*" element={<NotFound />} />
                 </Routes>
