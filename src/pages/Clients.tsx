@@ -32,7 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useClients, Client } from '@/hooks/useClients';
 import { useReferrals } from '@/hooks/useReferrals';
 import { supabase } from '@/integrations/supabase/client';
-import { useAsaas } from '@/hooks/useAsaas';
+import { useMercadoPago } from '@/hooks/useMercadoPago';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -73,7 +73,7 @@ const Clients = () => {
 
   const { clients, loading, addClient, updateClient, deleteClient } = useClients();
   const { links, clicks, leads, rewards } = useReferrals();
-  const { createCustomer, createPayment, syncCustomerToAsaas, createSubscription } = useAsaas();
+  const { createPixPayment, loading: mpLoading } = useMercadoPago();
 
   const referralData = { links, clicks, leads, rewards };
 
@@ -119,20 +119,7 @@ const Clients = () => {
     });
 
     if (result) {
-      // Criar cliente automaticamente na ASAAS
-      try {
-        await createCustomer({
-          name: newClient.name,
-          email: newClient.email,
-          cpfCnpj: newClient.document || undefined,
-          phone: newClient.phone || undefined,
-        });
-        toast.success('Cliente criado e sincronizado com ASAAS!');
-      } catch (error) {
-        console.error('Erro ao sincronizar com ASAAS:', error);
-        toast.warning('Cliente criado, mas houve erro ao sincronizar com ASAAS.');
-      }
-      
+      toast.success('Cliente criado com sucesso!');
       setNewClient({ name: '', email: '', phone: '', document: '' });
       setIsDialogOpen(false);
     }
@@ -143,23 +130,7 @@ const Clients = () => {
   };
 
   const handleSyncWithAsaas = async (client: Client) => {
-    setIsSyncing(true);
-    try {
-      const result = await createCustomer({
-        name: client.name,
-        email: client.email,
-        cpfCnpj: client.document?.replace(/[^\d]/g, '') || '',
-        phone: client.phone?.replace(/[^\d]/g, '') || undefined,
-      });
-      
-      if (result) {
-        toast.success(`Cliente "${client.name}" sincronizado com ASAAS!`);
-      }
-    } catch (error) {
-      toast.error('Erro ao sincronizar cliente com ASAAS');
-    } finally {
-      setIsSyncing(false);
-    }
+    toast.info('Sincronização não necessária - usando Mercado Pago');
   };
 
   const handleCreateCharge = async () => {
@@ -170,46 +141,18 @@ const Clients = () => {
 
     setIsCreatingCharge(true);
     try {
-      // First sync client with ASAAS
-      const customer = await createCustomer({
-        name: selectedClient.name,
-        email: selectedClient.email,
-        cpfCnpj: selectedClient.document?.replace(/[^\d]/g, '') || '',
-        phone: selectedClient.phone?.replace(/[^\d]/g, '') || undefined,
-      });
-
-      if (!customer?.id) {
-        toast.error('Erro ao criar/buscar cliente na ASAAS');
-        return;
-      }
-
-      // Create the payment in ASAAS
-      const asaasPayment = await createPayment({
-        customer: customer.id,
-        billingType: newCharge.billingType,
-        value: parseFloat(newCharge.value),
-        dueDate: newCharge.dueDate,
+      // Create PIX payment via Mercado Pago
+      const result = await createPixPayment({
+        amount: parseFloat(newCharge.value),
         description: newCharge.description || `Cobrança para ${selectedClient.name}`,
+        clientId: selectedClient.id,
+        clientEmail: selectedClient.email,
+        clientName: selectedClient.name,
+        clientDocument: selectedClient.document || undefined,
       });
 
-      if (asaasPayment) {
-        // Save the payment to local database
-        const { error } = await supabase
-          .from('payments')
-          .insert({
-            client_id: selectedClient.id,
-            amount: parseFloat(newCharge.value),
-            status: 'pending',
-            payment_method: newCharge.billingType,
-            description: newCharge.description || `Cobrança única para ${selectedClient.name}`,
-            asaas_id: asaasPayment.id,
-          });
-
-        if (error) {
-          console.error('Error saving payment locally:', error);
-        }
-
-        toast.success('Cobrança criada com sucesso!');
+      if (result?.success) {
+        toast.success('Cobrança PIX criada com sucesso!');
         setIsChargeDialogOpen(false);
         setNewCharge({ value: '', description: '', dueDate: '', billingType: 'PIX' });
         setSelectedClient(null);
@@ -235,31 +178,7 @@ const Clients = () => {
 
     setIsCreatingSubscription(true);
     try {
-      // 1) Garantir que o cliente exista no ASAAS
-      const customerResult = await syncCustomerToAsaas(selectedClient.id);
-      const asaasCustomerId = customerResult?.id;
-
-      if (!asaasCustomerId) {
-        toast.error('Erro ao sincronizar cliente com ASAAS');
-        return;
-      }
-
-      // 2) Criar assinatura recorrente no ASAAS (isso gera a 1ª cobrança na data informada)
-      const asaasSubscription = await createSubscription({
-        customer: asaasCustomerId,
-        billingType: 'PIX',
-        value: parseFloat(newSubscription.value),
-        nextDueDate: newSubscription.dueDate,
-        cycle: 'MONTHLY',
-        description: newSubscription.planName,
-      });
-
-      if (!asaasSubscription?.id) {
-        toast.error('Erro ao criar assinatura no ASAAS');
-        return;
-      }
-
-      // 3) Salvar localmente vinculando o asaas_id
+      // Save subscription locally only (no ASAAS sync)
       const { error } = await supabase
         .from('subscriptions')
         .insert([{
@@ -268,12 +187,11 @@ const Clients = () => {
           value: parseFloat(newSubscription.value),
           status: 'active',
           next_payment: new Date(newSubscription.dueDate).toISOString(),
-          asaas_id: asaasSubscription.id,
         }]);
 
       if (error) throw error;
 
-      toast.success('Assinatura criada e sincronizada com ASAAS!');
+      toast.success('Assinatura criada com sucesso!');
       setNewSubscription({ planName: '', value: '', dueDate: '' });
       setIsChargeDialogOpen(false);
       setSelectedClient(null);
