@@ -19,6 +19,7 @@ import {
   TrendingUp,
   Gift,
   AlertCircle,
+  Trash2,
 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -80,6 +81,9 @@ const Referrals = () => {
     toggleLinkActive,
     updateRewardStatus,
     convertLead,
+    deleteLink,
+    deleteLead,
+    deleteReward,
   } = useReferrals();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -407,6 +411,18 @@ const Referrals = () => {
                                       <ToggleLeft className="h-4 w-4" />
                                     )}
                                   </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => {
+                                      if (confirm('Tem certeza que deseja remover este link? Todos os cliques, leads e recompensas associados serão removidos.')) {
+                                        deleteLink(link.id);
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
                                 </div>
                               </TableCell>
                             </TableRow>
@@ -482,16 +498,30 @@ const Referrals = () => {
                                 {formatDate(lead.created_at)}
                               </TableCell>
                               <TableCell className="text-right">
-                                {!lead.is_converted && !isExpired && (
+                                <div className="flex items-center justify-end gap-2">
+                                  {!lead.is_converted && !isExpired && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => convertLead(lead.id)}
+                                    >
+                                      <UserCheck className="h-4 w-4 mr-1" />
+                                      Fechar Projeto
+                                    </Button>
+                                  )}
                                   <Button
-                                    variant="outline"
+                                    variant="ghost"
                                     size="sm"
-                                    onClick={() => convertLead(lead.id)}
+                                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => {
+                                      if (confirm('Tem certeza que deseja remover este lead?')) {
+                                        deleteLead(lead.id);
+                                      }
+                                    }}
                                   >
-                                    <UserCheck className="h-4 w-4 mr-1" />
-                                    Fechar Projeto
+                                    <Trash2 className="h-4 w-4" />
                                   </Button>
-                                )}
+                                </div>
                               </TableCell>
                             </TableRow>
                           );
@@ -567,6 +597,18 @@ const Referrals = () => {
                                     Pago
                                   </Badge>
                                 )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => {
+                                    if (confirm('Tem certeza que deseja remover esta recompensa?')) {
+                                      deleteReward(reward.id);
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
                               </div>
                             </TableCell>
                           </TableRow>
