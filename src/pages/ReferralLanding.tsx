@@ -203,7 +203,11 @@ const ReferralLanding = () => {
           <p className="text-muted-foreground mb-4">
             Verifique se o link está correto ou entre em contato conosco.
           </p>
-          <Button onClick={() => navigate('/')}>Ir para o site</Button>
+          <Button asChild>
+            <a href="https://pconconstrunet.site" target="_blank" rel="noopener noreferrer">
+              Ir para o site
+            </a>
+          </Button>
         </motion.div>
       </div>
     );
@@ -226,8 +230,10 @@ const ReferralLanding = () => {
             Recebemos suas informações e entraremos em contato em breve. 
             Você veio através da indicação de <strong>{linkData?.clients?.name}</strong>.
           </p>
-          <Button variant="outline" onClick={() => navigate('/')}>
-            Conhecer mais sobre nós
+          <Button variant="outline" asChild>
+            <a href="https://pconconstrunet.site" target="_blank" rel="noopener noreferrer">
+              Conhecer mais sobre nós
+            </a>
           </Button>
         </motion.div>
       </div>
