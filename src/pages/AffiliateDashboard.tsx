@@ -36,6 +36,7 @@ const AffiliateDashboard = () => {
   });
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const AFFILIATE_DOMAIN = 'https://assinaturaspcon.sbs';
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -75,7 +76,7 @@ const AffiliateDashboard = () => {
         return;
       }
 
-      const fullLink = `${window.location.origin}/a/${linkData.slug}`;
+      const fullLink = `${AFFILIATE_DOMAIN}/a/${linkData.slug}`;
 
       // Get clicks count
       const { count: clicksCount } = await supabase
