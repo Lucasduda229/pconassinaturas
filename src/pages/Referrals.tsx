@@ -23,6 +23,8 @@ import {
   Phone,
   Mail,
   Wand2,
+  Percent,
+  ArrowRight,
 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -242,87 +244,164 @@ const Referrals = () => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"
+          className="space-y-4"
         >
-          <Card className="glass-card">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                  <MousePointerClick className="h-5 w-5 text-primary" />
+          {/* Main Stats Row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <Card className="glass-card">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                    <MousePointerClick className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Cliques</p>
+                    <p className="text-xl font-bold">{stats.totalClicks}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Cliques</p>
-                  <p className="text-xl font-bold">{stats.totalClicks}</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="glass-card">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-secondary/50 flex items-center justify-center">
+                    <Users className="h-5 w-5 text-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Leads</p>
+                    <p className="text-xl font-bold">{stats.totalLeads}</p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="glass-card">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-secondary/50 flex items-center justify-center">
-                  <Users className="h-5 w-5 text-foreground" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Leads</p>
-                  <p className="text-xl font-bold">{stats.totalLeads}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card className="glass-card">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-success/20 flex items-center justify-center">
-                  <TrendingUp className="h-5 w-5 text-success" />
+            <Card className="glass-card">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-success/20 flex items-center justify-center">
+                    <TrendingUp className="h-5 w-5 text-success" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Conversões</p>
+                    <p className="text-xl font-bold">{stats.totalConversions}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Conversões</p>
-                  <p className="text-xl font-bold">{stats.totalConversions}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card className="glass-card">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-warning/20 flex items-center justify-center">
-                  <Clock className="h-5 w-5 text-warning" />
+            <Card className="glass-card">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-warning/20 flex items-center justify-center">
+                    <Clock className="h-5 w-5 text-warning" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Pendentes</p>
+                    <p className="text-xl font-bold">{stats.totalPending}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Pendentes</p>
-                  <p className="text-xl font-bold">{stats.totalPending}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card className="glass-card">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-success/20 flex items-center justify-center">
-                  <CheckCircle className="h-5 w-5 text-success" />
+            <Card className="glass-card">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-success/20 flex items-center justify-center">
+                    <CheckCircle className="h-5 w-5 text-success" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Pagos</p>
+                    <p className="text-xl font-bold">{stats.totalPaid}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Pagos</p>
-                  <p className="text-xl font-bold">{stats.totalPaid}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
+            <Card className="glass-card">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-destructive/20 flex items-center justify-center">
+                    <DollarSign className="h-5 w-5 text-destructive" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">A Pagar</p>
+                    <p className="text-xl font-bold">{formatCurrency(stats.totalToPay)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Conversion Rates Row */}
           <Card className="glass-card">
             <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-destructive/20 flex items-center justify-center">
-                  <DollarSign className="h-5 w-5 text-destructive" />
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8">
+                {/* Click to Lead Rate */}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <MousePointerClick className="h-4 w-4 text-primary" />
+                    <span>Cliques</span>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    <span>Leads</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-primary/10 px-3 py-1.5 rounded-full">
+                    <Percent className="h-3.5 w-3.5 text-primary" />
+                    <span className="font-bold text-primary">
+                      {stats.totalClicks > 0 
+                        ? ((stats.totalLeads / stats.totalClicks) * 100).toFixed(1)
+                        : '0.0'}%
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">A Pagar</p>
-                  <p className="text-xl font-bold">{formatCurrency(stats.totalToPay)}</p>
+
+                <div className="hidden sm:block w-px h-8 bg-border" />
+
+                {/* Lead to Conversion Rate */}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    <span>Leads</span>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <TrendingUp className="h-4 w-4 text-success" />
+                    <span>Fechamentos</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-success/10 px-3 py-1.5 rounded-full">
+                    <Percent className="h-3.5 w-3.5 text-success" />
+                    <span className="font-bold text-success">
+                      {stats.totalLeads > 0 
+                        ? ((stats.totalConversions / stats.totalLeads) * 100).toFixed(1)
+                        : '0.0'}%
+                    </span>
+                  </div>
+                </div>
+
+                <div className="hidden sm:block w-px h-8 bg-border" />
+
+                {/* Overall Conversion Rate */}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <MousePointerClick className="h-4 w-4 text-primary" />
+                    <span>Cliques</span>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <TrendingUp className="h-4 w-4 text-success" />
+                    <span>Fechamentos</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-accent/50 px-3 py-1.5 rounded-full">
+                    <Percent className="h-3.5 w-3.5 text-foreground" />
+                    <span className="font-bold text-foreground">
+                      {stats.totalClicks > 0 
+                        ? ((stats.totalConversions / stats.totalClicks) * 100).toFixed(1)
+                        : '0.0'}%
+                    </span>
+                  </div>
                 </div>
               </div>
             </CardContent>
