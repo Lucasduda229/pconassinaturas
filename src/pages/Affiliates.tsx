@@ -551,14 +551,14 @@ const Affiliates = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <div className="flex-1 sm:flex-initial bg-secondary/30 rounded-lg px-3 py-2 text-sm font-mono truncate max-w-[300px]">
-                    {`${window.location.origin}/afiliados/cadastro`}
+                  <div className="flex-1 sm:flex-initial bg-secondary/30 rounded-lg px-3 py-2 text-sm font-mono truncate max-w-[350px]">
+                    https://www.assinaturaspcon.sbs/afiliados/cadastro
                   </div>
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => {
-                      navigator.clipboard.writeText(`${window.location.origin}/afiliados/cadastro`);
+                      navigator.clipboard.writeText('https://www.assinaturaspcon.sbs/afiliados/cadastro');
                       toast.success('Link copiado!');
                     }}
                   >
@@ -567,7 +567,7 @@ const Affiliates = () => {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => window.open('/afiliados/cadastro', '_blank')}
+                    onClick={() => window.open('https://www.assinaturaspcon.sbs/afiliados/cadastro', '_blank')}
                   >
                     <ExternalLink className="h-4 w-4" />
                   </Button>
