@@ -100,6 +100,7 @@ const Referrals = () => {
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [rewardClientId, setRewardClientId] = useState<string>('');
   const [rewardAmount, setRewardAmount] = useState<string>('');
+  const [rewardType, setRewardType] = useState<string>('');
   const [rewardDescription, setRewardDescription] = useState<string>('');
   const [tempSettings, setTempSettings] = useState({
     reward_value: 100,
@@ -150,11 +151,19 @@ const Referrals = () => {
       toast.error('Selecione um cliente');
       return;
     }
+    if (!rewardType) {
+      toast.error('Informe o tipo da recompensa');
+      return;
+    }
     const amount = parseFloat(rewardAmount) || settings?.reward_value || 100;
-    await createManualReward(rewardClientId, amount, rewardDescription || undefined);
+    const fullDescription = rewardDescription 
+      ? `${rewardType} - ${rewardDescription}` 
+      : rewardType;
+    await createManualReward(rewardClientId, amount, fullDescription);
     setIsCreateRewardOpen(false);
     setRewardClientId('');
     setRewardAmount('');
+    setRewardType('');
     setRewardDescription('');
   };
 
@@ -884,6 +893,18 @@ const Referrals = () => {
               </Select>
             </div>
             <div className="space-y-2">
+              <Label htmlFor="reward_type">Tipo da Recompensa *</Label>
+              <Input
+                id="reward_type"
+                placeholder="Ex: 150 REAIS EM CUPOM PARA IMPLANTAÇÕES FUTURAS"
+                value={rewardType}
+                onChange={(e) => setRewardType(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Descreva qual é a recompensa (ex: cupom, desconto, dinheiro, etc.)
+              </p>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="reward_amount">Valor da Recompensa (R$)</Label>
               <Input
                 id="reward_amount"
@@ -897,10 +918,10 @@ const Referrals = () => {
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="reward_description">Descrição / Nome do Indicado</Label>
+              <Label htmlFor="reward_description">Nome do Indicado (opcional)</Label>
               <Input
                 id="reward_description"
-                placeholder="Ex: João da Silva (indicado por telefone)"
+                placeholder="Ex: João da Silva"
                 value={rewardDescription}
                 onChange={(e) => setRewardDescription(e.target.value)}
               />
