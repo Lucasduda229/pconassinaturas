@@ -79,6 +79,20 @@ interface AffiliateStats {
   paid_rewards: number;
 }
 
+interface AffiliateLead {
+  id: string;
+  affiliate_link_id: string;
+  lead_name: string;
+  lead_email: string | null;
+  lead_phone: string | null;
+  is_converted: boolean;
+  converted_at: string | null;
+  expires_at: string;
+  created_at: string;
+  source: string | null;
+  affiliate_name?: string;
+}
+
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -93,6 +107,7 @@ const formatDate = (date: string) => {
 const Affiliates = () => {
   const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
   const [links, setLinks] = useState<AffiliateLink[]>([]);
+  const [allLeads, setAllLeads] = useState<AffiliateLead[]>([]);
   const [stats, setStats] = useState<Record<string, AffiliateStats>>({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -123,6 +138,23 @@ const Affiliates = () => {
         .select('*');
       setLinks(linksData || []);
 
+      // Load all affiliate leads
+      const { data: allLeadsData } = await supabase
+        .from('affiliate_leads')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      // Map leads with affiliate names
+      const leadsWithAffiliates: AffiliateLead[] = (allLeadsData || []).map(lead => {
+        const link = linksData?.find(l => l.id === lead.affiliate_link_id);
+        const affiliate = affiliatesData?.find(a => a.id === link?.affiliate_id);
+        return {
+          ...lead,
+          affiliate_name: affiliate?.name || 'Desconhecido'
+        };
+      });
+      setAllLeads(leadsWithAffiliates);
+
       // Load stats for each affiliate
       const statsMap: Record<string, AffiliateStats> = {};
       
@@ -136,14 +168,9 @@ const Affiliates = () => {
             .select('*', { count: 'exact', head: true })
             .eq('affiliate_link_id', link.id);
 
-          // Leads
-          const { data: leadsData } = await supabase
-            .from('affiliate_leads')
-            .select('*')
-            .eq('affiliate_link_id', link.id);
-
-          const leads = leadsData || [];
-          const conversions = leads.filter(l => l.is_converted).length;
+          // Leads for this affiliate
+          const affiliateLeads = allLeadsData?.filter(l => l.affiliate_link_id === link.id) || [];
+          const conversions = affiliateLeads.filter(l => l.is_converted).length;
 
           // Rewards
           const { data: rewardsData } = await supabase
@@ -162,7 +189,7 @@ const Affiliates = () => {
           statsMap[affiliate.id] = {
             affiliate_id: affiliate.id,
             clicks: clicksCount || 0,
-            leads: leads.length,
+            leads: affiliateLeads.length,
             conversions,
             pending_rewards: pendingRewards,
             paid_rewards: paidRewards,
@@ -282,6 +309,12 @@ const Affiliates = () => {
   const filteredOthers = otherAffiliates.filter(a =>
     a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     a.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredLeads = allLeads.filter(lead =>
+    lead.lead_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    lead.lead_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    lead.affiliate_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Calculate totals
@@ -413,6 +446,14 @@ const Affiliates = () => {
                   )}
                 </TabsTrigger>
                 <TabsTrigger value="approved">Aprovados ({approvedAffiliates.length})</TabsTrigger>
+                <TabsTrigger value="leads" className="relative">
+                  Leads
+                  {allLeads.length > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
+                      {allLeads.length}
+                    </span>
+                  )}
+                </TabsTrigger>
                 <TabsTrigger value="others">Outros ({otherAffiliates.length})</TabsTrigger>
               </TabsList>
 
@@ -588,7 +629,89 @@ const Affiliates = () => {
               </Card>
             </TabsContent>
 
-            {/* Others Tab */}
+            {/* Leads Tab */}
+            <TabsContent value="leads">
+              <Card className="glass-card">
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Lead</TableHead>
+                        <TableHead>Contato</TableHead>
+                        <TableHead>Afiliado</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Expira em</TableHead>
+                        <TableHead>Cadastrado em</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredLeads.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            Nenhum lead encontrado
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredLeads.map((lead) => {
+                          const isExpired = new Date(lead.expires_at) < new Date();
+                          return (
+                            <TableRow key={lead.id}>
+                              <TableCell>
+                                <div className="font-medium">{lead.lead_name}</div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="space-y-1">
+                                  {lead.lead_email && (
+                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                      <Mail className="h-3 w-3" />
+                                      {lead.lead_email}
+                                    </div>
+                                  )}
+                                  {lead.lead_phone && (
+                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                      <Phone className="h-3 w-3" />
+                                      {lead.lead_phone}
+                                    </div>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <span className="text-sm">{lead.affiliate_name}</span>
+                              </TableCell>
+                              <TableCell>
+                                {lead.is_converted ? (
+                                  <Badge className="bg-success/20 text-success border-success/30 border">
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Convertido
+                                  </Badge>
+                                ) : isExpired ? (
+                                  <Badge className="bg-destructive/20 text-destructive border-destructive/30 border">
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    Expirado
+                                  </Badge>
+                                ) : (
+                                  <Badge className="bg-warning/20 text-warning border-warning/30 border">
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    Ativo
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <span className={isExpired ? 'text-destructive' : 'text-muted-foreground'}>
+                                  {formatDate(lead.expires_at)}
+                                </span>
+                              </TableCell>
+                              <TableCell>{formatDate(lead.created_at)}</TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             <TabsContent value="others">
               <Card className="glass-card">
                 <CardContent className="p-0">
