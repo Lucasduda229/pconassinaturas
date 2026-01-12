@@ -668,8 +668,8 @@ const ClientImplementations = () => {
 
         {/* Request Dialog */}
         <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
+          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-hidden flex flex-col">
+            <DialogHeader className="flex-shrink-0">
               <div className="flex items-center gap-3 mb-2">
                 <div className="p-2 rounded-lg bg-primary/10">
                   <Rocket className="w-5 h-5 text-primary" />
@@ -681,7 +681,7 @@ const ClientImplementations = () => {
               </DialogDescription>
             </DialogHeader>
             
-            <div className="py-4 space-y-4">
+            <div className="flex-1 overflow-y-auto py-4 space-y-4">
               <div className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border border-primary/20">
                 <h3 className="font-bold text-lg text-foreground mb-2">{selectedImpl?.name}</h3>
                 <div className="flex items-baseline gap-2">
@@ -771,7 +771,7 @@ const ClientImplementations = () => {
               </div>
             </div>
             
-            <DialogFooter className="gap-2">
+            <DialogFooter className="flex-shrink-0 gap-2 pt-4 border-t border-border">
               <Button variant="outline" onClick={() => setIsRequestDialogOpen(false)}>
                 Cancelar
               </Button>
