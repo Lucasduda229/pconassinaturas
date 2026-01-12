@@ -364,15 +364,20 @@ const Checkout = () => {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <img src={logo} alt="Logo" className="h-14 sm:h-16 w-auto" />
           <div className="flex items-center gap-4">
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <motion.div 
+              whileHover={{ scale: 1.05 }} 
+              whileTap={{ scale: 0.95 }}
+              className="relative"
+            >
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full animate-pulse" />
               <Button 
-                variant="ghost" 
                 size="sm" 
                 onClick={() => navigate('/cliente/implantacoes')}
-                className="text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/30 font-semibold"
               >
                 <Rocket className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">Implantações</span>
+                <span className="sm:hidden">Novo</span>
               </Button>
             </motion.div>
             <span className="text-sm text-muted-foreground hidden sm:block">
