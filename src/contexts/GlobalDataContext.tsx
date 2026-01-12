@@ -97,7 +97,7 @@ interface GlobalDataContextType {
   deleteClient: (id: string) => Promise<boolean>;
   
   // CRUD operations - Subscriptions
-  addSubscription: (subscription: Omit<Subscription, 'id' | 'created_at' | 'updated_at' | 'start_date' | 'asaas_id'> & { asaas_id?: string | null }) => Promise<Subscription | null>;
+  addSubscription: (subscription: Omit<Subscription, 'id' | 'created_at' | 'updated_at' | 'start_date'>) => Promise<Subscription | null>;
   updateSubscription: (id: string, updates: Partial<Subscription>) => Promise<Subscription | null>;
   deleteSubscription: (id: string) => Promise<boolean>;
   
@@ -266,7 +266,7 @@ export const GlobalDataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // CRUD - Subscriptions
-  const addSubscription = async (subscription: Omit<Subscription, 'id' | 'created_at' | 'updated_at' | 'start_date' | 'asaas_id'> & { asaas_id?: string | null }): Promise<Subscription | null> => {
+  const addSubscription = async (subscription: Omit<Subscription, 'id' | 'created_at' | 'updated_at' | 'start_date'>): Promise<Subscription | null> => {
     try {
       const { data, error } = await supabase
         .from('subscriptions')

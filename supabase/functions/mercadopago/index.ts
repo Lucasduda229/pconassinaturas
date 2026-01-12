@@ -70,8 +70,6 @@ serve(async (req: Request) => {
         notification_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/mercadopago-webhook`,
       };
 
-      console.log("Sending to Mercado Pago API:", JSON.stringify(paymentData));
-
       const response = await fetch(`${MERCADOPAGO_API_URL}/v1/payments`, {
         method: "POST",
         headers: {
@@ -82,28 +80,11 @@ serve(async (req: Request) => {
         body: JSON.stringify(paymentData),
       });
 
-      // Check for empty response
-      const responseText = await response.text();
-      console.log("Mercado Pago response status:", response.status);
-      console.log("Mercado Pago response body:", responseText);
-
-      if (!responseText) {
-        console.error("Empty response from Mercado Pago - check if access token is valid");
-        throw new Error("Resposta vazia do Mercado Pago. Verifique se o token de acesso está correto.");
-      }
-
-      let result;
-      try {
-        result = JSON.parse(responseText);
-      } catch (e) {
-        console.error("Failed to parse Mercado Pago response:", responseText);
-        throw new Error("Resposta inválida do Mercado Pago");
-      }
+      const result = await response.json();
 
       if (!response.ok) {
         console.error("Mercado Pago error:", result);
-        const errorMsg = result.message || result.error || (result.cause && result.cause[0]?.description) || "Erro ao criar pagamento PIX";
-        throw new Error(errorMsg);
+        throw new Error(result.message || "Erro ao criar pagamento PIX");
       }
 
       console.log("PIX payment created:", result.id);
@@ -162,30 +143,6 @@ serve(async (req: Request) => {
       if (!response.ok) {
         console.error("Mercado Pago status check error:", result);
         throw new Error(result.message || "Erro ao verificar status");
-      }
-
-      console.log("Payment status result:", { id: paymentId, status: result.status });
-
-      // If payment is approved, update the database
-      if (result.status === "approved") {
-        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-        const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-        const supabase = createClient(supabaseUrl, supabaseKey);
-
-        // Update payment status in database
-        const { error: updateError } = await supabase
-          .from("payments")
-          .update({ 
-            status: "paid",
-            paid_at: result.date_approved || new Date().toISOString()
-          })
-          .eq("transaction_id", paymentId.toString());
-
-        if (updateError) {
-          console.error("Error updating payment in DB:", updateError);
-        } else {
-          console.log("Payment marked as paid in database:", paymentId);
-        }
       }
 
       return new Response(

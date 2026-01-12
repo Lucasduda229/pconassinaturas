@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGlobalData, Subscription } from '@/contexts/GlobalDataContext';
-import { useMercadoPago } from '@/hooks/useMercadoPago';
+import { useAsaas } from '@/hooks/useAsaas';
 import { supabase } from '@/integrations/supabase/client';
 import { differenceInDays, isPast, isToday, format, addDays } from 'date-fns';
 import { formatBrazilDate, formatDateForInput, inputDateToISO, toBrazilTime } from '@/utils/dateUtils';
@@ -58,7 +58,7 @@ const Subscriptions = () => {
   const [isCreatingCharge, setIsCreatingCharge] = useState(false);
 
   const { subscriptions, clients, loadingSubscriptions: loading, addSubscription, updateSubscription, deleteSubscription } = useGlobalData();
-  const { createPixPayment, loading: mpLoading } = useMercadoPago();
+  const { createPayment, createCustomer, syncCustomerToAsaas, createSubscription: createAsaasSubscription, loading: asaasLoading } = useAsaas();
 
   const filteredSubscriptions = subscriptions.filter(sub =>
     (sub.clients?.name || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -83,17 +83,42 @@ const Subscriptions = () => {
     }
 
     try {
-      // Save subscription locally only (no ASAAS sync)
+      // First, sync the client with Asaas
+      const customerResult = await syncCustomerToAsaas(newSubscription.clientId);
+      const asaasCustomerId = customerResult?.id;
+
+      if (!asaasCustomerId) {
+        toast.error('Erro ao sincronizar cliente com Asaas');
+        return;
+      }
+
+      // Create subscription in Asaas
+      const asaasSubscription = await createAsaasSubscription({
+        customer: asaasCustomerId,
+        billingType: 'PIX',
+        value: parseFloat(newSubscription.value),
+        nextDueDate: newSubscription.dueDate,
+        cycle: 'MONTHLY',
+        description: newSubscription.planName,
+      });
+
+      if (!asaasSubscription?.id) {
+        toast.error('Erro ao criar assinatura no Asaas');
+        return;
+      }
+
+      // Save locally with Asaas ID
       const result = await addSubscription({
         client_id: newSubscription.clientId,
         plan_name: newSubscription.planName,
         value: parseFloat(newSubscription.value),
         next_payment: inputDateToISO(newSubscription.dueDate),
+        asaas_id: asaasSubscription.id,
         status: 'active',
       });
 
       if (result) {
-        toast.success('Assinatura criada com sucesso!');
+        toast.success('Assinatura criada e sincronizada com Asaas!');
         setNewSubscription({ clientId: '', planName: '', value: '', dueDate: '' });
         setIsDialogOpen(false);
       }
@@ -117,18 +142,46 @@ const Subscriptions = () => {
 
     setIsCreatingCharge(true);
     try {
-      // Create PIX payment via Mercado Pago
-      const pixResult = await createPixPayment({
-        amount: parseFloat(newCharge.value),
-        description: newCharge.description || `Cobrança para ${selectedClient.name}`,
-        clientEmail: selectedClient.email,
-        clientId: newCharge.clientId,
-        clientName: selectedClient.name,
-        clientDocument: selectedClient.document || undefined,
+      // First sync client with ASAAS
+      const customer = await createCustomer({
+        name: selectedClient.name,
+        email: selectedClient.email,
+        cpfCnpj: selectedClient.document?.replace(/[^\d]/g, '') || '',
+        phone: selectedClient.phone?.replace(/[^\d]/g, '') || undefined,
       });
 
-      if (pixResult) {
-        toast.success('Cobrança PIX criada com sucesso!');
+      if (!customer?.id) {
+        toast.error('Erro ao criar/buscar cliente na ASAAS');
+        return;
+      }
+
+      // Create the payment in ASAAS
+      const asaasPayment = await createPayment({
+        customer: customer.id,
+        billingType: newCharge.billingType,
+        value: parseFloat(newCharge.value),
+        dueDate: newCharge.dueDate,
+        description: newCharge.description || `Cobrança para ${selectedClient.name}`,
+      });
+
+      if (asaasPayment) {
+        // Save the payment to local database
+        const { error } = await supabase
+          .from('payments')
+          .insert({
+            client_id: newCharge.clientId,
+            amount: parseFloat(newCharge.value),
+            status: 'pending',
+            payment_method: newCharge.billingType,
+            description: newCharge.description || `Cobrança única para ${selectedClient.name}`,
+            asaas_id: asaasPayment.id,
+          });
+
+        if (error) {
+          console.error('Error saving payment locally:', error);
+        }
+
+        toast.success('Cobrança criada com sucesso!');
         setIsDialogOpen(false);
         setNewCharge({ clientId: '', value: '', description: '', dueDate: '', billingType: 'PIX' });
       }
@@ -173,28 +226,35 @@ const Subscriptions = () => {
     setGeneratingChargeId(subscription.id);
 
     try {
-      // Get client details
-      const client = clients.find(c => c.id === subscription.client_id);
-      if (!client) {
-        throw new Error('Cliente não encontrado');
+      // First, sync customer to Asaas (creates if not exists)
+      const customerResult = await syncCustomerToAsaas(subscription.client_id);
+      
+      // The API returns 'id' not 'asaasCustomerId'
+      const asaasCustomerId = customerResult?.id;
+      
+      if (!asaasCustomerId) {
+        throw new Error('Não foi possível sincronizar o cliente com a Asaas.');
       }
 
-      // Create PIX payment via Mercado Pago
-      const pixResult = await createPixPayment({
-        amount: Number(subscription.value),
+      // Calculate due date (use next_payment or 3 days from now if past)
+      const nextPaymentDate = new Date(subscription.next_payment);
+      const dueDate = isPast(nextPaymentDate) ? addDays(new Date(), 3) : nextPaymentDate;
+
+      // Create payment in Asaas
+      const paymentResult = await createPayment({
+        customer: asaasCustomerId,
+        billingType: 'PIX', // Default to PIX
+        value: Number(subscription.value),
+        dueDate: format(dueDate, 'yyyy-MM-dd'),
         description: `Cobrança - ${subscription.plan_name}`,
-        clientEmail: client.email,
-        clientId: subscription.client_id,
-        clientName: client.name,
-        clientDocument: client.document || undefined,
-        subscriptionId: subscription.id,
+        externalReference: subscription.id,
       });
 
-      if (pixResult) {
-        toast.success('Cobrança PIX criada com sucesso!');
+      if (paymentResult) {
+        toast.success('Cobrança criada com sucesso! O cliente será notificado por email.');
         
         // Update subscription next_payment to next month
-        const newNextPayment = new Date(subscription.next_payment);
+        const newNextPayment = new Date(dueDate);
         newNextPayment.setMonth(newNextPayment.getMonth() + 1);
         
         await updateSubscription(subscription.id, {

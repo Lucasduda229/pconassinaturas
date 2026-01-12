@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useClientAuth } from '@/contexts/ClientAuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useMercadoPago } from '@/hooks/useMercadoPago';
+import { useAsaas } from '@/hooks/useAsaas';
 import { useContracts, Contract } from '@/hooks/useContracts';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,12 +11,12 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { formatBrazilDate } from '@/utils/dateUtils';
-import {
-  Loader2,
-  LogOut,
-  CreditCard,
-  QrCode,
-  Calendar,
+import { 
+  Loader2, 
+  LogOut, 
+  CreditCard, 
+  QrCode, 
+  Calendar, 
   DollarSign,
   CheckCircle,
   AlertCircle,
@@ -29,11 +29,10 @@ import {
   FileText,
   Download,
   MapPin,
-  FileCheck,
+  FileCheck
 } from 'lucide-react';
-import QRCode from 'react-qr-code';
 import logo from '@/assets/logo-pcon-grande.png';
-
+import logoAsaas from '@/assets/logo-asaas-white.png';
 import BlueBackground from '@/components/BlueBackground';
 import ClientReferrals from '@/components/ClientReferrals';
 
@@ -64,7 +63,7 @@ interface Payment {
 const Checkout = () => {
   const { client, isAuthenticated, isLoading: authLoading, logout } = useClientAuth();
   const navigate = useNavigate();
-  const { createPixPayment, checkPaymentStatus, loading: mpLoading } = useMercadoPago();
+  const { createCustomer, createPayment, getPixQrCode, getBoletoData, loading: asaasLoading } = useAsaas();
   const { contracts, loading: contractsLoading } = useContracts(client?.id);
   
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -213,32 +212,82 @@ const Checkout = () => {
     setBoletoData(null);
 
     try {
-      // Apenas PIX é suportado com Mercado Pago
-      if (method !== 'PIX') {
-        toast.error('Apenas PIX está disponível no momento');
-        setPaymentStep('error');
+      // Se é cobrança única e já tem asaas_id, usa ele diretamente
+      if (!isSubscription && selectedCharge?.asaas_id) {
+        const asaasPaymentId = selectedCharge.asaas_id;
+        
+        if (method === 'PIX') {
+          const pixResult = await getPixQrCode(asaasPaymentId);
+          if (pixResult) {
+            setPixData({
+              qrCode: pixResult.encodedImage,
+              copyPaste: pixResult.payload,
+            });
+            setPaymentStep('pix');
+          }
+        } else if (method === 'CREDIT_CARD') {
+          // Para cartão, redireciona para a URL de pagamento
+          const paymentData = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/asaas?action=getPayment&paymentId=${asaasPaymentId}`,
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+                'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              },
+            }
+          ).then(r => r.json());
+          
+          if (paymentData.invoiceUrl) {
+            window.open(paymentData.invoiceUrl, '_blank');
+            setPaymentStep('success');
+            toast.success('Redirecionando para pagamento...');
+          }
+        }
         return;
       }
 
-      // Create PIX payment via Mercado Pago
-      const result = await createPixPayment({
-        amount: paymentValue,
-        description: paymentDescription,
-        clientId: client.id,
-        clientEmail: client.email,
-        clientName: client.name,
-        clientDocument: client.document || undefined,
-        subscriptionId: isSubscription ? selectedSubscription!.id : undefined,
+      // Para assinaturas ou cobranças sem asaas_id, cria nova cobrança
+      const customerResult = await createCustomer({
+        name: client.name,
+        email: client.email,
+        cpfCnpj: client.document || undefined,
+        phone: client.phone || undefined,
       });
 
-      if (result?.success && result.qrCode) {
-        setPixData({
-          qrCode: result.qrCodeBase64 || '',
-          copyPaste: result.qrCode,
-        });
-        setPaymentStep('pix');
-      } else {
-        throw new Error('Erro ao criar pagamento PIX');
+      if (!customerResult?.id) {
+        throw new Error('Erro ao criar cliente no gateway de pagamento');
+      }
+
+      const dueDate = format(new Date(), 'yyyy-MM-dd');
+      const paymentResult = await createPayment({
+        customer: customerResult.id,
+        billingType: method,
+        value: paymentValue,
+        dueDate,
+        description: paymentDescription,
+        externalReference: externalRef,
+      });
+
+      if (!paymentResult?.id) {
+        throw new Error('Erro ao criar cobrança');
+      }
+
+      if (method === 'PIX') {
+        const pixResult = await getPixQrCode(paymentResult.id);
+        if (pixResult) {
+          setPixData({
+            qrCode: pixResult.encodedImage,
+            copyPaste: pixResult.payload,
+          });
+          setPaymentStep('pix');
+        }
+      } else if (method === 'CREDIT_CARD') {
+        if (paymentResult.invoiceUrl) {
+          window.open(paymentResult.invoiceUrl, '_blank');
+          setPaymentStep('success');
+          toast.success('Redirecionando para pagamento...');
+        }
       }
     } catch (error: any) {
       console.error('Payment error:', error);
@@ -404,7 +453,7 @@ const Checkout = () => {
                         size="default"
                         className="w-full h-10 btn-blue text-sm"
                         onClick={() => openChargePaymentModal(charge)}
-                        disabled={isProcessing || mpLoading}
+                        disabled={isProcessing || asaasLoading}
                       >
                         <span className="flex items-center justify-center gap-2">
                           Pagar Agora
@@ -499,7 +548,7 @@ const Checkout = () => {
                         size="default"
                         className="w-full h-11 btn-blue text-sm"
                         onClick={() => openPaymentModal(subscription)}
-                        disabled={isProcessing || mpLoading}
+                        disabled={isProcessing || asaasLoading}
                       >
                         {isProcessing ? (
                           <span className="flex items-center justify-center gap-2">
@@ -768,7 +817,8 @@ const Checkout = () => {
           className="mt-12 pb-8"
         >
           <div className="flex flex-col items-center gap-4">
-            <p className="text-xs text-gray-neutral">Pagamentos processados por Mercado Pago</p>
+            <p className="text-xs text-gray-neutral">Pagamentos processados por</p>
+            <img src={logoAsaas} alt="ASAAS" className="h-8 w-auto opacity-80" />
             <div className="flex items-center gap-3 mt-2 flex-wrap justify-center">
               <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/30 border border-border/30">
                 <QrCode className="h-5 w-5 text-primary" />
@@ -874,17 +924,12 @@ const Checkout = () => {
                       </p>
                     </div>
 
-                    <div className="flex justify-center p-4 bg-secondary/30 rounded-xl border border-border/30">
-                      <div className="relative w-44 h-44">
-                        <QRCode
-                          value={pixData.copyPaste}
-                          size={176}
-                          bgColor="transparent"
-                          fgColor="hsl(var(--foreground))"
-                          level="M"
-                          className="w-full h-full"
-                        />
-                      </div>
+                    <div className="flex justify-center p-4 bg-white rounded-xl">
+                      <img 
+                        src={`data:image/png;base64,${pixData.qrCode}`} 
+                        alt="QR Code PIX" 
+                        className="w-44 h-44"
+                      />
                     </div>
 
                     <div className="space-y-2">
