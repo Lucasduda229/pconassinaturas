@@ -315,6 +315,30 @@ export const useImplementations = () => {
     }
   }, [fetchRequests]);
 
+  const deleteRequest = useCallback(async (id: string, clientId?: string) => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from('implementation_requests')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast.success('Solicitação excluída com sucesso!');
+      if (clientId) {
+        await fetchRequests(clientId);
+      } else {
+        await fetchRequests();
+      }
+      return true;
+    } catch (error) {
+      console.error('Error deleting request:', error);
+      toast.error('Erro ao excluir solicitação');
+      return false;
+    }
+  }, [fetchRequests]);
+
   const getCategories = useCallback(() => {
     const categories = implementations
       .map(impl => impl.category)
@@ -334,6 +358,7 @@ export const useImplementations = () => {
     toggleStatus,
     createRequest,
     updateRequestStatus,
+    deleteRequest,
     getCategories
   };
 };
