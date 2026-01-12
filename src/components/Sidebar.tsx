@@ -11,7 +11,8 @@ import {
   X,
   FileSignature,
   Gift,
-  UserPlus
+  UserPlus,
+  Rocket
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -25,6 +26,7 @@ const navItems = [
   { icon: Receipt, label: 'Pagamentos', path: '/payments' },
   { icon: FileSignature, label: 'Contratos', path: '/contracts' },
   { icon: FileText, label: 'Notas Fiscais', path: '/invoices' },
+  { icon: Rocket, label: 'Implantações', path: '/implementations' },
   { icon: Gift, label: 'Indicações', path: '/referrals' },
   { icon: UserPlus, label: 'Afiliados', path: '/affiliates' },
   { icon: Bell, label: 'Notificações', path: '/notifications' },
