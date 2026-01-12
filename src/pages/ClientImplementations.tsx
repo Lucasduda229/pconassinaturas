@@ -63,6 +63,7 @@ const ClientImplementations = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedImpl, setSelectedImpl] = useState<Implementation | null>(null);
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [requestNotes, setRequestNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -87,8 +88,14 @@ const ClientImplementations = () => {
     return matchesCategory && matchesSearch;
   });
 
+  const handleDetailClick = (impl: Implementation) => {
+    setSelectedImpl(impl);
+    setIsDetailDialogOpen(true);
+  };
+
   const handleRequestClick = (impl: Implementation) => {
     setSelectedImpl(impl);
+    setIsDetailDialogOpen(false);
     setIsRequestDialogOpen(true);
   };
 
@@ -333,7 +340,10 @@ const ClientImplementations = () => {
                       variants={itemVariants}
                       whileHover={{ y: -5, transition: { duration: 0.2 } }}
                     >
-                      <Card className="h-full bg-gradient-to-br from-white/15 to-white/5 backdrop-blur-xl border-white/20 shadow-2xl overflow-hidden group hover:border-white/40 transition-all duration-300">
+                      <Card 
+                        className="h-full bg-gradient-to-br from-white/15 to-white/5 backdrop-blur-xl border-white/20 shadow-2xl overflow-hidden group hover:border-white/40 transition-all duration-300 cursor-pointer"
+                        onClick={() => handleDetailClick(impl)}
+                      >
                         {/* Top accent bar */}
                         <div className="h-1 bg-gradient-to-r from-primary via-primary/80 to-primary/60" />
                         
@@ -396,6 +406,7 @@ const ClientImplementations = () => {
                               variant="secondary" 
                               className="w-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30" 
                               disabled
+                              onClick={(e) => e.stopPropagation()}
                             >
                               <CheckCircle2 className="w-4 h-4 mr-2" />
                               Já Solicitado
@@ -405,6 +416,7 @@ const ClientImplementations = () => {
                               variant="outline" 
                               className="w-full border-white/20 text-white/70 hover:bg-white/10" 
                               disabled
+                              onClick={(e) => e.stopPropagation()}
                             >
                               <Timer className="w-4 h-4 mr-2" />
                               Em Breve
@@ -412,7 +424,10 @@ const ClientImplementations = () => {
                           ) : (
                             <Button 
                               className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-semibold shadow-lg shadow-primary/25 group/btn"
-                              onClick={() => handleRequestClick(impl)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRequestClick(impl);
+                              }}
                             >
                               <Zap className="w-4 h-4 mr-2 group-hover/btn:animate-pulse" />
                               Quero esse módulo
@@ -507,6 +522,112 @@ const ClientImplementations = () => {
             </TabsContent>
           </Tabs>
         </div>
+
+        {/* Detail Dialog */}
+        <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+          <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <div className="flex items-start gap-3">
+                <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 shrink-0">
+                  <Package className="w-6 h-6 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <DialogTitle className="text-xl mb-1">{selectedImpl?.name}</DialogTitle>
+                  {selectedImpl?.category && (
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      <span className="text-muted-foreground text-sm">{selectedImpl.category}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </DialogHeader>
+            
+            <div className="py-4 space-y-5">
+              {/* Tags */}
+              {selectedImpl?.tags && selectedImpl.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {selectedImpl.tags.map(tag => (
+                    <Badge 
+                      key={tag} 
+                      variant="outline" 
+                      className={`text-xs gap-1 ${
+                        tag.toLowerCase() === 'novo' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' :
+                        tag.toLowerCase() === 'popular' ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' :
+                        tag.toLowerCase() === 'em breve' ? 'bg-sky-500/10 text-sky-600 border-sky-500/30' :
+                        ''
+                      }`}
+                    >
+                      {getTagIcon(tag)}
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              
+              {/* Description */}
+              <div className="space-y-2">
+                <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Descrição</h4>
+                <div className="p-4 bg-muted/50 rounded-xl">
+                  <p className="text-foreground leading-relaxed whitespace-pre-wrap">
+                    {selectedImpl?.description || selectedImpl?.short_description || 'Sem descrição disponível'}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Price */}
+              <div className="p-5 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border border-primary/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Valor do módulo</p>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl font-bold text-primary">
+                        {selectedImpl && new Intl.NumberFormat('pt-BR', { 
+                          style: 'currency', 
+                          currency: 'BRL' 
+                        }).format(selectedImpl.value)}
+                      </span>
+                      <span className="text-muted-foreground text-sm">pagamento único</span>
+                    </div>
+                  </div>
+                  {selectedImpl?.availability === 'coming_soon' && (
+                    <Badge className="bg-amber-500/20 text-amber-600 border-amber-500/30">
+                      <Timer className="w-3 h-3 mr-1" />
+                      Em Breve
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              
+              {/* Info */}
+              <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg text-sm text-muted-foreground">
+                <Shield className="w-4 h-4 shrink-0" />
+                <span>Após solicitar, nossa equipe entrará em contato para agendar a implantação</span>
+              </div>
+            </div>
+            
+            <DialogFooter className="gap-2 sm:gap-2">
+              <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>
+                Fechar
+              </Button>
+              {selectedImpl && !isAlreadyRequested(selectedImpl.id) && selectedImpl.availability !== 'coming_soon' && (
+                <Button 
+                  onClick={() => selectedImpl && handleRequestClick(selectedImpl)}
+                  className="bg-gradient-to-r from-primary to-primary/80"
+                >
+                  <Zap className="w-4 h-4 mr-2" />
+                  Quero esse módulo
+                </Button>
+              )}
+              {selectedImpl && isAlreadyRequested(selectedImpl.id) && (
+                <Button disabled className="bg-emerald-500/20 text-emerald-600 border border-emerald-500/30">
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  Já Solicitado
+                </Button>
+              )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Request Dialog */}
         <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
