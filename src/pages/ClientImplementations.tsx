@@ -37,7 +37,8 @@ import {
   Zap,
   Star,
   Shield,
-  ArrowRight
+  ArrowRight,
+  Trash2
 } from 'lucide-react';
 import { useImplementations, Implementation } from '@/hooks/useImplementations';
 import { useClientAuth } from '@/contexts/ClientAuthContext';
@@ -56,6 +57,7 @@ const ClientImplementations = () => {
     fetchImplementations,
     fetchRequests,
     createRequest,
+    deleteRequest,
     getCategories
   } = useImplementations();
 
@@ -66,6 +68,7 @@ const ClientImplementations = () => {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [requestNotes, setRequestNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [deletingRequestId, setDeletingRequestId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -112,6 +115,13 @@ const ClientImplementations = () => {
       fetchRequests(client.id);
     }
     setSubmitting(false);
+  };
+
+  const handleDeleteRequest = async (requestId: string) => {
+    if (!client?.id) return;
+    setDeletingRequestId(requestId);
+    await deleteRequest(requestId, client.id);
+    setDeletingRequestId(null);
   };
 
   const getTagIcon = (tag: string) => {
@@ -480,34 +490,53 @@ const ClientImplementations = () => {
                                 key={req.id}
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 20, height: 0 }}
                                 transition={{ delay: index * 0.1 }}
-                                className="flex items-center justify-between p-5 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
+                                className="flex items-center justify-between p-5 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl hover:bg-white/10 transition-colors gap-4"
                               >
-                                <div className="flex-1">
-                                  <h4 className="font-semibold text-white text-lg">
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-semibold text-white text-lg truncate">
                                     {req.implementation?.name || 'Implantação'}
                                   </h4>
                                   <p className="text-white/50 text-sm mt-1">
                                     Solicitado em {format(new Date(req.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                                   </p>
                                   {req.notes && (
-                                    <p className="text-white/60 text-sm mt-2 italic border-l-2 border-white/20 pl-3">
+                                    <p className="text-white/60 text-sm mt-2 italic border-l-2 border-white/20 pl-3 line-clamp-2">
                                       "{req.notes}"
                                     </p>
                                   )}
                                 </div>
-                                <div className="text-right space-y-2">
-                                  <Badge className={`${statusInfo.bgColor} ${statusInfo.color} border gap-1`}>
-                                    {statusInfo.icon}
-                                    {statusInfo.label}
-                                  </Badge>
-                                  {req.implementation && (
-                                    <p className="text-white font-semibold">
-                                      {new Intl.NumberFormat('pt-BR', { 
-                                        style: 'currency', 
-                                        currency: 'BRL' 
-                                      }).format(req.implementation.value)}
-                                    </p>
+                                <div className="flex items-center gap-4">
+                                  <div className="text-right space-y-2">
+                                    <Badge className={`${statusInfo.bgColor} ${statusInfo.color} border gap-1`}>
+                                      {statusInfo.icon}
+                                      {statusInfo.label}
+                                    </Badge>
+                                    {req.implementation && (
+                                      <p className="text-white font-semibold">
+                                        {new Intl.NumberFormat('pt-BR', { 
+                                          style: 'currency', 
+                                          currency: 'BRL' 
+                                        }).format(req.implementation.value)}
+                                      </p>
+                                    )}
+                                  </div>
+                                  {req.status === 'pending' && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleDeleteRequest(req.id)}
+                                      disabled={deletingRequestId === req.id}
+                                      className="text-red-400 hover:text-red-300 hover:bg-red-500/20 shrink-0"
+                                      title="Cancelar solicitação"
+                                    >
+                                      {deletingRequestId === req.id ? (
+                                        <div className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+                                      ) : (
+                                        <Trash2 className="w-4 h-4" />
+                                      )}
+                                    </Button>
                                   )}
                                 </div>
                               </motion.div>
