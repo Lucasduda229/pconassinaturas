@@ -29,7 +29,8 @@ import {
   FileText,
   Download,
   MapPin,
-  FileCheck
+  FileCheck,
+  Rocket
 } from 'lucide-react';
 import logo from '@/assets/logo-pcon-grande.png';
 import logoAsaas from '@/assets/logo-asaas-white.png';
@@ -363,6 +364,17 @@ const Checkout = () => {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <img src={logo} alt="Logo" className="h-14 sm:h-16 w-auto" />
           <div className="flex items-center gap-4">
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => navigate('/cliente/implantacoes')}
+                className="text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+              >
+                <Rocket className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Implantações</span>
+              </Button>
+            </motion.div>
             <span className="text-sm text-muted-foreground hidden sm:block">
               {client?.name?.split(' ')[0]}
             </span>
