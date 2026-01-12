@@ -522,22 +522,20 @@ const ClientImplementations = () => {
                                       </p>
                                     )}
                                   </div>
-                                  {(req.status === 'pending' || req.status === 'completed' || req.status === 'rejected') && (
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => handleDeleteRequest(req.id)}
-                                      disabled={deletingRequestId === req.id}
-                                      className="text-red-400 hover:text-red-300 hover:bg-red-500/20 shrink-0"
-                                      title="Cancelar solicitação"
-                                    >
-                                      {deletingRequestId === req.id ? (
-                                        <div className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
-                                      ) : (
-                                        <Trash2 className="w-4 h-4" />
-                                      )}
-                                    </Button>
-                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleDeleteRequest(req.id)}
+                                    disabled={deletingRequestId === req.id}
+                                    className="text-red-400 hover:text-red-300 hover:bg-red-500/20 shrink-0"
+                                    title="Excluir solicitação"
+                                  >
+                                    {deletingRequestId === req.id ? (
+                                      <div className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+                                    ) : (
+                                      <Trash2 className="w-4 h-4" />
+                                    )}
+                                  </Button>
                                 </div>
                               </motion.div>
                             );
