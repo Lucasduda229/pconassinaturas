@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,7 +32,12 @@ import {
   CheckCircle2,
   Search,
   ArrowLeft,
-  History
+  History,
+  Rocket,
+  Zap,
+  Star,
+  Shield,
+  ArrowRight
 } from 'lucide-react';
 import { useImplementations, Implementation } from '@/hooks/useImplementations';
 import { useClientAuth } from '@/contexts/ClientAuthContext';
@@ -108,19 +114,39 @@ const ClientImplementations = () => {
     return null;
   };
 
-  const getTagColor = (tag: string) => {
-    if (tag.toLowerCase() === 'novo') return 'bg-green-500/10 text-green-600 border-green-500/20';
-    if (tag.toLowerCase() === 'popular') return 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20';
-    if (tag.toLowerCase() === 'em breve') return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
-    return '';
+  const getTagStyles = (tag: string) => {
+    if (tag.toLowerCase() === 'novo') return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+    if (tag.toLowerCase() === 'popular') return 'bg-amber-500/20 text-amber-400 border-amber-500/30';
+    if (tag.toLowerCase() === 'em breve') return 'bg-sky-500/20 text-sky-400 border-sky-500/30';
+    return 'bg-white/10 text-white/70 border-white/20';
   };
 
   const getStatusInfo = (status: string) => {
-    const info: Record<string, { color: string; label: string; icon: React.ReactNode }> = {
-      pending: { color: 'text-yellow-600', label: 'Aguardando', icon: <Clock className="w-4 h-4" /> },
-      approved: { color: 'text-green-600', label: 'Aprovado', icon: <CheckCircle2 className="w-4 h-4" /> },
-      rejected: { color: 'text-red-600', label: 'Rejeitado', icon: null },
-      completed: { color: 'text-blue-600', label: 'Concluído', icon: <CheckCircle2 className="w-4 h-4" /> }
+    const info: Record<string, { color: string; bgColor: string; label: string; icon: React.ReactNode }> = {
+      pending: { 
+        color: 'text-amber-400', 
+        bgColor: 'bg-amber-500/20 border-amber-500/30',
+        label: 'Aguardando', 
+        icon: <Clock className="w-4 h-4" /> 
+      },
+      approved: { 
+        color: 'text-emerald-400', 
+        bgColor: 'bg-emerald-500/20 border-emerald-500/30',
+        label: 'Aprovado', 
+        icon: <CheckCircle2 className="w-4 h-4" /> 
+      },
+      rejected: { 
+        color: 'text-red-400', 
+        bgColor: 'bg-red-500/20 border-red-500/30',
+        label: 'Rejeitado', 
+        icon: null 
+      },
+      completed: { 
+        color: 'text-sky-400', 
+        bgColor: 'bg-sky-500/20 border-sky-500/30',
+        label: 'Concluído', 
+        icon: <CheckCircle2 className="w-4 h-4" /> 
+      }
     };
     return info[status] || info.pending;
   };
@@ -132,273 +158,425 @@ const ClientImplementations = () => {
     );
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
+
   return (
     <div className="relative min-h-screen">
       <BlueBackground />
       <div className="relative min-h-screen p-4 lg:p-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center justify-between mb-8"
+          >
             <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate('/cliente')}
-                className="text-white hover:bg-white/10"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate('/checkout')}
+                  className="text-white hover:bg-white/10 backdrop-blur-sm border border-white/10"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
+              </motion.div>
               <img src={logo} alt="P-CON" className="h-10 lg:h-12" />
             </div>
             <div className="flex items-center gap-4">
               <span className="text-white/80 text-sm hidden sm:block">
-                Olá, {client?.name?.split(' ')[0]}
+                Olá, <span className="font-semibold text-white">{client?.name?.split(' ')[0]}</span>
               </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={logout}
-                className="border-white/20 text-white hover:bg-white/10"
-              >
-                Sair
-              </Button>
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={logout}
+                  className="border-white/20 bg-white/5 text-white hover:bg-white/10 backdrop-blur-sm"
+                >
+                  Sair
+                </Button>
+              </motion.div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Title */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl lg:text-4xl font-bold text-white mb-2">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="text-center mb-10"
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 mb-4">
+              <Rocket className="w-4 h-4 text-primary-foreground" />
+              <span className="text-sm text-white/90">Expanda seu Sistema</span>
+            </div>
+            <h1 className="text-3xl lg:text-5xl font-bold text-white mb-3 tracking-tight">
               Implantações Futuras
             </h1>
-            <p className="text-white/70">
-              Conheça nossos módulos e sistemas disponíveis para contratação
+            <p className="text-white/70 text-lg max-w-2xl mx-auto">
+              Descubra módulos e sistemas para potencializar o seu negócio
             </p>
-          </div>
+          </motion.div>
 
           <Tabs defaultValue="available" className="w-full">
-            <TabsList className="bg-white/10 border-white/20 mb-6">
-              <TabsTrigger value="available" className="data-[state=active]:bg-white data-[state=active]:text-primary gap-2">
-                <Package className="w-4 h-4" />
-                Disponíveis
-              </TabsTrigger>
-              <TabsTrigger value="history" className="data-[state=active]:bg-white data-[state=active]:text-primary gap-2">
-                <History className="w-4 h-4" />
-                Minhas Solicitações
-                {requests.length > 0 && (
-                  <Badge className="ml-1 bg-primary/20 text-primary">
-                    {requests.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            </TabsList>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <TabsList className="bg-white/10 backdrop-blur-sm border border-white/20 mb-6 p-1">
+                <TabsTrigger 
+                  value="available" 
+                  className="data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-lg gap-2 transition-all"
+                >
+                  <Package className="w-4 h-4" />
+                  Disponíveis
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="history" 
+                  className="data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-lg gap-2 transition-all"
+                >
+                  <History className="w-4 h-4" />
+                  Minhas Solicitações
+                  {requests.length > 0 && (
+                    <Badge className="ml-1 bg-white/20 text-white border-0 text-xs">
+                      {requests.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+            </motion.div>
 
             <TabsContent value="available">
               {/* Filters */}
-              <Card className="mb-6 bg-white/95 backdrop-blur">
-                <CardContent className="p-4">
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="flex-1 relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Buscar implantações..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10"
-                      />
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <Card className="mb-8 bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl">
+                  <CardContent className="p-4 lg:p-6">
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <div className="flex-1 relative">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/50" />
+                        <Input
+                          placeholder="Buscar implantações..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="pl-12 bg-white/10 border-white/20 text-white placeholder:text-white/50 h-12 text-base focus:bg-white/20 transition-colors"
+                        />
+                      </div>
+                      {categories.length > 0 && (
+                        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                          <SelectTrigger className="w-full sm:w-[220px] bg-white/10 border-white/20 text-white h-12">
+                            <SelectValue placeholder="Todas as categorias" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todas as categorias</SelectItem>
+                            {categories.map(cat => (
+                              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
-                    {categories.length > 0 && (
-                      <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                        <SelectTrigger className="w-full sm:w-[200px]">
-                          <SelectValue placeholder="Todas as categorias" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todas as categorias</SelectItem>
-                          {categories.map(cat => (
-                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </motion.div>
 
               {/* Implementations Grid */}
               {loading ? (
-                <div className="text-center py-12 text-white/70">Carregando...</div>
+                <div className="text-center py-16">
+                  <div className="inline-flex items-center gap-3 text-white/70">
+                    <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Carregando módulos...</span>
+                  </div>
+                </div>
               ) : filteredImplementations.length === 0 ? (
-                <Card className="bg-white/95 backdrop-blur">
-                  <CardContent className="text-center py-12 text-muted-foreground">
-                    Nenhuma implantação encontrada
-                  </CardContent>
-                </Card>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                >
+                  <Card className="bg-white/10 backdrop-blur-xl border-white/20">
+                    <CardContent className="text-center py-16">
+                      <Package className="w-16 h-16 text-white/30 mx-auto mb-4" />
+                      <p className="text-white/70 text-lg">Nenhuma implantação encontrada</p>
+                      <p className="text-white/50 text-sm mt-2">Tente ajustar os filtros de busca</p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredImplementations.map((impl) => (
-                    <Card key={impl.id} className="bg-white/95 backdrop-blur hover:shadow-lg transition-shadow overflow-hidden group">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1">
-                            <CardTitle className="text-lg leading-tight">{impl.name}</CardTitle>
-                            {impl.category && (
-                              <CardDescription className="mt-1">{impl.category}</CardDescription>
+                <motion.div 
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                >
+                  {filteredImplementations.map((impl, index) => (
+                    <motion.div
+                      key={impl.id}
+                      variants={itemVariants}
+                      whileHover={{ y: -5, transition: { duration: 0.2 } }}
+                    >
+                      <Card className="h-full bg-gradient-to-br from-white/15 to-white/5 backdrop-blur-xl border-white/20 shadow-2xl overflow-hidden group hover:border-white/40 transition-all duration-300">
+                        {/* Top accent bar */}
+                        <div className="h-1 bg-gradient-to-r from-primary via-primary/80 to-primary/60" />
+                        
+                        <CardHeader className="pb-3 space-y-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1">
+                              <CardTitle className="text-lg lg:text-xl text-white font-bold leading-tight group-hover:text-primary-foreground transition-colors">
+                                {impl.name}
+                              </CardTitle>
+                              {impl.category && (
+                                <div className="flex items-center gap-2 mt-2">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                                  <span className="text-white/60 text-sm">{impl.category}</span>
+                                </div>
+                              )}
+                            </div>
+                            {impl.availability === 'coming_soon' && (
+                              <Badge className="shrink-0 bg-amber-500/20 text-amber-300 border-amber-500/30 backdrop-blur-sm">
+                                <Timer className="w-3 h-3 mr-1" />
+                                Em Breve
+                              </Badge>
                             )}
                           </div>
-                          {impl.availability === 'coming_soon' && (
-                            <Badge variant="secondary" className="shrink-0">
-                              <Timer className="w-3 h-3 mr-1" />
-                              Em Breve
-                            </Badge>
+                          
+                          {impl.tags && impl.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {impl.tags.map(tag => (
+                                <Badge 
+                                  key={tag} 
+                                  variant="outline" 
+                                  className={`text-xs gap-1 backdrop-blur-sm ${getTagStyles(tag)}`}
+                                >
+                                  {getTagIcon(tag)}
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
                           )}
-                        </div>
-                        {impl.tags && impl.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {impl.tags.map(tag => (
-                              <Badge 
-                                key={tag} 
-                                variant="outline" 
-                                className={`text-xs gap-1 ${getTagColor(tag)}`}
-                              >
-                                {getTagIcon(tag)}
-                                {tag}
-                              </Badge>
-                            ))}
+                        </CardHeader>
+                        
+                        <CardContent className="pb-4 flex-1">
+                          <p className="text-white/70 text-sm leading-relaxed line-clamp-3">
+                            {impl.short_description || impl.description || 'Módulo para potencializar seu sistema'}
+                          </p>
+                          
+                          <div className="mt-6 flex items-end gap-2">
+                            <span className="text-3xl font-bold text-white">
+                              {new Intl.NumberFormat('pt-BR', { 
+                                style: 'currency', 
+                                currency: 'BRL' 
+                              }).format(impl.value)}
+                            </span>
+                            <span className="text-white/50 text-sm mb-1">único</span>
                           </div>
-                        )}
-                      </CardHeader>
-                      <CardContent className="pb-4">
-                        <p className="text-sm text-muted-foreground line-clamp-3">
-                          {impl.short_description || impl.description || 'Sem descrição disponível'}
-                        </p>
-                        <div className="mt-4">
-                          <span className="text-2xl font-bold text-primary">
-                            {new Intl.NumberFormat('pt-BR', { 
-                              style: 'currency', 
-                              currency: 'BRL' 
-                            }).format(impl.value)}
-                          </span>
-                        </div>
-                      </CardContent>
-                      <CardFooter className="bg-muted/30 border-t">
-                        {isAlreadyRequested(impl.id) ? (
-                          <Button variant="secondary" className="w-full" disabled>
-                            <CheckCircle2 className="w-4 h-4 mr-2" />
-                            Já Solicitado
-                          </Button>
-                        ) : impl.availability === 'coming_soon' ? (
-                          <Button variant="outline" className="w-full" disabled>
-                            <Timer className="w-4 h-4 mr-2" />
-                            Em Breve
-                          </Button>
-                        ) : (
-                          <Button 
-                            className="w-full"
-                            onClick={() => handleRequestClick(impl)}
-                          >
-                            Quero esse módulo
-                          </Button>
-                        )}
-                      </CardFooter>
-                    </Card>
+                        </CardContent>
+                        
+                        <CardFooter className="pt-4 border-t border-white/10">
+                          {isAlreadyRequested(impl.id) ? (
+                            <Button 
+                              variant="secondary" 
+                              className="w-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30" 
+                              disabled
+                            >
+                              <CheckCircle2 className="w-4 h-4 mr-2" />
+                              Já Solicitado
+                            </Button>
+                          ) : impl.availability === 'coming_soon' ? (
+                            <Button 
+                              variant="outline" 
+                              className="w-full border-white/20 text-white/70 hover:bg-white/10" 
+                              disabled
+                            >
+                              <Timer className="w-4 h-4 mr-2" />
+                              Em Breve
+                            </Button>
+                          ) : (
+                            <Button 
+                              className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-semibold shadow-lg shadow-primary/25 group/btn"
+                              onClick={() => handleRequestClick(impl)}
+                            >
+                              <Zap className="w-4 h-4 mr-2 group-hover/btn:animate-pulse" />
+                              Quero esse módulo
+                              <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
+                            </Button>
+                          )}
+                        </CardFooter>
+                      </Card>
+                    </motion.div>
                   ))}
-                </div>
+                </motion.div>
               )}
             </TabsContent>
 
             <TabsContent value="history">
-              <Card className="bg-white/95 backdrop-blur">
-                <CardHeader>
-                  <CardTitle>Histórico de Solicitações</CardTitle>
-                  <CardDescription>
-                    Acompanhe o status das suas solicitações de implantação
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {requests.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      Você ainda não fez nenhuma solicitação
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <Card className="bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl">
+                  <CardHeader className="border-b border-white/10">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-white/10">
+                        <History className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-white text-xl">Histórico de Solicitações</CardTitle>
+                        <CardDescription className="text-white/60">
+                          Acompanhe o status das suas solicitações de implantação
+                        </CardDescription>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {requests.map((req) => {
-                        const statusInfo = getStatusInfo(req.status);
-                        return (
-                          <div
-                            key={req.id}
-                            className="flex items-center justify-between p-4 border rounded-lg"
-                          >
-                            <div className="flex-1">
-                              <h4 className="font-medium">{req.implementation?.name || 'Implantação'}</h4>
-                              <p className="text-sm text-muted-foreground">
-                                Solicitado em {format(new Date(req.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                              </p>
-                              {req.notes && (
-                                <p className="text-sm text-muted-foreground mt-1 italic">
-                                  "{req.notes}"
-                                </p>
-                              )}
-                            </div>
-                            <div className="text-right">
-                              <div className={`flex items-center gap-1 ${statusInfo.color}`}>
-                                {statusInfo.icon}
-                                <span className="font-medium">{statusInfo.label}</span>
-                              </div>
-                              {req.implementation && (
-                                <span className="text-sm text-muted-foreground">
-                                  {new Intl.NumberFormat('pt-BR', { 
-                                    style: 'currency', 
-                                    currency: 'BRL' 
-                                  }).format(req.implementation.value)}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    {requests.length === 0 ? (
+                      <div className="text-center py-12">
+                        <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center mx-auto mb-4">
+                          <Package className="w-10 h-10 text-white/30" />
+                        </div>
+                        <p className="text-white/70 text-lg mb-2">Nenhuma solicitação ainda</p>
+                        <p className="text-white/50 text-sm">Explore os módulos disponíveis e faça sua primeira solicitação</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <AnimatePresence>
+                          {requests.map((req, index) => {
+                            const statusInfo = getStatusInfo(req.status);
+                            return (
+                              <motion.div
+                                key={req.id}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: index * 0.1 }}
+                                className="flex items-center justify-between p-5 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
+                              >
+                                <div className="flex-1">
+                                  <h4 className="font-semibold text-white text-lg">
+                                    {req.implementation?.name || 'Implantação'}
+                                  </h4>
+                                  <p className="text-white/50 text-sm mt-1">
+                                    Solicitado em {format(new Date(req.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                                  </p>
+                                  {req.notes && (
+                                    <p className="text-white/60 text-sm mt-2 italic border-l-2 border-white/20 pl-3">
+                                      "{req.notes}"
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="text-right space-y-2">
+                                  <Badge className={`${statusInfo.bgColor} ${statusInfo.color} border gap-1`}>
+                                    {statusInfo.icon}
+                                    {statusInfo.label}
+                                  </Badge>
+                                  {req.implementation && (
+                                    <p className="text-white font-semibold">
+                                      {new Intl.NumberFormat('pt-BR', { 
+                                        style: 'currency', 
+                                        currency: 'BRL' 
+                                      }).format(req.implementation.value)}
+                                    </p>
+                                  )}
+                                </div>
+                              </motion.div>
+                            );
+                          })}
+                        </AnimatePresence>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
             </TabsContent>
           </Tabs>
         </div>
 
         {/* Request Dialog */}
         <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Solicitar Implantação</DialogTitle>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Rocket className="w-5 h-5 text-primary" />
+                </div>
+                <DialogTitle className="text-xl">Solicitar Implantação</DialogTitle>
+              </div>
               <DialogDescription>
-                Você está solicitando: <strong>{selectedImpl?.name}</strong>
+                Você está solicitando o módulo:
               </DialogDescription>
             </DialogHeader>
-            <div className="py-4">
-              <div className="mb-4 p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground mb-2">Valor:</p>
-                <p className="text-2xl font-bold text-primary">
-                  {selectedImpl && new Intl.NumberFormat('pt-BR', { 
-                    style: 'currency', 
-                    currency: 'BRL' 
-                  }).format(selectedImpl.value)}
-                </p>
+            
+            <div className="py-4 space-y-4">
+              <div className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border border-primary/20">
+                <h3 className="font-bold text-lg text-foreground mb-2">{selectedImpl?.name}</h3>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-primary">
+                    {selectedImpl && new Intl.NumberFormat('pt-BR', { 
+                      style: 'currency', 
+                      currency: 'BRL' 
+                    }).format(selectedImpl.value)}
+                  </span>
+                  <span className="text-muted-foreground text-sm">pagamento único</span>
+                </div>
               </div>
+              
               <div className="space-y-2">
-                <Label htmlFor="notes">Observações (opcional)</Label>
+                <Label htmlFor="notes" className="text-sm font-medium">
+                  Observações <span className="text-muted-foreground">(opcional)</span>
+                </Label>
                 <Textarea
                   id="notes"
                   value={requestNotes}
                   onChange={(e) => setRequestNotes(e.target.value)}
-                  placeholder="Alguma observação ou necessidade específica?"
+                  placeholder="Alguma necessidade específica ou informação adicional?"
                   rows={3}
+                  className="resize-none"
                 />
               </div>
+              
+              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
+                <Shield className="w-4 h-4 shrink-0" />
+                <span>Nossa equipe entrará em contato para agendar a implantação</span>
+              </div>
             </div>
-            <DialogFooter>
+            
+            <DialogFooter className="gap-2">
               <Button variant="outline" onClick={() => setIsRequestDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleSubmitRequest} disabled={submitting}>
-                {submitting ? 'Enviando...' : 'Confirmar Solicitação'}
+              <Button 
+                onClick={handleSubmitRequest} 
+                disabled={submitting}
+                className="bg-gradient-to-r from-primary to-primary/80"
+              >
+                {submitting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Confirmar Solicitação
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
