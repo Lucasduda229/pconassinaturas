@@ -203,7 +203,7 @@ const ClientImplementations = () => {
   return (
     <div className="relative min-h-screen">
       <BlueBackground />
-      <div className="relative min-h-screen p-4 lg:p-8">
+      <div className="relative z-10 min-h-screen p-4 lg:p-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <motion.div 
@@ -289,7 +289,7 @@ const ClientImplementations = () => {
               </TabsList>
             </motion.div>
 
-            <TabsContent value="available">
+            <TabsContent value="available" className="relative z-10">
               {/* Filters */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -352,7 +352,7 @@ const ClientImplementations = () => {
                   variants={containerVariants}
                   initial="hidden"
                   animate="visible"
-                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10 pb-8"
                 >
                   {filteredImplementations.map((impl, index) => (
                     <motion.div
@@ -462,7 +462,7 @@ const ClientImplementations = () => {
               )}
             </TabsContent>
 
-            <TabsContent value="history">
+            <TabsContent value="history" className="relative z-10">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
