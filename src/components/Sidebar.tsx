@@ -15,6 +15,7 @@ import {
   Rocket
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdminNotifications } from '@/hooks/useAdminNotifications';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import logo from '@/assets/logo-pcon-grande.png';
@@ -29,7 +30,6 @@ const navItems = [
   { icon: Rocket, label: 'Implantações', path: '/implementations' },
   { icon: Gift, label: 'Indicações', path: '/referrals' },
   { icon: UserPlus, label: 'Afiliados', path: '/affiliates' },
-  { icon: Bell, label: 'Notificações', path: '/notifications' },
 ];
 
 interface SidebarProps {
@@ -40,6 +40,7 @@ interface SidebarProps {
 const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const { unreadCount } = useAdminNotifications();
 
   const handleLogout = () => {
     logout();
@@ -96,6 +97,23 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 <span className="font-medium">{item.label}</span>
               </NavLink>
             ))}
+            
+            {/* Notifications with badge */}
+            <NavLink
+              to="/notifications"
+              onClick={handleNavClick}
+              className={({ isActive }) =>
+                `nav-item relative ${isActive ? 'nav-item-active' : ''}`
+              }
+            >
+              <Bell className="w-5 h-5" />
+              <span className="font-medium">Notificações</span>
+              {unreadCount > 0 && (
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-destructive text-destructive-foreground text-xs font-bold rounded-full animate-pulse">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </NavLink>
           </nav>
 
           {/* Footer */}
@@ -116,15 +134,31 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
 // Mobile Header Component
 export const MobileHeader = ({ onMenuClick }: { onMenuClick: () => void }) => {
+  const { unreadCount } = useAdminNotifications();
+  
   return (
-    <header className="fixed top-0 left-0 right-0 h-14 glass-card border-b border-border/50 z-30 lg:hidden flex items-center px-4">
-      <button 
-        onClick={onMenuClick}
-        className="p-2 rounded-lg hover:bg-secondary/50 transition-colors"
-      >
-        <Menu className="w-6 h-6" />
-      </button>
-      <img src={logo} alt="P-CON" className="h-8 w-auto ml-3" />
+    <header className="fixed top-0 left-0 right-0 h-14 glass-card border-b border-border/50 z-30 lg:hidden flex items-center justify-between px-4">
+      <div className="flex items-center">
+        <button 
+          onClick={onMenuClick}
+          className="p-2 rounded-lg hover:bg-secondary/50 transition-colors"
+        >
+          <Menu className="w-6 h-6" />
+        </button>
+        <img src={logo} alt="P-CON" className="h-8 w-auto ml-3" />
+      </div>
+      
+      {unreadCount > 0 && (
+        <NavLink 
+          to="/notifications" 
+          className="relative p-2 rounded-lg hover:bg-secondary/50 transition-colors"
+        >
+          <Bell className="w-5 h-5" />
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full">
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
+        </NavLink>
+      )}
     </header>
   );
 };
