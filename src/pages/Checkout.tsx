@@ -416,6 +416,62 @@ const Checkout = () => {
             </p>
           </motion.div>
 
+          {/* Banner Promocional Implantações */}
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: 0.15, duration: 0.6 }}
+            whileHover={{ scale: 1.01 }}
+            onClick={() => navigate('/cliente/implantacoes')}
+            className="cursor-pointer"
+          >
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 p-1 shadow-xl shadow-emerald-500/20">
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-400/20 via-transparent to-teal-400/20 animate-pulse" />
+              <div className="relative bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 rounded-xl p-5 sm:p-6">
+                {/* Decorative elements */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+                
+                <div className="relative flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-white/30 rounded-full blur-md animate-pulse" />
+                      <div className="relative w-14 h-14 sm:w-16 sm:h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/30">
+                        <Rocket className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
+                      </div>
+                    </div>
+                    <div className="text-center sm:text-left">
+                      <div className="flex items-center gap-2 justify-center sm:justify-start mb-1">
+                        <Badge className="bg-white/20 text-white border-white/30 text-[10px] sm:text-xs font-bold px-2 py-0.5 animate-pulse">
+                          🎉 NOVIDADE
+                        </Badge>
+                      </div>
+                      <h3 className="text-lg sm:text-xl font-heading font-bold text-white mb-1">
+                        Novas Implantações Disponíveis!
+                      </h3>
+                      <p className="text-white/80 text-xs sm:text-sm max-w-md">
+                        Potencialize seu sistema com módulos exclusivos. Automações, integrações e muito mais!
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <motion.div 
+                    whileHover={{ scale: 1.05 }} 
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Button 
+                      size="lg"
+                      className="bg-white text-emerald-600 hover:bg-white/90 font-bold shadow-lg group whitespace-nowrap"
+                    >
+                      Conhecer Agora
+                      <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                    </Button>
+                  </motion.div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
           {/* Pending Single Charges */}
           {pendingCharges.length > 0 && (
             <motion.div
