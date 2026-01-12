@@ -522,7 +522,7 @@ const ClientImplementations = () => {
                                       </p>
                                     )}
                                   </div>
-                                  {req.status === 'pending' && (
+                                  {(req.status === 'pending' || req.status === 'completed' || req.status === 'rejected') && (
                                     <Button
                                       variant="ghost"
                                       size="icon"
