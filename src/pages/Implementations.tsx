@@ -59,7 +59,8 @@ const Implementations = () => {
     updateImplementation,
     deleteImplementation,
     toggleStatus,
-    updateRequestStatus
+    updateRequestStatus,
+    deleteRequest
   } = useImplementations();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -476,37 +477,48 @@ const Implementations = () => {
                               {req.notes || '-'}
                             </TableCell>
                             <TableCell className="text-right">
-                              {req.status === 'pending' && (
-                                <div className="flex justify-end gap-2">
+                              <div className="flex justify-end gap-2">
+                                {req.status === 'pending' && (
+                                  <>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="text-green-600 hover:text-green-700"
+                                      onClick={() => updateRequestStatus(req.id, 'approved')}
+                                      title="Aprovar"
+                                    >
+                                      <CheckCircle className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="text-destructive"
+                                      onClick={() => updateRequestStatus(req.id, 'rejected')}
+                                      title="Rejeitar"
+                                    >
+                                      <XCircle className="w-4 h-4" />
+                                    </Button>
+                                  </>
+                                )}
+                                {req.status === 'approved' && (
                                   <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="text-green-600 hover:text-green-700"
-                                    onClick={() => updateRequestStatus(req.id, 'approved')}
-                                    title="Aprovar"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => updateRequestStatus(req.id, 'completed')}
                                   >
-                                    <CheckCircle className="w-4 h-4" />
+                                    Concluir
                                   </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="text-destructive"
-                                    onClick={() => updateRequestStatus(req.id, 'rejected')}
-                                    title="Rejeitar"
-                                  >
-                                    <XCircle className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              )}
-                              {req.status === 'approved' && (
+                                )}
                                 <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => updateRequestStatus(req.id, 'completed')}
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => deleteRequest(req.id)}
+                                  title="Excluir solicitação"
                                 >
-                                  Marcar Concluído
+                                  <Trash2 className="w-4 h-4" />
                                 </Button>
-                              )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
