@@ -70,6 +70,7 @@ const ClientImplementations = () => {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [requestNotes, setRequestNotes] = useState('');
   const [paymentType, setPaymentType] = useState<'avista' | 'parcelado'>('avista');
+  const [installments, setInstallments] = useState<number>(2);
   const [submitting, setSubmitting] = useState(false);
   const [deletingRequestId, setDeletingRequestId] = useState<string | null>(null);
 
@@ -109,13 +110,17 @@ const ClientImplementations = () => {
     if (!selectedImpl || !client?.id) return;
     
     setSubmitting(true);
-    const notesWithPayment = `[Pagamento: ${paymentType === 'avista' ? 'À Vista' : 'Parcelado'}]${requestNotes ? ` - ${requestNotes}` : ''}`;
+    const paymentInfo = paymentType === 'avista' 
+      ? 'À Vista' 
+      : `Parcelado em ${installments}x`;
+    const notesWithPayment = `[Pagamento: ${paymentInfo}]${requestNotes ? ` - ${requestNotes}` : ''}`;
     const success = await createRequest(selectedImpl.id, client.id, notesWithPayment);
     
     if (success) {
       setIsRequestDialogOpen(false);
       setRequestNotes('');
       setPaymentType('avista');
+      setInstallments(2);
       setSelectedImpl(null);
       fetchRequests(client.id);
     }
@@ -721,6 +726,41 @@ const ClientImplementations = () => {
                     <span className="text-xs text-muted-foreground">Em até 12x</span>
                   </button>
                 </div>
+                
+                {/* Installments selector - shown when parcelado is selected */}
+                {paymentType === 'parcelado' && selectedImpl && (
+                  <div className="p-4 bg-muted/30 rounded-xl border border-border space-y-3">
+                    <Label className="text-sm font-medium">Escolha o número de parcelas:</Label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[2, 3, 6, 12].map((num) => {
+                        const installmentValue = selectedImpl.value / num;
+                        return (
+                          <button
+                            key={num}
+                            type="button"
+                            onClick={() => setInstallments(num)}
+                            className={`p-3 rounded-lg border-2 transition-all flex flex-col items-center gap-1 ${
+                              installments === num
+                                ? 'border-primary bg-primary/10 text-primary'
+                                : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                            }`}
+                          >
+                            <span className="font-bold text-lg">{num}x</span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Intl.NumberFormat('pt-BR', { 
+                                style: 'currency', 
+                                currency: 'BRL' 
+                              }).format(installmentValue)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-xs text-muted-foreground text-center">
+                      Total: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedImpl.value)} em {installments}x de {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedImpl.value / installments)}
+                    </p>
+                  </div>
+                )}
               </div>
               
               <div className="space-y-2">
