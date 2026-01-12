@@ -38,7 +38,9 @@ import {
   Star,
   Shield,
   ArrowRight,
-  Trash2
+  Trash2,
+  CreditCard,
+  Banknote
 } from 'lucide-react';
 import { useImplementations, Implementation } from '@/hooks/useImplementations';
 import { useClientAuth } from '@/contexts/ClientAuthContext';
@@ -67,6 +69,7 @@ const ClientImplementations = () => {
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [requestNotes, setRequestNotes] = useState('');
+  const [paymentType, setPaymentType] = useState<'avista' | 'parcelado'>('avista');
   const [submitting, setSubmitting] = useState(false);
   const [deletingRequestId, setDeletingRequestId] = useState<string | null>(null);
 
@@ -106,11 +109,13 @@ const ClientImplementations = () => {
     if (!selectedImpl || !client?.id) return;
     
     setSubmitting(true);
-    const success = await createRequest(selectedImpl.id, client.id, requestNotes);
+    const notesWithPayment = `[Pagamento: ${paymentType === 'avista' ? 'À Vista' : 'Parcelado'}]${requestNotes ? ` - ${requestNotes}` : ''}`;
+    const success = await createRequest(selectedImpl.id, client.id, notesWithPayment);
     
     if (success) {
       setIsRequestDialogOpen(false);
       setRequestNotes('');
+      setPaymentType('avista');
       setSelectedImpl(null);
       fetchRequests(client.id);
     }
@@ -682,6 +687,39 @@ const ClientImplementations = () => {
                     }).format(selectedImpl.value)}
                   </span>
                   <span className="text-muted-foreground text-sm">pagamento único</span>
+                </div>
+              </div>
+              
+              {/* Payment Type Selection */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Como você vai pagar?</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentType('avista')}
+                    className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${
+                      paymentType === 'avista'
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                    }`}
+                  >
+                    <Banknote className={`w-6 h-6 ${paymentType === 'avista' ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <span className="font-semibold">À Vista</span>
+                    <span className="text-xs text-muted-foreground">Pagamento único</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentType('parcelado')}
+                    className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${
+                      paymentType === 'parcelado'
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                    }`}
+                  >
+                    <CreditCard className={`w-6 h-6 ${paymentType === 'parcelado' ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <span className="font-semibold">Parcelado</span>
+                    <span className="text-xs text-muted-foreground">Em até 12x</span>
+                  </button>
                 </div>
               </div>
               
