@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, MoreHorizontal, CreditCard, CheckCircle, XCircle, Clock, Trash2, Download, Eye, FileText, Loader2, Check } from 'lucide-react';
+import { Search, MoreHorizontal, CreditCard, CheckCircle, XCircle, Clock, Trash2, Download, Eye, FileText, Loader2, Check, MessageCircle } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
@@ -22,6 +22,7 @@ import { useGlobalData, Payment } from '@/contexts/GlobalDataContext';
 import { formatBrazilDate } from '@/utils/dateUtils';
 import { toast } from 'sonner';
 import { exportToCSV, formatCurrencyForExport, formatDateForExport } from '@/utils/exportUtils';
+import { useWhatsAppReminder } from '@/hooks/useWhatsAppReminder';
 
 const Payments = () => {
   const [search, setSearch] = useState('');
@@ -32,6 +33,7 @@ const Payments = () => {
   const [invoiceNumber, setInvoiceNumber] = useState('');
   
   const { payments, loadingPayments: loading, deletePayment, markPaymentAsPaid, addInvoice, invoices } = useGlobalData();
+  const { sendReminder, sendingReminderId } = useWhatsAppReminder();
 
   const filteredPayments = payments.filter(payment =>
     (payment.subscriptions?.clients?.name || payment.clients?.name || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -212,6 +214,26 @@ const Payments = () => {
               <FileText className="w-4 h-4 mr-2" />
               {hasInvoice(item.id) ? 'NF já emitida' : 'Emitir nota fiscal'}
             </DropdownMenuItem>
+            {item.status !== 'paid' && (
+              <DropdownMenuItem 
+                onClick={() => sendReminder({
+                  clientId: item.client_id || '',
+                  clientName: getPaymentClientName(item),
+                  clientPhone: item.clients?.phone || null,
+                  type: item.status === 'overdue' ? 'overdue' : 'payment',
+                  amount: Number(item.amount),
+                  description: item.description || undefined,
+                })}
+                disabled={sendingReminderId === item.client_id || !item.clients?.phone}
+              >
+                {sendingReminderId === item.client_id ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                )}
+                {!item.clients?.phone ? 'Sem telefone' : sendingReminderId === item.client_id ? 'Enviando...' : 'Enviar WhatsApp'}
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem 
               className="text-destructive"
               onClick={() => handleDeletePayment(item.id)}
