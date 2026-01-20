@@ -400,6 +400,50 @@ export type Database = {
           },
         ]
       }
+      client_vault: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          password: string | null
+          title: string
+          updated_at: string
+          url: string | null
+          username: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          password?: string | null
+          title: string
+          updated_at?: string
+          url?: string | null
+          username?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          password?: string | null
+          title?: string
+          updated_at?: string
+          url?: string | null
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_vault_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           created_at: string

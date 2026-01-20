@@ -169,8 +169,18 @@ const Payments = () => {
       ),
     },
     {
+      key: 'dueDate',
+      header: 'Vencimento',
+      hideOnMobile: true,
+      render: (item: Payment) => (
+        <span className="text-muted-foreground">
+          {item.due_date ? formatBrazilDate(item.due_date) : '-'}
+        </span>
+      ),
+    },
+    {
       key: 'createdAt',
-      header: 'Data',
+      header: 'Criação',
       hideOnMobile: true,
       render: (item: Payment) => (
         <span className="text-muted-foreground">
@@ -384,6 +394,13 @@ const Payments = () => {
                   <label className="text-xs font-medium text-muted-foreground">Data de Criação</label>
                   <p className="text-sm font-medium text-foreground">{formatBrazilDate(selectedPayment.created_at)}</p>
                 </div>
+
+                {selectedPayment.due_date && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Data de Vencimento</label>
+                    <p className="text-sm font-medium text-foreground">{formatBrazilDate(selectedPayment.due_date)}</p>
+                  </div>
+                )}
                 
                 {selectedPayment.paid_at && (
                   <div className="space-y-1">
