@@ -39,27 +39,48 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`Sending WhatsApp message to ${phone}`);
-
-    // Send message via BTZap API - using correct endpoint format
-    const url = `https://adm.btzap.com.br/api/send_message?access_token=${apiKey}&instance_id=${instanceId}&number=${encodeURIComponent(phone)}&message=${encodeURIComponent(message)}`;
-    
-    console.log(`BTZap API URL: https://adm.btzap.com.br/api/send_message?instance_id=${instanceId}&number=${phone}`);
-    
-    const response = await fetch(url, {
-      method: "POST",
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`BTZap API error: ${response.status} - ${errorText}`);
-      return new Response(
-        JSON.stringify({ success: false, error: "Erro ao enviar mensagem via BTZap" }),
-        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+    // Format phone number (remove non-digits and ensure country code)
+    let formattedPhone = phone.replace(/\D/g, "");
+    if (!formattedPhone.startsWith("55")) {
+      formattedPhone = "55" + formattedPhone;
     }
 
-    const result = await response.json();
+    console.log(`Sending WhatsApp message to ${formattedPhone}`);
+
+    // Send message via BTZap API - correct endpoint: /api/send with JSON body
+    const response = await fetch("https://adm.btzap.com.br/api/send", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        number: formattedPhone,
+        type: "text",
+        message: message,
+        instance_id: instanceId,
+        access_token: apiKey,
+      }),
+    });
+
+    console.log(`BTZap API response status: ${response.status}`);
+
+    const responseText = await response.text();
+    console.log("BTZap raw response:", responseText);
+
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch {
+      console.error("Failed to parse BTZap response as JSON:", responseText);
+      if (!response.ok) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Erro ao enviar mensagem via BTZap" }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+      result = { raw: responseText };
+    }
+
     console.log("BTZap response:", result);
 
     // Create notification record
