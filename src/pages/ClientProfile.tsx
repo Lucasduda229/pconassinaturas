@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, FileText, CreditCard, Calendar, User, Loader2, Plus, QrCode, Receipt, Upload, Trash2, ExternalLink, FileSignature, Gift, Clock, CheckCircle, DollarSign } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, FileText, CreditCard, Calendar, User, Loader2, Plus, QrCode, Receipt, Upload, Trash2, ExternalLink, FileSignature, Gift, Clock, CheckCircle, DollarSign, Lock } from 'lucide-react';
 import { useEffect, useState, useMemo, useRef } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import StatusBadge from '@/components/StatusBadge';
@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { useMercadoPago } from '@/hooks/useMercadoPago';
 import { useContracts } from '@/hooks/useContracts';
 import PixQRCode from '@/components/PixQRCode';
+import ClientVault from '@/components/ClientVault';
 
 interface Client {
   id: string;
@@ -463,7 +464,7 @@ const ClientProfile = () => {
 
       {/* Tabs */}
       <Tabs defaultValue="subscriptions" className="w-full">
-        <TabsList className="w-full sm:w-auto glass-card border-border/50 mb-4">
+        <TabsList className="w-full sm:w-auto glass-card border-border/50 mb-4 flex-wrap">
           <TabsTrigger value="subscriptions" className="flex-1 sm:flex-none gap-2">
             <CreditCard className="w-4 h-4" />
             <span className="hidden sm:inline">Assinaturas</span>
@@ -477,6 +478,11 @@ const ClientProfile = () => {
             <FileSignature className="w-4 h-4" />
             <span className="hidden sm:inline">Contratos</span>
             <span className="sm:hidden">Docs</span>
+          </TabsTrigger>
+          <TabsTrigger value="vault" className="flex-1 sm:flex-none gap-2">
+            <Lock className="w-4 h-4" />
+            <span className="hidden sm:inline">Cofre</span>
+            <span className="sm:hidden">🔒</span>
           </TabsTrigger>
           <TabsTrigger value="rewards" className="flex-1 sm:flex-none gap-2">
             <Gift className="w-4 h-4" />
@@ -1014,6 +1020,10 @@ const ClientProfile = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="vault">
+          <ClientVault clientId={id!} />
         </TabsContent>
       </Tabs>
 
