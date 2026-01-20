@@ -55,6 +55,7 @@ export interface Payment {
   clients?: {
     name: string;
     email?: string;
+    phone?: string | null;
   };
 }
 
@@ -167,7 +168,7 @@ export const GlobalDataProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { data, error } = await supabase
         .from('payments')
-        .select('*, subscriptions(clients(name), plan_name), clients(name, email)')
+        .select('*, subscriptions(clients(name), plan_name), clients(name, email, phone)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

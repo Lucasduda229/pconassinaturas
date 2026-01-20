@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Filter, MoreHorizontal, Trash2, Calendar, AlertTriangle, Plus, Pencil, CreditCard, Loader2, Receipt, QrCode, FileText } from 'lucide-react';
+import { Search, Filter, MoreHorizontal, Trash2, Calendar, AlertTriangle, Plus, Pencil, CreditCard, Loader2, Receipt, QrCode, FileText, MessageCircle } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
@@ -33,6 +33,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { differenceInDays, isPast, isToday, format, addDays } from 'date-fns';
 import { formatBrazilDate, formatDateForInput, inputDateToISO, toBrazilTime } from '@/utils/dateUtils';
 import { toast } from 'sonner';
+import { useWhatsAppReminder } from '@/hooks/useWhatsAppReminder';
 
 const Subscriptions = () => {
   const [search, setSearch] = useState('');
@@ -59,6 +60,7 @@ const Subscriptions = () => {
 
   const { subscriptions, clients, loadingSubscriptions: loading, addSubscription, updateSubscription, deleteSubscription } = useGlobalData();
   const { createPayment, createCustomer, syncCustomerToAsaas, createSubscription: createAsaasSubscription, loading: asaasLoading } = useAsaas();
+  const { sendReminder, sendingReminderId } = useWhatsAppReminder();
 
   const filteredSubscriptions = subscriptions.filter(sub =>
     (sub.clients?.name || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -375,6 +377,24 @@ const Subscriptions = () => {
                 <CreditCard className="w-4 h-4 mr-2" />
               )}
               {generatingChargeId === item.id ? 'Gerando...' : 'Gerar cobrança'}
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => sendReminder({
+                clientId: item.client_id,
+                clientName: item.clients?.name || 'Cliente',
+                clientPhone: item.clients?.phone || null,
+                type: 'subscription',
+                amount: Number(item.value),
+                description: item.plan_name,
+              })}
+              disabled={sendingReminderId === item.client_id || !item.clients?.phone}
+            >
+              {sendingReminderId === item.client_id ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <MessageCircle className="w-4 h-4 mr-2" />
+              )}
+              {!item.clients?.phone ? 'Sem telefone' : sendingReminderId === item.client_id ? 'Enviando...' : 'Enviar WhatsApp'}
             </DropdownMenuItem>
             <DropdownMenuItem 
               className="text-destructive"
