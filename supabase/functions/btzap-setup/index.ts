@@ -42,7 +42,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       const response = await fetch(
         `https://adm.btzap.com.br/api/set_webhook?${params.toString()}`,
-        { method: "POST" }
+        { method: "GET" }
       );
 
       const result = await response.text();
@@ -72,7 +72,7 @@ const handler = async (req: Request): Promise<Response> => {
       
       const response = await fetch(
         `https://adm.btzap.com.br/api/get_qrcode?instance_id=${instanceId}&access_token=${apiKey}`,
-        { method: "POST" }
+        { method: "GET" }
       );
 
       const result = await response.text();
@@ -101,7 +101,7 @@ const handler = async (req: Request): Promise<Response> => {
       
       const response = await fetch(
         `https://adm.btzap.com.br/api/reconnect?instance_id=${instanceId}&access_token=${apiKey}`,
-        { method: "POST" }
+        { method: "GET" }
       );
 
       const result = await response.text();
