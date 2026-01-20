@@ -203,6 +203,7 @@ const Clients = () => {
             payment_method: newCharge.billingType,
             description: newCharge.description || `Cobrança única para ${selectedClient.name}`,
             asaas_id: asaasPayment.id,
+            due_date: new Date(newCharge.dueDate).toISOString(),
           });
 
         if (error) {

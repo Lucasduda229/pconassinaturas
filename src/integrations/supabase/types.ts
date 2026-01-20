@@ -698,6 +698,7 @@ export type Database = {
           client_id: string | null
           created_at: string
           description: string | null
+          due_date: string | null
           id: string
           paid_at: string | null
           payment_method: string | null
@@ -711,6 +712,7 @@ export type Database = {
           client_id?: string | null
           created_at?: string
           description?: string | null
+          due_date?: string | null
           id?: string
           paid_at?: string | null
           payment_method?: string | null
@@ -724,6 +726,7 @@ export type Database = {
           client_id?: string | null
           created_at?: string
           description?: string | null
+          due_date?: string | null
           id?: string
           paid_at?: string | null
           payment_method?: string | null
