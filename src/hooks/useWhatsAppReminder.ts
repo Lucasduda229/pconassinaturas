@@ -36,7 +36,6 @@ export const useWhatsAppReminder = () => {
         message = `Ola ${clientName}! 💈\n\n` +
           `Passando para lembrar que a fatura referente a sua assinatura ativa${description ? ` do *${description}*` : ''} no valor de *R$ ${formattedAmount}* vence amanha.\n\n` +
           `📱 *Acesse sua area do cliente:*\n${CLIENT_AREA_URL}\n\n` +
-          `Mantenha seu acesso ao sistema de agendamento da barbearia em dia!\n\n` +
           `Qualquer duvida, estamos a disposicao.`;
       } else if (type === 'payment') {
         message = `Ola ${clientName}! 💈\n\n` +

@@ -111,7 +111,7 @@ const handler = async (req: Request): Promise<Response> => {
           continue;
         }
 
-        const message = `Ola ${client.name}! 💈\n\nPassando para lembrar que a fatura referente a sua assinatura ativa do *${sub.plan_name}* no valor de *R$ ${sub.value.toFixed(2).replace(".", ",")}* vence amanha.\n\n📱 *Acesse sua area do cliente:*\n${CLIENT_AREA_URL}\n\nMantenha seu acesso ao sistema de agendamento da barbearia em dia!\n\nQualquer duvida, estamos a disposicao.`;
+        const message = `Ola ${client.name}! 💈\n\nPassando para lembrar que a fatura referente a sua assinatura ativa do *${sub.plan_name}* no valor de *R$ ${sub.value.toFixed(2).replace(".", ",")}* vence amanha.\n\n📱 *Acesse sua area do cliente:*\n${CLIENT_AREA_URL}\n\nQualquer duvida, estamos a disposicao.`;
 
         try {
           let phone = client.phone.replace(/\D/g, "");
