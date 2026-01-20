@@ -30,23 +30,23 @@ export const useWhatsAppReminder = () => {
       const formattedAmount = amount.toFixed(2).replace('.', ',');
 
       if (type === 'subscription') {
-        message = `Olá ${clientName}! 👋\n\n` +
-          `Lembramos que sua assinatura${description ? ` *${description}*` : ''} no valor de *R$ ${formattedAmount}* está próxima do vencimento.\n\n` +
-          `Para evitar interrupção do serviço, realize o pagamento até a data de vencimento.\n\n` +
-          `Qualquer dúvida, estamos à disposição! 🙌`;
+        message = `Ola ${clientName}!\n\n` +
+          `Passando para lembrar que sua fatura${description ? ` de *${description}*` : ''} no valor de *R$ ${formattedAmount}* vence amanha.\n\n` +
+          `Evite a interrupcao do servico realizando o pagamento ate a data de vencimento.\n\n` +
+          `Qualquer duvida, estamos a disposicao!`;
       } else if (type === 'payment') {
-        message = `Olá ${clientName}! 👋\n\n` +
-          `Identificamos que você possui um pagamento pendente de *R$ ${formattedAmount}*` +
-          (description ? ` referente a *${description}*` : '') + `.\n\n` +
-          `Por favor, regularize seu pagamento para manter seu acesso ativo.\n\n` +
-          `Qualquer dúvida, estamos à disposição! 🙌`;
+        message = `Ola ${clientName}!\n\n` +
+          `Sua fatura no valor de *R$ ${formattedAmount}*` +
+          (description ? ` referente a *${description}*` : '') + ` esta pendente e vence amanha.\n\n` +
+          `Realize o pagamento para manter seu acesso ativo.\n\n` +
+          `Qualquer duvida, estamos a disposicao!`;
       } else if (type === 'overdue') {
-        message = `Olá ${clientName}! ⚠️\n\n` +
-          `Seu pagamento de *R$ ${formattedAmount}*` +
+        message = `Ola ${clientName}!\n\n` +
+          `Sua fatura de *R$ ${formattedAmount}*` +
           (description ? ` referente a *${description}*` : '') +
-          ` encontra-se em atraso.\n\n` +
-          `Para evitar a suspensão dos serviços, por favor regularize sua situação o mais breve possível.\n\n` +
-          `Entre em contato conosco para mais informações. 📞`;
+          ` esta vencida.\n\n` +
+          `Para evitar a suspensao do servico, regularize o quanto antes.\n\n` +
+          `Entre em contato se precisar de ajuda.`;
       }
 
       // Format phone number
