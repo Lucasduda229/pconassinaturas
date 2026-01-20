@@ -33,16 +33,27 @@ const handler = async (req: Request): Promise<Response> => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get tomorrow's date
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = tomorrow.toISOString().split("T")[0];
+    // Compute date boundaries in America/Sao_Paulo (BRT, UTC-03)
+    // This prevents timezone mismatches when next_payment is stored as timestamptz.
+    const toYMDInSaoPaulo = (d: Date) =>
+      new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(d); // YYYY-MM-DD
 
-    // Get today for overdue check
-    const today = new Date();
-    const todayStr = today.toISOString().split("T")[0];
+    const now = new Date();
+    const todayBrt = toYMDInSaoPaulo(now);
+    const tomorrowDate = new Date(now);
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tomorrowBrt = toYMDInSaoPaulo(tomorrowDate);
 
-    console.log(`Checking subscriptions for reminders. Tomorrow: ${tomorrowStr}, Today: ${todayStr}`);
+    const startOfTomorrowUtc = new Date(`${tomorrowBrt}T00:00:00-03:00`).toISOString();
+    const startOfDayAfterTomorrowUtc = new Date(
+      new Date(`${tomorrowBrt}T00:00:00-03:00`).getTime() + 86400000
+    ).toISOString();
+
+    const startOfTodayUtc = new Date(`${todayBrt}T00:00:00-03:00`).toISOString();
+
+    console.log(
+      `Checking subscriptions for reminders (BRT). Today: ${todayBrt}, Tomorrow: ${tomorrowBrt}`
+    );
 
     // Get subscriptions due tomorrow (D-1 reminder)
     const { data: dueTomorrow, error: dueError } = await supabase
@@ -55,8 +66,8 @@ const handler = async (req: Request): Promise<Response> => {
         client:clients(id, name, phone, email)
       `)
       .eq("status", "active")
-      .gte("next_payment", tomorrowStr)
-      .lt("next_payment", new Date(tomorrow.getTime() + 86400000).toISOString().split("T")[0]);
+      .gte("next_payment", startOfTomorrowUtc)
+      .lt("next_payment", startOfDayAfterTomorrowUtc);
 
     if (dueError) {
       console.error("Error fetching due subscriptions:", dueError);
@@ -73,7 +84,7 @@ const handler = async (req: Request): Promise<Response> => {
         client:clients(id, name, phone, email)
       `)
       .eq("status", "active")
-      .lt("next_payment", todayStr);
+      .lt("next_payment", startOfTodayUtc);
 
     if (overdueError) {
       console.error("Error fetching overdue subscriptions:", overdueError);
@@ -151,7 +162,7 @@ const handler = async (req: Request): Promise<Response> => {
         if (!client?.phone) continue;
 
         const daysOverdue = Math.floor(
-          (today.getTime() - new Date(sub.next_payment).getTime()) / 86400000
+          (Date.now() - new Date(sub.next_payment).getTime()) / 86400000
         );
 
         const message = `Ola ${client.name}! 💈\n\n⚠️ A fatura referente a sua assinatura ativa do *${sub.plan_name}* no valor de *R$ ${sub.value.toFixed(2).replace(".", ",")}* esta em atraso ha ${daysOverdue} dia(s).\n\nRegularize o pagamento para manter sua assinatura em dia.\n\n📱 *Acesse sua area do cliente:*\n${CLIENT_AREA_URL}\n\nQualquer duvida, entre em contato conosco!`;
