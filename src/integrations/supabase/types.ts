@@ -958,6 +958,59 @@ export type Database = {
           },
         ]
       }
+      whatsapp_messages: {
+        Row: {
+          btzap_message_id: string | null
+          client_id: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          message: string
+          message_type: string
+          phone: string
+          remote_jid: string | null
+          status: string
+          status_updated_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          btzap_message_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message: string
+          message_type?: string
+          phone: string
+          remote_jid?: string | null
+          status?: string
+          status_updated_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          btzap_message_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message?: string
+          message_type?: string
+          phone?: string
+          remote_jid?: string | null
+          status?: string
+          status_updated_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
