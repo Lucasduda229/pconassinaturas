@@ -24,21 +24,36 @@ async function sendWhatsAppMessage(phone: string, message: string): Promise<bool
   try {
     console.log(`Sending WhatsApp message to ${formattedPhone}`);
     
-    // Send message via BTZap API - using correct endpoint format
-    const url = `https://adm.btzap.com.br/api/send_message?access_token=${apiKey}&instance_id=${instanceId}&number=${encodeURIComponent(formattedPhone)}&message=${encodeURIComponent(message)}`;
-    
-    const response = await fetch(url, {
+    // Send message via BTZap API - correct endpoint: /api/send
+    const response = await fetch("https://adm.btzap.com.br/api/send", {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        number: formattedPhone,
+        type: "text",
+        message: message,
+        instance_id: instanceId,
+        access_token: apiKey,
+      }),
     });
 
+    const responseText = await response.text();
+    console.log("BTZap raw response:", responseText);
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`BTZap API error: ${response.status} - ${errorText}`);
+      console.error(`BTZap API error: ${response.status} - ${responseText}`);
       return false;
     }
 
-    const result = await response.json();
-    console.log("BTZap response:", result);
+    let result;
+    try {
+      result = JSON.parse(responseText);
+      console.log("BTZap response:", result);
+    } catch {
+      console.log("BTZap response (non-JSON):", responseText);
+    }
     return true;
   } catch (error) {
     console.error("Error sending WhatsApp message:", error);
