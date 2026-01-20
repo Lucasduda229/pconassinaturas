@@ -88,7 +88,7 @@ const handler = async (req: Request): Promise<Response> => {
           continue;
         }
 
-        const message = `Ola ${client.name}!\n\nPassando para lembrar que sua fatura de *${sub.plan_name}* no valor de *R$ ${sub.value.toFixed(2).replace(".", ",")}* vence amanha.\n\nEvite a interrupcao do servico realizando o pagamento ate a data de vencimento.\n\nQualquer duvida, estamos a disposicao!`;
+        const message = `Ola ${client.name}! 💈\n\nPassando para lembrar que sua assinatura do *${sub.plan_name}* no valor de *R$ ${sub.value.toFixed(2).replace(".", ",")}* vence amanha.\n\nMantenha seu acesso ao sistema de agendamento da barbearia em dia!\n\nQualquer duvida, estamos a disposicao.`;
 
         try {
           let phone = client.phone.replace(/\D/g, "");
@@ -140,7 +140,7 @@ const handler = async (req: Request): Promise<Response> => {
           (today.getTime() - new Date(sub.next_payment).getTime()) / 86400000
         );
 
-        const message = `Ola ${client.name}!\n\n⚠️ Sua fatura de *${sub.plan_name}* no valor de *R$ ${sub.value.toFixed(2).replace(".", ",")}* esta em atraso ha ${daysOverdue} dia(s).\n\nPor favor, regularize o pagamento para evitar a suspensao do servico.\n\nQualquer duvida, entre em contato conosco!`;
+        const message = `Ola ${client.name}! 💈\n\n⚠️ Sua assinatura do *${sub.plan_name}* no valor de *R$ ${sub.value.toFixed(2).replace(".", ",")}* esta em atraso ha ${daysOverdue} dia(s).\n\nRegularize o pagamento para continuar usando o sistema de agendamento da sua barbearia sem interrupcoes.\n\nQualquer duvida, entre em contato conosco!`;
 
         try {
           let phone = client.phone.replace(/\D/g, "");
