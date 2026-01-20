@@ -172,11 +172,23 @@ const Payments = () => {
       key: 'dueDate',
       header: 'Vencimento',
       hideOnMobile: true,
-      render: (item: Payment) => (
-        <span className="text-muted-foreground">
-          {item.due_date ? formatBrazilDate(item.due_date) : '-'}
-        </span>
-      ),
+      render: (item: Payment) => {
+        const dueDate = item.due_date;
+        if (!dueDate) return <span className="text-muted-foreground">-</span>;
+        
+        const isOverdue = new Date(dueDate) < new Date() && item.status !== 'paid';
+        const isToday = new Date(dueDate).toDateString() === new Date().toDateString();
+        
+        return (
+          <span className={
+            isOverdue ? 'text-destructive font-medium' : 
+            isToday ? 'text-warning font-medium' : 
+            'text-muted-foreground'
+          }>
+            {formatBrazilDate(dueDate)}
+          </span>
+        );
+      },
     },
     {
       key: 'createdAt',
