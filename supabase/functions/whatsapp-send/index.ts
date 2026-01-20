@@ -63,8 +63,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     // If sendImage is true, first send the image with caption
     if (sendImage) {
-      const imageToSend = imageUrl || DEFAULT_IMAGE_URL;
-      console.log(`Sending image: ${imageToSend}`);
+      const baseImageUrl = imageUrl || DEFAULT_IMAGE_URL;
+      const cacheBustedImageUrl = `${baseImageUrl}${baseImageUrl.includes("?") ? "&" : "?"}v=${Date.now()}`;
+      console.log(`Sending image: ${cacheBustedImageUrl}`);
 
       // Send image with caption using BTZap media endpoint
       const imageResponse = await fetch("https://adm.btzap.com.br/api/send", {
@@ -76,7 +77,7 @@ const handler = async (req: Request): Promise<Response> => {
           number: formattedPhone,
           type: "image",
           message: message,
-          media_url: imageToSend,
+          media_url: cacheBustedImageUrl,
           instance_id: instanceId,
           access_token: apiKey,
         }),
