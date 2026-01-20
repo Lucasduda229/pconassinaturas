@@ -83,12 +83,28 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("BTZap response:", result);
 
+    // Extract BTZap message ID from response
+    const btzapMessageId = result?.message?.key?.id || null;
+    const remoteJid = result?.message?.key?.remoteJid || null;
+    const messageStatus = result?.status === "success" ? "sent" : "failed";
+
+    // Save to whatsapp_messages table for tracking
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    await supabase.from("whatsapp_messages").insert({
+      client_id: clientId || null,
+      phone: formattedPhone,
+      message: message,
+      message_type: type || "manual",
+      btzap_message_id: btzapMessageId,
+      remote_jid: remoteJid,
+      status: messageStatus,
+    });
+
     // Create notification record
     if (clientId) {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
-
       await supabase.from("notifications").insert({
         client_id: clientId,
         type: type === "overdue" ? "payment_overdue" : "payment_reminder",
