@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.btzap-setup]
 verify_jwt = false
+
+[functions.whatsapp-auto-reminders]
+verify_jwt = false
