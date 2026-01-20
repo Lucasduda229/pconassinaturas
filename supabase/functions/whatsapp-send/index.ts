@@ -41,17 +41,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Sending WhatsApp message to ${phone}`);
 
-    // Send message via BTZap API
-    const response = await fetch(`https://api.btzap.com.br/instance/${instanceId}/message/text`, {
+    // Send message via BTZap API - using correct endpoint format
+    const url = `https://adm.btzap.com.br/api/send_message?access_token=${apiKey}&instance_id=${instanceId}&number=${encodeURIComponent(phone)}&message=${encodeURIComponent(message)}`;
+    
+    console.log(`BTZap API URL: https://adm.btzap.com.br/api/send_message?instance_id=${instanceId}&number=${phone}`);
+    
+    const response = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        number: phone,
-        text: message,
-      }),
     });
 
     if (!response.ok) {
