@@ -43,6 +43,7 @@ export interface Payment {
   transaction_id: string | null;
   paid_at: string | null;
   created_at: string;
+  due_date: string | null;
   description: string | null;
   asaas_id: string | null;
   clientName?: string;
@@ -175,8 +176,9 @@ export const GlobalDataProvider = ({ children }: { children: ReactNode }) => {
       
       const paymentsWithClientName = (data || []).map(payment => ({
         ...payment,
+        due_date: (payment as any).due_date || null,
         clientName: payment.subscriptions?.clients?.name || payment.clients?.name || 'N/A'
-      }));
+      })) as Payment[];
       
       setPayments(paymentsWithClientName);
     } catch (error) {
