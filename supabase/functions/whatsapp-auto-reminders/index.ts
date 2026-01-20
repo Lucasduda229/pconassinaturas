@@ -9,6 +9,9 @@ const corsHeaders = {
 // Default promo image URL
 const PROMO_IMAGE_URL = "https://pconassinaturas.lovable.app/images/whatsapp-promo.png";
 
+// Client area URL
+const CLIENT_AREA_URL = "https://www.assinaturaspcon.sbs/cliente";
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -108,7 +111,7 @@ const handler = async (req: Request): Promise<Response> => {
           continue;
         }
 
-        const message = `Ola ${client.name}! 💈\n\nPassando para lembrar que a fatura referente a sua assinatura ativa do *${sub.plan_name}* no valor de *R$ ${sub.value.toFixed(2).replace(".", ",")}* vence amanha.\n\nVoce pode acessar os detalhes da sua assinatura no seu perfil de cliente.\n\nMantenha seu acesso ao sistema de agendamento da barbearia em dia!\n\nQualquer duvida, estamos a disposicao.`;
+        const message = `Ola ${client.name}! 💈\n\nPassando para lembrar que a fatura referente a sua assinatura ativa do *${sub.plan_name}* no valor de *R$ ${sub.value.toFixed(2).replace(".", ",")}* vence amanha.\n\n📱 *Acesse sua area do cliente:*\n${CLIENT_AREA_URL}\n\nMantenha seu acesso ao sistema de agendamento da barbearia em dia!\n\nQualquer duvida, estamos a disposicao.`;
 
         try {
           let phone = client.phone.replace(/\D/g, "");
@@ -148,7 +151,7 @@ const handler = async (req: Request): Promise<Response> => {
           (today.getTime() - new Date(sub.next_payment).getTime()) / 86400000
         );
 
-        const message = `Ola ${client.name}! 💈\n\n⚠️ A fatura referente a sua assinatura ativa do *${sub.plan_name}* no valor de *R$ ${sub.value.toFixed(2).replace(".", ",")}* esta em atraso ha ${daysOverdue} dia(s).\n\nRegularize o pagamento para manter sua assinatura em dia. Acesse seu perfil de cliente para mais informacoes.\n\nQualquer duvida, entre em contato conosco!`;
+        const message = `Ola ${client.name}! 💈\n\n⚠️ A fatura referente a sua assinatura ativa do *${sub.plan_name}* no valor de *R$ ${sub.value.toFixed(2).replace(".", ",")}* esta em atraso ha ${daysOverdue} dia(s).\n\nRegularize o pagamento para manter sua assinatura em dia.\n\n📱 *Acesse sua area do cliente:*\n${CLIENT_AREA_URL}\n\nQualquer duvida, entre em contato conosco!`;
 
         try {
           let phone = client.phone.replace(/\D/g, "");
