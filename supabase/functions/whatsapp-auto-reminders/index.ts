@@ -87,6 +87,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Helper function to send message with image
     const sendMessageWithImage = async (phone: string, message: string) => {
+      const baseImageUrl = PROMO_IMAGE_URL;
+      const cacheBustedImageUrl = `${baseImageUrl}${baseImageUrl.includes("?") ? "&" : "?"}v=${Date.now()}`;
+
       const response = await fetch("https://adm.btzap.com.br/api/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -94,7 +97,7 @@ const handler = async (req: Request): Promise<Response> => {
           number: phone,
           type: "image",
           message: message,
-          media_url: PROMO_IMAGE_URL,
+          media_url: cacheBustedImageUrl,
           instance_id: instanceId,
           access_token: apiKey,
         }),
