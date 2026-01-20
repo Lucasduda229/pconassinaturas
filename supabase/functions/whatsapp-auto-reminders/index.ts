@@ -6,6 +6,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Default promo image URL
+const PROMO_IMAGE_URL = "https://pconassinaturas.lovable.app/images/whatsapp-promo.png";
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -79,6 +82,23 @@ const handler = async (req: Request): Promise<Response> => {
       errors: [] as string[],
     };
 
+    // Helper function to send message with image
+    const sendMessageWithImage = async (phone: string, message: string) => {
+      const response = await fetch("https://adm.btzap.com.br/api/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          number: phone,
+          type: "image",
+          message: message,
+          media_url: PROMO_IMAGE_URL,
+          instance_id: instanceId,
+          access_token: apiKey,
+        }),
+      });
+      return response.json();
+    };
+
     // Send D-1 reminders
     if (dueTomorrow && dueTomorrow.length > 0) {
       for (const sub of dueTomorrow) {
@@ -94,20 +114,8 @@ const handler = async (req: Request): Promise<Response> => {
           let phone = client.phone.replace(/\D/g, "");
           if (!phone.startsWith("55")) phone = "55" + phone;
 
-          const response = await fetch("https://adm.btzap.com.br/api/send", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              number: phone,
-              type: "text",
-              message: message,
-              instance_id: instanceId,
-              access_token: apiKey,
-            }),
-          });
-
-          const result = await response.json();
-          console.log(`D-1 reminder sent to ${client.name}:`, result.status);
+          const result = await sendMessageWithImage(phone, message);
+          console.log(`D-1 reminder with image sent to ${client.name}:`, result.status);
 
           if (result.status === "success") {
             results.reminders_sent++;
@@ -146,20 +154,8 @@ const handler = async (req: Request): Promise<Response> => {
           let phone = client.phone.replace(/\D/g, "");
           if (!phone.startsWith("55")) phone = "55" + phone;
 
-          const response = await fetch("https://adm.btzap.com.br/api/send", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              number: phone,
-              type: "text",
-              message: message,
-              instance_id: instanceId,
-              access_token: apiKey,
-            }),
-          });
-
-          const result = await response.json();
-          console.log(`Overdue reminder sent to ${client.name}:`, result.status);
+          const result = await sendMessageWithImage(phone, message);
+          console.log(`Overdue reminder with image sent to ${client.name}:`, result.status);
 
           if (result.status === "success") {
             results.overdue_sent++;

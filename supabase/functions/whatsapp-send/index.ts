@@ -11,7 +11,12 @@ interface SendMessageRequest {
   message: string;
   clientId: string;
   type: string;
+  sendImage?: boolean;
+  imageUrl?: string;
 }
+
+// Default promo image URL
+const DEFAULT_IMAGE_URL = "https://pconassinaturas.lovable.app/images/whatsapp-promo.png";
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -30,7 +35,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { phone, message, clientId, type }: SendMessageRequest = await req.json();
+    const { phone, message, clientId, type, sendImage = true, imageUrl }: SendMessageRequest = await req.json();
 
     if (!phone || !message) {
       return new Response(
@@ -45,54 +50,100 @@ const handler = async (req: Request): Promise<Response> => {
       formattedPhone = "55" + formattedPhone;
     }
 
-    console.log(`Sending WhatsApp message to ${formattedPhone}`);
+    console.log(`Sending WhatsApp message to ${formattedPhone}, sendImage: ${sendImage}`);
 
-    // Send message via BTZap API - correct endpoint: /api/send with JSON body
-    const response = await fetch("https://adm.btzap.com.br/api/send", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        number: formattedPhone,
-        type: "text",
-        message: message,
-        instance_id: instanceId,
-        access_token: apiKey,
-      }),
-    });
-
-    console.log(`BTZap API response status: ${response.status}`);
-
-    const responseText = await response.text();
-    console.log("BTZap raw response:", responseText);
-
-    let result;
-    try {
-      result = JSON.parse(responseText);
-    } catch {
-      console.error("Failed to parse BTZap response as JSON:", responseText);
-      if (!response.ok) {
-        return new Response(
-          JSON.stringify({ success: false, error: "Erro ao enviar mensagem via BTZap" }),
-          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
-        );
-      }
-      result = { raw: responseText };
-    }
-
-    console.log("BTZap response:", result);
-
-    // Extract BTZap message ID from response
-    const btzapMessageId = result?.message?.key?.id || null;
-    const remoteJid = result?.message?.key?.remoteJid || null;
-    const messageStatus = result?.status === "success" ? "sent" : "failed";
-
-    // Save to whatsapp_messages table for tracking
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    let result;
+    let btzapMessageId = null;
+    let remoteJid = null;
+    let messageStatus = "failed";
+
+    // If sendImage is true, first send the image with caption
+    if (sendImage) {
+      const imageToSend = imageUrl || DEFAULT_IMAGE_URL;
+      console.log(`Sending image: ${imageToSend}`);
+
+      // Send image with caption using BTZap media endpoint
+      const imageResponse = await fetch("https://adm.btzap.com.br/api/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          number: formattedPhone,
+          type: "image",
+          message: message,
+          media_url: imageToSend,
+          instance_id: instanceId,
+          access_token: apiKey,
+        }),
+      });
+
+      console.log(`BTZap API image response status: ${imageResponse.status}`);
+
+      const imageResponseText = await imageResponse.text();
+      console.log("BTZap image raw response:", imageResponseText);
+
+      try {
+        result = JSON.parse(imageResponseText);
+      } catch {
+        console.error("Failed to parse BTZap image response as JSON:", imageResponseText);
+        if (!imageResponse.ok) {
+          // Fallback to text-only message if image fails
+          console.log("Image send failed, falling back to text-only message");
+        }
+        result = { raw: imageResponseText };
+      }
+
+      btzapMessageId = result?.message?.key?.id || null;
+      remoteJid = result?.message?.key?.remoteJid || null;
+      messageStatus = result?.status === "success" ? "sent" : "failed";
+
+    } else {
+      // Send text-only message
+      const response = await fetch("https://adm.btzap.com.br/api/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          number: formattedPhone,
+          type: "text",
+          message: message,
+          instance_id: instanceId,
+          access_token: apiKey,
+        }),
+      });
+
+      console.log(`BTZap API response status: ${response.status}`);
+
+      const responseText = await response.text();
+      console.log("BTZap raw response:", responseText);
+
+      try {
+        result = JSON.parse(responseText);
+      } catch {
+        console.error("Failed to parse BTZap response as JSON:", responseText);
+        if (!response.ok) {
+          return new Response(
+            JSON.stringify({ success: false, error: "Erro ao enviar mensagem via BTZap" }),
+            { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        }
+        result = { raw: responseText };
+      }
+
+      btzapMessageId = result?.message?.key?.id || null;
+      remoteJid = result?.message?.key?.remoteJid || null;
+      messageStatus = result?.status === "success" ? "sent" : "failed";
+    }
+
+    console.log("BTZap response:", result);
+
+    // Save to whatsapp_messages table for tracking
     await supabase.from("whatsapp_messages").insert({
       client_id: clientId || null,
       phone: formattedPhone,
