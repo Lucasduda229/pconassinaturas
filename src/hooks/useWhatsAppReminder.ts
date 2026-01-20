@@ -30,22 +30,22 @@ export const useWhatsAppReminder = () => {
       const formattedAmount = amount.toFixed(2).replace('.', ',');
 
       if (type === 'subscription') {
-        message = `Ola ${clientName}!\n\n` +
-          `Passando para lembrar que sua fatura${description ? ` de *${description}*` : ''} no valor de *R$ ${formattedAmount}* vence amanha.\n\n` +
-          `Evite a interrupcao do servico realizando o pagamento ate a data de vencimento.\n\n` +
-          `Qualquer duvida, estamos a disposicao!`;
+        message = `Ola ${clientName}! 💈\n\n` +
+          `Passando para lembrar que sua assinatura${description ? ` do *${description}*` : ''} no valor de *R$ ${formattedAmount}* vence amanha.\n\n` +
+          `Mantenha seu acesso ao sistema de agendamento da barbearia em dia!\n\n` +
+          `Qualquer duvida, estamos a disposicao.`;
       } else if (type === 'payment') {
-        message = `Ola ${clientName}!\n\n` +
+        message = `Ola ${clientName}! 💈\n\n` +
           `Sua fatura no valor de *R$ ${formattedAmount}*` +
           (description ? ` referente a *${description}*` : '') + ` esta pendente e vence amanha.\n\n` +
-          `Realize o pagamento para manter seu acesso ativo.\n\n` +
-          `Qualquer duvida, estamos a disposicao!`;
+          `Mantenha o sistema de agendamento da sua barbearia funcionando!\n\n` +
+          `Qualquer duvida, estamos a disposicao.`;
       } else if (type === 'overdue') {
-        message = `Ola ${clientName}!\n\n` +
-          `Sua fatura de *R$ ${formattedAmount}*` +
+        message = `Ola ${clientName}! 💈\n\n` +
+          `⚠️ Sua assinatura de *R$ ${formattedAmount}*` +
           (description ? ` referente a *${description}*` : '') +
           ` esta vencida.\n\n` +
-          `Para evitar a suspensao do servico, regularize o quanto antes.\n\n` +
+          `Regularize o pagamento para continuar usando o sistema de agendamento da sua barbearia sem interrupcoes.\n\n` +
           `Entre em contato se precisar de ajuda.`;
       }
 
