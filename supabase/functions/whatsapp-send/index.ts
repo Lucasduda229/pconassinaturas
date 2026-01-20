@@ -16,7 +16,7 @@ interface SendMessageRequest {
 }
 
 // Default promo image URL
-const DEFAULT_IMAGE_URL = "https://pconassinaturas.lovable.app/images/whatsapp-promo.png";
+const DEFAULT_IMAGE_URL = "https://pconassinaturas.lovable.app/images/whatsapp-promo-v2.png";
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
