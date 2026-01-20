@@ -31,21 +31,22 @@ export const useWhatsAppReminder = () => {
 
       if (type === 'subscription') {
         message = `Ola ${clientName}! 💈\n\n` +
-          `Passando para lembrar que sua assinatura${description ? ` do *${description}*` : ''} no valor de *R$ ${formattedAmount}* vence amanha.\n\n` +
+          `Passando para lembrar que a fatura referente a sua assinatura ativa${description ? ` do *${description}*` : ''} no valor de *R$ ${formattedAmount}* vence amanha.\n\n` +
+          `Voce pode acessar os detalhes da sua assinatura no seu perfil de cliente.\n\n` +
           `Mantenha seu acesso ao sistema de agendamento da barbearia em dia!\n\n` +
           `Qualquer duvida, estamos a disposicao.`;
       } else if (type === 'payment') {
         message = `Ola ${clientName}! 💈\n\n` +
-          `Sua fatura no valor de *R$ ${formattedAmount}*` +
-          (description ? ` referente a *${description}*` : '') + ` esta pendente e vence amanha.\n\n` +
-          `Mantenha o sistema de agendamento da sua barbearia funcionando!\n\n` +
+          `A fatura referente a sua assinatura ativa no valor de *R$ ${formattedAmount}*` +
+          (description ? ` (*${description}*)` : '') + ` esta pendente e vence amanha.\n\n` +
+          `Acesse seu perfil de cliente para mais detalhes sobre sua assinatura.\n\n` +
           `Qualquer duvida, estamos a disposicao.`;
       } else if (type === 'overdue') {
         message = `Ola ${clientName}! 💈\n\n` +
-          `⚠️ Sua assinatura de *R$ ${formattedAmount}*` +
-          (description ? ` referente a *${description}*` : '') +
+          `⚠️ A fatura referente a sua assinatura ativa de *R$ ${formattedAmount}*` +
+          (description ? ` (*${description}*)` : '') +
           ` esta vencida.\n\n` +
-          `Regularize o pagamento para continuar usando o sistema de agendamento da sua barbearia sem interrupcoes.\n\n` +
+          `Regularize o pagamento para manter sua assinatura em dia. Acesse seu perfil de cliente para mais informacoes.\n\n` +
           `Entre em contato se precisar de ajuda.`;
       }
 
