@@ -210,7 +210,7 @@ const Referrals = () => {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
-    doc.text('P-CON CONSTRUCT', 105, 25, { align: 'center' });
+    doc.text('P-CON CONSTRUNET', 105, 25, { align: 'center' });
     
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
@@ -307,7 +307,7 @@ const Referrals = () => {
     doc.setTextColor(100, 100, 100);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.text('Este cupom pode ser utilizado em projetos e serviços futuros da P-CON Construct.', 105, 250, { align: 'center' });
+    doc.text('Este cupom pode ser utilizado em projetos e serviços futuros da P-CON Construnet.', 105, 250, { align: 'center' });
     doc.text('Documento gerado automaticamente pelo sistema.', 105, 258, { align: 'center' });
     doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 105, 266, { align: 'center' });
 
