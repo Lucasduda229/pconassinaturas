@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { jsPDF } from 'jspdf';
 import {
   Link2,
   MousePointerClick,
@@ -25,6 +26,7 @@ import {
   Wand2,
   Percent,
   ArrowRight,
+  FileText,
 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -189,6 +191,129 @@ const Referrals = () => {
     };
     const config = configs[status] || { label: status, className: 'bg-muted' };
     return <Badge className={`${config.className} border`}>{config.label}</Badge>;
+  };
+
+  const generateCouponPDF = (reward: ReferralReward) => {
+    const doc = new jsPDF();
+    const clientName = reward.referral_link?.client?.name || 'Cliente';
+    const leadName = reward.referral_lead?.lead_name || 'Lead';
+    const amount = Number(reward.amount);
+    const createdDate = format(new Date(reward.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+    const paidDate = reward.paid_at 
+      ? format(new Date(reward.paid_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+      : '-';
+
+    // Header
+    doc.setFillColor(20, 30, 50);
+    doc.rect(0, 0, 210, 50, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text('P-CON CONSTRUCT', 105, 25, { align: 'center' });
+    
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text('COMPROVANTE DE CUPOM DE INDICAÇÃO', 105, 38, { align: 'center' });
+
+    // Content
+    doc.setTextColor(50, 50, 50);
+    
+    // Box with info
+    doc.setDrawColor(100, 100, 200);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(20, 60, 170, 100, 5, 5);
+
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DETALHES DO CUPOM', 105, 75, { align: 'center' });
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    
+    let y = 90;
+    const lineHeight = 10;
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Indicador:', 30, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(clientName, 80, y);
+    y += lineHeight;
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Lead Convertido:', 30, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(leadName, 80, y);
+    y += lineHeight;
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Tipo:', 30, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(reward.reward_type === 'coupon' ? 'Cupom de Desconto' : 'Dinheiro (PIX)', 80, y);
+    y += lineHeight;
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Valor:', 30, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 150, 50);
+    doc.text(formatCurrency(amount), 80, y);
+    doc.setTextColor(50, 50, 50);
+    y += lineHeight;
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Data Criação:', 30, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(createdDate, 80, y);
+    y += lineHeight;
+
+    if (reward.status === 'paid') {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Data Pagamento:', 30, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(paidDate, 80, y);
+    }
+
+    // Description box
+    if (reward.description || reward.reward_type === 'coupon') {
+      y = 175;
+      doc.setFillColor(240, 240, 255);
+      doc.roundedRect(20, y, 170, 30, 3, 3, 'F');
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Descrição:', 30, y + 12);
+      doc.setFont('helvetica', 'normal');
+      doc.text(reward.description || 'Cupom de desconto para projetos futuros', 30, y + 22);
+    }
+
+    // Status badge
+    const statusY = 220;
+    if (reward.status === 'paid') {
+      doc.setFillColor(0, 180, 100);
+    } else if (reward.status === 'approved') {
+      doc.setFillColor(50, 100, 200);
+    } else {
+      doc.setFillColor(200, 150, 50);
+    }
+    doc.roundedRect(70, statusY, 70, 15, 3, 3, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    const statusText = reward.status === 'paid' ? 'PAGO' : reward.status === 'approved' ? 'APROVADO' : 'PENDENTE';
+    doc.text(statusText, 105, statusY + 10, { align: 'center' });
+
+    // Footer
+    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Este cupom pode ser utilizado em projetos e serviços futuros da P-CON Construct.', 105, 250, { align: 'center' });
+    doc.text('Documento gerado automaticamente pelo sistema.', 105, 258, { align: 'center' });
+    doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 105, 266, { align: 'center' });
+
+    // Save
+    doc.save(`comprovante-cupom-${clientName.replace(/\s+/g, '-').toLowerCase()}-${leadName.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+    toast.success('PDF gerado com sucesso!');
   };
 
   const filteredLinks = links.filter((link) =>
@@ -769,10 +894,15 @@ const Referrals = () => {
                                   </Button>
                                 )}
                                 {reward.status === 'paid' && (
-                                  <Badge className="bg-success/20 text-success border-success/30 border">
-                                    <CheckCircle className="h-3 w-3 mr-1" />
-                                    Pago
-                                  </Badge>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => generateCouponPDF(reward)}
+                                    className="gap-1"
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                    <span className="hidden sm:inline">PDF</span>
+                                  </Button>
                                 )}
                                 <Button
                                   variant="ghost"
