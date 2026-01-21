@@ -61,7 +61,7 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { useReferrals, ReferralLead, ReferralReward } from '@/hooks/useReferrals';
 import { useGlobalData } from '@/contexts/GlobalDataContext';
-import logoWhite from '@/assets/logo-asaas-white.png';
+
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', {
@@ -194,7 +194,7 @@ const Referrals = () => {
     return <Badge className={`${config.className} border`}>{config.label}</Badge>;
   };
 
-  const generateCouponPDF = async (reward: ReferralReward) => {
+  const generateCouponPDF = (reward: ReferralReward) => {
     const doc = new jsPDF();
     const clientName = reward.referral_link?.client?.name || 'Cliente';
     const leadName = reward.referral_lead?.lead_name || 'Lead';
@@ -204,36 +204,18 @@ const Referrals = () => {
       ? format(new Date(reward.paid_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
       : '-';
 
-    // Header background
+    // Header
     doc.setFillColor(20, 30, 50);
-    doc.rect(0, 0, 210, 55, 'F');
-
-    // Load and add logo
-    try {
-      const response = await fetch('/images/logo-pcon-white.png');
-      if (response.ok) {
-        const blob = await response.blob();
-        const reader = new FileReader();
-        reader.onload = () => {
-          const base64 = reader.result as string;
-          doc.addImage(base64, 'PNG', 75, 8, 60, 18);
-          finishPDF();
-        };
-        reader.readAsDataURL(blob);
-        return;
-      }
-    } catch (e) {
-      console.log('Logo not found, using text only');
-    }
+    doc.rect(0, 0, 210, 50, 'F');
     
-    finishPDF();
-
-    function finishPDF() {
-      // Title text (fallback or below logo)
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text('COMPROVANTE DE CUPOM DE INDICAÇÃO', 105, 45, { align: 'center' });
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text('P-CON CONSTRUNET', 105, 25, { align: 'center' });
+    
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text('COMPROVANTE DE CUPOM DE INDICAÇÃO', 105, 38, { align: 'center' });
 
     // Content
     doc.setTextColor(50, 50, 50);
@@ -333,7 +315,6 @@ const Referrals = () => {
     // Save
     doc.save(`comprovante-cupom-${clientName.replace(/\s+/g, '-').toLowerCase()}-${leadName.replace(/\s+/g, '-').toLowerCase()}.pdf`);
     toast.success('PDF gerado com sucesso!');
-    }
   };
 
   const filteredLinks = links.filter((link) =>
