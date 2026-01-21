@@ -338,6 +338,8 @@ export type Database = {
           description: string | null
           id: string
           initial_amount: number
+          origin: string | null
+          referral_reward_id: string | null
           status: string
           updated_at: string
         }
@@ -348,6 +350,8 @@ export type Database = {
           description?: string | null
           id?: string
           initial_amount?: number
+          origin?: string | null
+          referral_reward_id?: string | null
           status?: string
           updated_at?: string
         }
@@ -358,6 +362,8 @@ export type Database = {
           description?: string | null
           id?: string
           initial_amount?: number
+          origin?: string | null
+          referral_reward_id?: string | null
           status?: string
           updated_at?: string
         }
