@@ -9,9 +9,13 @@ export interface ClientCoupon {
   current_balance: number;
   description: string | null;
   status: 'active' | 'used' | 'expired';
+  origin: 'manual' | 'referral';
+  referral_reward_id: string | null;
   created_at: string;
   updated_at: string;
   client_name?: string;
+  client_phone?: string;
+  lead_name?: string;
 }
 
 export interface CouponTransaction {
@@ -41,21 +45,58 @@ export const useClientCoupons = (clientId?: string) => {
       const { data, error } = await query;
       if (error) throw error;
 
-      // Fetch client names
+      // Fetch client names and phones
       const clientIds = [...new Set((data || []).map((c: any) => c.client_id))];
       if (clientIds.length > 0) {
         const { data: clients } = await supabase
           .from('clients')
-          .select('id, name')
+          .select('id, name, phone')
           .in('id', clientIds);
 
-        const clientMap = new Map((clients || []).map(c => [c.id, c.name]));
+        const clientMap = new Map((clients || []).map(c => [c.id, { name: c.name, phone: c.phone }]));
+
+        // Fetch referral lead names for coupons with referral_reward_id
+        const rewardIds = (data || [])
+          .map((c: any) => c.referral_reward_id)
+          .filter(Boolean);
+
+        let leadMap = new Map();
+        if (rewardIds.length > 0) {
+          const { data: rewards } = await supabase
+            .from('referral_rewards')
+            .select('id, referral_lead_id')
+            .in('id', rewardIds);
+
+          const leadIds = (rewards || []).map((r: any) => r.referral_lead_id);
+          if (leadIds.length > 0) {
+            const { data: leads } = await supabase
+              .from('referral_leads')
+              .select('id, lead_name')
+              .in('id', leadIds);
+
+            const leadIdMap = new Map((rewards || []).map((r: any) => [r.id, r.referral_lead_id]));
+            const leadNameMap = new Map((leads || []).map((l: any) => [l.id, l.lead_name]));
+
+            rewardIds.forEach((rewardId: string) => {
+              const leadId = leadIdMap.get(rewardId);
+              if (leadId) {
+                leadMap.set(rewardId, leadNameMap.get(leadId));
+              }
+            });
+          }
+        }
         
-        const couponsWithNames = (data || []).map((coupon: any) => ({
-          ...coupon,
-          status: coupon.status as 'active' | 'used' | 'expired',
-          client_name: clientMap.get(coupon.client_id) || 'N/A'
-        }));
+        const couponsWithNames = (data || []).map((coupon: any) => {
+          const clientInfo = clientMap.get(coupon.client_id);
+          return {
+            ...coupon,
+            status: coupon.status as 'active' | 'used' | 'expired',
+            origin: coupon.origin || 'manual',
+            client_name: clientInfo?.name || 'N/A',
+            client_phone: clientInfo?.phone || null,
+            lead_name: coupon.referral_reward_id ? leadMap.get(coupon.referral_reward_id) : null,
+          };
+        });
         
         setCoupons(couponsWithNames);
       } else {
@@ -89,6 +130,8 @@ export const useClientCoupons = (clientId?: string) => {
     client_id: string;
     initial_amount: number;
     description?: string;
+    origin?: 'manual' | 'referral';
+    referral_reward_id?: string;
   }) => {
     try {
       const { data, error } = await supabase
@@ -99,6 +142,8 @@ export const useClientCoupons = (clientId?: string) => {
           current_balance: coupon.initial_amount,
           description: coupon.description || null,
           status: 'active',
+          origin: coupon.origin || 'manual',
+          referral_reward_id: coupon.referral_reward_id || null,
         })
         .select()
         .single();
