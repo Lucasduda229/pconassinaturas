@@ -20,6 +20,7 @@ import Contracts from "./pages/Contracts";
 import Referrals from "./pages/Referrals";
 import Affiliates from "./pages/Affiliates";
 import Implementations from "./pages/Implementations";
+import ClientCoupons from "./pages/ClientCoupons";
 import ReferralLanding from "./pages/ReferralLanding";
 
 import ClientLogin from "./pages/ClientLogin";
@@ -59,7 +60,7 @@ const App = () => (
                   <Route path="/referrals" element={<ProtectedRoute><Referrals /></ProtectedRoute>} />
                   <Route path="/affiliates" element={<ProtectedRoute><Affiliates /></ProtectedRoute>} />
                   <Route path="/implementations" element={<ProtectedRoute><Implementations /></ProtectedRoute>} />
-                  
+                  <Route path="/coupons" element={<ProtectedRoute><ClientCoupons /></ProtectedRoute>} />
                   {/* Referral Landing Page (Public) - Clients */}
                   <Route path="/r/:slug" element={<ReferralLanding />} />
                   

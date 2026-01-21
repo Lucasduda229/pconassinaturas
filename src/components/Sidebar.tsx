@@ -12,7 +12,8 @@ import {
   FileSignature,
   Gift,
   UserPlus,
-  Rocket
+  Rocket,
+  Ticket
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminNotifications } from '@/hooks/useAdminNotifications';
@@ -28,6 +29,7 @@ const navItems = [
   { icon: FileSignature, label: 'Contratos', path: '/contracts' },
   { icon: FileText, label: 'Notas Fiscais', path: '/invoices' },
   { icon: Rocket, label: 'Implantações', path: '/implementations' },
+  { icon: Ticket, label: 'Cupons', path: '/coupons' },
   { icon: Gift, label: 'Indicações', path: '/referrals' },
   { icon: UserPlus, label: 'Afiliados', path: '/affiliates' },
 ];
