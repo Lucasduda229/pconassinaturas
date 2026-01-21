@@ -330,6 +330,39 @@ export type Database = {
         }
         Relationships: []
       }
+      client_coupons: {
+        Row: {
+          client_id: string
+          created_at: string
+          current_balance: number
+          description: string | null
+          id: string
+          initial_amount: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          current_balance?: number
+          description?: string | null
+          id?: string
+          initial_amount?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          current_balance?: number
+          description?: string | null
+          id?: string
+          initial_amount?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       client_sessions: {
         Row: {
           client_user_id: string
@@ -517,6 +550,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      coupon_transactions: {
+        Row: {
+          amount: number
+          coupon_id: string
+          created_at: string
+          description: string
+          id: string
+        }
+        Insert: {
+          amount: number
+          coupon_id: string
+          created_at?: string
+          description: string
+          id?: string
+        }
+        Update: {
+          amount?: number
+          coupon_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+        }
+        Relationships: []
       }
       implementation_requests: {
         Row: {
