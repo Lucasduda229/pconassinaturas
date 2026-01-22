@@ -326,6 +326,16 @@ export const GlobalDataProvider = ({ children }: { children: ReactNode }) => {
   // CRUD - Payments
   const markPaymentAsPaid = async (id: string): Promise<boolean> => {
     try {
+      // First get the payment details with client info
+      const { data: paymentData, error: fetchError } = await supabase
+        .from('payments')
+        .select('*, clients(id, name, phone)')
+        .eq('id', id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Update payment status
       const { error } = await supabase
         .from('payments')
         .update({ 
@@ -335,6 +345,34 @@ export const GlobalDataProvider = ({ children }: { children: ReactNode }) => {
         .eq('id', id);
 
       if (error) throw error;
+
+      // Send WhatsApp confirmation if client has phone
+      const client = paymentData?.clients;
+      if (client?.phone) {
+        const formattedAmount = paymentData?.amount 
+          ? `R$ ${paymentData.amount.toFixed(2).replace(".", ",")}`
+          : '';
+        
+        try {
+          await supabase.functions.invoke('whatsapp-send', {
+            body: {
+              phone: client.phone,
+              message: `Ola ${client.name}! 💈\n\n` +
+                `✅ *Pagamento confirmado!*\n\n` +
+                `Recebemos seu pagamento de *${formattedAmount}* com sucesso.\n\n` +
+                `Obrigado por manter sua assinatura em dia!\n\n` +
+                `📱 *Acesse sua area do cliente:*\nhttps://www.assinaturaspcon.sbs/cliente\n\n` +
+                `Qualquer duvida, estamos a disposicao.`,
+              clientId: client.id,
+              type: 'payment_confirmed_manual'
+            }
+          });
+        } catch (whatsappError) {
+          console.error('Error sending WhatsApp:', whatsappError);
+          // Don't fail the payment update if WhatsApp fails
+        }
+      }
+
       toast.success('Pagamento marcado como pago!');
       await fetchPayments(); // Refresh data
       return true;
