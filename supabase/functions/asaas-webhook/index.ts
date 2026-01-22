@@ -6,6 +6,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const CLIENT_AREA_URL = "https://www.assinaturaspcon.sbs/cliente";
+const PROMO_IMAGE_URL = "https://pconassinaturas.lovable.app/images/whatsapp-promo-v2.png";
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -64,6 +67,72 @@ serve(async (req) => {
       } catch (err) {
         console.error("Error in createNotification:", err);
       }
+    };
+
+    // Helper function to send WhatsApp message
+    const sendWhatsAppMessage = async (clientId: string, phone: string, message: string, messageType: string) => {
+      try {
+        const apiKey = Deno.env.get("BTZAP_API_KEY");
+        const instanceId = Deno.env.get("BTZAP_INSTANCE_ID");
+
+        if (!apiKey || !instanceId) {
+          console.log("BTZap not configured, skipping WhatsApp message");
+          return;
+        }
+
+        // Format phone number
+        let formattedPhone = phone.replace(/\D/g, "");
+        if (!formattedPhone.startsWith("55")) {
+          formattedPhone = "55" + formattedPhone;
+        }
+
+        const cacheBustedImageUrl = `${PROMO_IMAGE_URL}?v=${Date.now()}`;
+
+        const response = await fetch("https://adm.btzap.com.br/api/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            number: formattedPhone,
+            type: "image",
+            message: message,
+            media_url: cacheBustedImageUrl,
+            instance_id: instanceId,
+            access_token: apiKey,
+          }),
+        });
+
+        const result = await response.json();
+        console.log(`WhatsApp ${messageType} sent to ${formattedPhone}:`, result.status);
+
+        if (result.status === "success") {
+          await supabase.from("whatsapp_messages").insert({
+            client_id: clientId,
+            phone: formattedPhone,
+            message: message,
+            message_type: messageType,
+            btzap_message_id: result.message?.key?.id || null,
+            remote_jid: result.message?.key?.remoteJid || null,
+            status: "sent",
+          });
+        }
+      } catch (err) {
+        console.error("Error sending WhatsApp message:", err);
+      }
+    };
+
+    // Helper function to get client data
+    const getClientData = async (clientId: string) => {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id, name, phone")
+        .eq("id", clientId)
+        .maybeSingle();
+      
+      if (error) {
+        console.error("Error getting client data:", error);
+        return null;
+      }
+      return data;
     };
 
     // Helper function to get subscription by asaas_id
@@ -233,6 +302,28 @@ serve(async (req) => {
             "payment_received",
             `Pagamento de ${amount} recebido com sucesso! Fatura ${invoiceNumber} gerada.`
           );
+
+          // Send WhatsApp confirmation message
+          const clientData = await getClientData(clientId);
+          if (clientData?.phone) {
+            const formattedAmount = payment?.value ? 
+              `R$ ${payment.value.toFixed(2).replace(".", ",")}` : '';
+            
+            const whatsappMessage = `Ola ${clientData.name}! 💈\n\n` +
+              `✅ *Pagamento confirmado!*\n\n` +
+              `Recebemos seu pagamento de *${formattedAmount}* com sucesso.\n\n` +
+              `📄 *Fatura:* ${invoiceNumber}\n\n` +
+              `Obrigado por manter sua assinatura em dia!\n\n` +
+              `📱 *Acesse sua area do cliente:*\n${CLIENT_AREA_URL}\n\n` +
+              `Qualquer duvida, estamos a disposicao.`;
+
+            await sendWhatsAppMessage(
+              clientId,
+              clientData.phone,
+              whatsappMessage,
+              "payment_confirmed"
+            );
+          }
         }
         break;
       }
