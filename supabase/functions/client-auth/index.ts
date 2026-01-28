@@ -6,6 +6,85 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const ASAAS_API_KEY = Deno.env.get("ASAAS_API_KEY");
+const ASAAS_BASE_URL = "https://api.asaas.com/v3";
+
+// Helper function to sync customer to ASAAS
+async function syncCustomerToAsaas(client: { id: string; name: string; email: string; phone?: string | null; document?: string | null }): Promise<{ success: boolean; asaasId?: string; error?: string }> {
+  if (!ASAAS_API_KEY) {
+    console.log('ASAAS_API_KEY not configured, skipping sync');
+    return { success: false, error: 'ASAAS not configured' };
+  }
+
+  try {
+    // First check if customer already exists by email
+    const searchResponse = await fetch(
+      `${ASAAS_BASE_URL}/customers?email=${encodeURIComponent(client.email)}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'access_token': ASAAS_API_KEY,
+        },
+      }
+    );
+
+    const searchData = await searchResponse.json();
+    
+    if (searchData.data && searchData.data.length > 0) {
+      console.log('Customer already exists in ASAAS:', searchData.data[0].id);
+      return { success: true, asaasId: searchData.data[0].id };
+    }
+
+    // Build customer payload
+    const customerPayload: any = {
+      name: client.name,
+      email: client.email,
+      externalReference: client.id,
+    };
+
+    // Add phone if valid
+    if (client.phone) {
+      const cleanPhone = client.phone.replace(/\D/g, '');
+      if (cleanPhone.length >= 10) {
+        customerPayload.phone = cleanPhone;
+      }
+    }
+
+    // Add cpfCnpj if valid (11 or 14 digits)
+    if (client.document) {
+      const cleanDoc = client.document.replace(/\D/g, '');
+      if (cleanDoc.length === 11 || cleanDoc.length === 14) {
+        customerPayload.cpfCnpj = cleanDoc;
+      }
+    }
+
+    console.log('Creating customer in ASAAS:', customerPayload);
+
+    const createResponse = await fetch(`${ASAAS_BASE_URL}/customers`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'access_token': ASAAS_API_KEY,
+      },
+      body: JSON.stringify(customerPayload),
+    });
+
+    const createData = await createResponse.json();
+
+    if (!createResponse.ok) {
+      console.error('ASAAS customer creation error:', createData);
+      return { success: false, error: createData.errors?.[0]?.description || 'Erro ao criar cliente no ASAAS' };
+    }
+
+    console.log('Customer created in ASAAS:', createData.id);
+    return { success: true, asaasId: createData.id };
+  } catch (error) {
+    console.error('Error syncing to ASAAS:', error);
+    return { success: false, error: 'Erro de conexão com ASAAS' };
+  }
+}
+
 // Simple hash function for password (in production, use bcrypt)
 async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -311,13 +390,24 @@ serve(async (req) => {
           );
         }
 
-        console.log('Self-registration completed:', email, 'Client ID:', newClient.id);
+        // Sync client to ASAAS in background
+        const asaasResult = await syncCustomerToAsaas({
+          id: newClient.id,
+          name: newClient.name,
+          email: newClient.email,
+          phone: newClient.phone,
+          document: newClient.document,
+        });
+
+        console.log('Self-registration completed:', email, 'Client ID:', newClient.id, 'ASAAS sync:', asaasResult.success ? asaasResult.asaasId : 'failed');
         
         return new Response(
           JSON.stringify({ 
             success: true, 
             clientId: newClient.id,
             userId: newUser.id,
+            asaasSynced: asaasResult.success,
+            asaasId: asaasResult.asaasId,
             message: 'Cadastro realizado com sucesso!'
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
