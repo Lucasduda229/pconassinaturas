@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useClientAuth } from '@/contexts/ClientAuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Loader2, Lock, Mail, ArrowRight } from 'lucide-react';
+import { Loader2, Lock, Mail, ArrowRight, UserPlus } from 'lucide-react';
 import logo from '@/assets/logo-pcon-grande.png';
 import BlueBackground from '@/components/BlueBackground';
 
@@ -147,12 +147,31 @@ const ClientLogin = () => {
             </motion.div>
           </motion.form>
 
-          {/* Footer */}
+          {/* Link para cadastro */}
           <motion.div 
-            className="mt-8 text-center"
+            className="mt-6 text-center"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.35, duration: 0.4 }}
+          >
+            <p className="text-sm text-muted-foreground mb-2">
+              Ainda não tem conta?
+            </p>
+            <Link 
+              to="/cliente/cadastro" 
+              className="text-sm text-primary hover:text-primary/80 transition-colors inline-flex items-center gap-1 font-medium"
+            >
+              <UserPlus className="h-4 w-4" />
+              Criar minha conta
+            </Link>
+          </motion.div>
+
+          {/* Footer */}
+          <motion.div 
+            className="mt-4 text-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.4 }}
           >
             <p className="text-xs text-muted-foreground/60">
               Pagamentos processados com segurança
