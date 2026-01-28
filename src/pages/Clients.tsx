@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Trash2, RefreshCw, CreditCard, QrCode, FileText, Loader2, Link2, Send, Eye, EyeOff, Pencil, Download, User, Receipt, Calendar, Gift } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Mail, Phone, Trash2, RefreshCw, CreditCard, QrCode, FileText, Loader2, Link2, Send, Eye, EyeOff, Pencil, Download, User, Receipt, Calendar, Gift, Copy } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
@@ -429,6 +429,12 @@ const Clients = () => {
     toast.success('Link copiado!');
   };
 
+  const copyRegisterLink = () => {
+    const registerUrl = 'https://www.assinaturaspcon.sbs/cliente/cadastro';
+    navigator.clipboard.writeText(registerUrl);
+    toast.success('Link de cadastro copiado!');
+  };
+
   const columns = [
     {
       key: 'name',
@@ -541,6 +547,17 @@ const Clients = () => {
         </div>
         
         <div className="flex gap-2 sm:gap-3">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-10 sm:h-11 gap-2 border-border/50 bg-secondary/50"
+            onClick={copyRegisterLink}
+            title="Copiar link de cadastro para novos clientes"
+          >
+            <Copy className="w-4 h-4" />
+            <span className="hidden sm:inline">Link Cadastro</span>
+          </Button>
+          
           <Button 
             variant="outline" 
             size="sm" 
