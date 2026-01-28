@@ -220,6 +220,110 @@ serve(async (req) => {
         );
       }
 
+      case 'self-register': {
+        const { name, email, phone, document, password } = body;
+        
+        if (!name || !email || !password) {
+          return new Response(
+            JSON.stringify({ error: 'Nome, email e senha são obrigatórios' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Check if email already exists in clients
+        const { data: existingClient } = await supabase
+          .from('clients')
+          .select('id')
+          .eq('email', email.toLowerCase())
+          .single();
+
+        if (existingClient) {
+          // Check if client already has a user account
+          const { data: existingUser } = await supabase
+            .from('client_users')
+            .select('id')
+            .eq('client_id', existingClient.id)
+            .single();
+
+          if (existingUser) {
+            return new Response(
+              JSON.stringify({ error: 'Este email já possui uma conta. Faça login.' }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        }
+
+        // Check if email already exists in client_users
+        const { data: existingUserByEmail } = await supabase
+          .from('client_users')
+          .select('id')
+          .eq('email', email.toLowerCase())
+          .single();
+
+        if (existingUserByEmail) {
+          return new Response(
+            JSON.stringify({ error: 'Este email já está cadastrado' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Create the client first
+        const { data: newClient, error: clientCreateError } = await supabase
+          .from('clients')
+          .insert({
+            name: name.trim(),
+            email: email.toLowerCase().trim(),
+            phone: phone || null,
+            document: document || null,
+            status: 'active'
+          })
+          .select()
+          .single();
+
+        if (clientCreateError) {
+          console.error('Client creation error:', clientCreateError);
+          return new Response(
+            JSON.stringify({ error: 'Erro ao criar cadastro do cliente' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Now create the client user
+        const passwordHash = await hashPassword(password);
+
+        const { data: newUser, error: userCreateError } = await supabase
+          .from('client_users')
+          .insert({
+            client_id: newClient.id,
+            email: email.toLowerCase().trim(),
+            password_hash: passwordHash
+          })
+          .select()
+          .single();
+
+        if (userCreateError) {
+          console.error('User creation error:', userCreateError);
+          // Rollback: delete the client if user creation fails
+          await supabase.from('clients').delete().eq('id', newClient.id);
+          return new Response(
+            JSON.stringify({ error: 'Erro ao criar conta de acesso' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        console.log('Self-registration completed:', email, 'Client ID:', newClient.id);
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            clientId: newClient.id,
+            userId: newUser.id,
+            message: 'Cadastro realizado com sucesso!'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       case 'reset-password': {
         const { clientId, password } = body;
         

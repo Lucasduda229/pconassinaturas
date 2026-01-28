@@ -24,6 +24,7 @@ import ClientCoupons from "./pages/ClientCoupons";
 import ReferralLanding from "./pages/ReferralLanding";
 
 import ClientLogin from "./pages/ClientLogin";
+import ClientRegister from "./pages/ClientRegister";
 import ClientImplementations from "./pages/ClientImplementations";
 import Checkout from "./pages/Checkout";
 
@@ -66,6 +67,7 @@ const App = () => (
                   
                   {/* Client Routes */}
                   <Route path="/cliente" element={<ClientLogin />} />
+                  <Route path="/cliente/cadastro" element={<ClientRegister />} />
                   <Route path="/cliente/implantacoes" element={<ClientImplementations />} />
                   <Route path="/checkout" element={<Checkout />} />
                   
