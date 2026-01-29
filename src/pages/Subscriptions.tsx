@@ -42,7 +42,7 @@ import { useGlobalData, Subscription } from '@/contexts/GlobalDataContext';
 import { useAsaas } from '@/hooks/useAsaas';
 import { supabase } from '@/integrations/supabase/client';
 import { differenceInDays, isPast, isToday, format, addDays } from 'date-fns';
-import { formatBrazilDate, formatDateForInput, inputDateToISO, toBrazilTime } from '@/utils/dateUtils';
+import { formatBrazilDate, formatDateForInput, inputDateToISO, normalizeInputDate, toBrazilTime } from '@/utils/dateUtils';
 import { toast } from 'sonner';
 import { useWhatsAppReminder } from '@/hooks/useWhatsAppReminder';
 
@@ -106,11 +106,12 @@ const Subscriptions = () => {
       }
 
       // Create subscription in Asaas
+      const normalizedDate = normalizeInputDate(newSubscription.dueDate);
       const asaasSubscription = await createAsaasSubscription({
         customer: asaasCustomerId,
         billingType: 'PIX',
         value: parseFloat(newSubscription.value),
-        nextDueDate: newSubscription.dueDate,
+        nextDueDate: normalizedDate,
         cycle: 'MONTHLY',
         description: newSubscription.planName,
       });
@@ -169,11 +170,12 @@ const Subscriptions = () => {
       }
 
       // Create the payment in ASAAS
+      const normalizedChargeDate = normalizeInputDate(newCharge.dueDate);
       const asaasPayment = await createPayment({
         customer: customer.id,
         billingType: newCharge.billingType,
         value: parseFloat(newCharge.value),
-        dueDate: newCharge.dueDate,
+        dueDate: normalizedChargeDate,
         description: newCharge.description || `Cobrança para ${selectedClient.name}`,
       });
 
@@ -188,7 +190,7 @@ const Subscriptions = () => {
             payment_method: newCharge.billingType,
             description: newCharge.description || `Cobrança única para ${selectedClient.name}`,
             asaas_id: asaasPayment.id,
-            due_date: new Date(newCharge.dueDate).toISOString(),
+            due_date: inputDateToISO(newCharge.dueDate),
           });
 
         if (error) {
