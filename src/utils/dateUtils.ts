@@ -90,11 +90,12 @@ export const formatDateForInput = (date: Date | string): string => {
 
 /**
  * Converte uma data de input type="date" para ISO string segura
+ * Mantém a data exata selecionada sem alterações de timezone
  */
 export const inputDateToISO = (inputDate: string): string => {
   if (!inputDate) return '';
   
   // inputDate está no formato yyyy-MM-dd
-  // Adiciona horário de meio-dia para evitar problemas de timezone
-  return new Date(inputDate + 'T12:00:00').toISOString();
+  // Retorna diretamente com horário de meio-dia UTC para garantir que a data não mude
+  return `${inputDate}T12:00:00.000Z`;
 };
