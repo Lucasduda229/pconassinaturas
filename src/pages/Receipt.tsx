@@ -14,9 +14,9 @@ const Receipt = () => {
   const { data: coupon, isLoading, error } = useQuery({
     queryKey: ['receipt', id],
     queryFn: async () => {
-      // Try to find as a coupon first
-      const { data: couponData, error: couponError } = await supabase
-        .from('client_coupons')
+      // Try to find as a coupon first - cast to bypass TypeScript issues
+      const { data: couponData, error: couponError } = await (supabase
+        .from('client_coupons') as any)
         .select('*')
         .eq('id', id)
         .maybeSingle();
