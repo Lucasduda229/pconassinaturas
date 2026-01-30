@@ -27,6 +27,63 @@ const playNotificationSound = () => {
   }
 };
 
+// Solicitar permissão para notificações push web
+const requestNotificationPermission = async (): Promise<boolean> => {
+  if (!('Notification' in window)) {
+    console.log('Este navegador não suporta notificações web');
+    return false;
+  }
+  
+  if (Notification.permission === 'granted') {
+    return true;
+  }
+  
+  if (Notification.permission !== 'denied') {
+    const permission = await Notification.requestPermission();
+    return permission === 'granted';
+  }
+  
+  return false;
+};
+
+// Função para exibir notificação push web
+const showWebPushNotification = async (title: string, message: string, category: string) => {
+  const hasPermission = await requestNotificationPermission();
+  
+  if (!hasPermission) return;
+  
+  const categoryIcons: Record<string, string> = {
+    implementations: '🚀',
+    referrals: '🎁',
+    affiliates: '👥',
+    payments: '💰'
+  };
+  
+  const icon = categoryIcons[category] || '🔔';
+  
+  try {
+    const notification = new Notification(`${icon} ${title}`, {
+      body: message,
+      icon: '/pwa-192x192.png',
+      badge: '/pwa-192x192.png',
+      tag: `admin-notification-${Date.now()}`,
+      requireInteraction: false,
+      silent: false // permite que o sistema toque seu próprio som
+    });
+    
+    // Fechar automaticamente após 5 segundos
+    setTimeout(() => notification.close(), 5000);
+    
+    // Focar na janela quando clicar na notificação
+    notification.onclick = () => {
+      window.focus();
+      notification.close();
+    };
+  } catch (error) {
+    console.log('Erro ao exibir notificação push:', error);
+  }
+};
+
 export interface AdminNotification {
   id: string;
   type: string;
@@ -189,6 +246,13 @@ export const useAdminNotifications = () => {
           
           // Tocar som de notificação
           playNotificationSound();
+          
+          // Exibir notificação push web nativa
+          showWebPushNotification(
+            newNotification.title,
+            newNotification.message,
+            newNotification.category
+          );
           
           showNewNotificationToast(newNotification);
         }
