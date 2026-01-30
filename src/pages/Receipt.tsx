@@ -15,7 +15,7 @@ const Receipt = () => {
     queryKey: ['receipt', id],
     queryFn: async () => {
       // Try to find as a coupon first
-      const { data: couponData, error: couponError } = await supabase
+      const { data: couponData } = await supabase
         .from('client_coupons')
         .select(`
           *,
@@ -29,7 +29,7 @@ const Receipt = () => {
       }
 
       // Try as referral reward
-      const { data: rewardData, error: rewardError } = await supabase
+      const { data: rewardData } = await supabase
         .from('referral_rewards')
         .select(`
           *,
@@ -60,6 +60,68 @@ const Receipt = () => {
 
       if (affiliateRewardData) {
         return { type: 'affiliate_reward', data: affiliateRewardData };
+      }
+
+      // Try as referral lead - find the associated reward
+      const { data: leadData } = await supabase
+        .from('referral_leads')
+        .select(`
+          *,
+          referral_links:referral_link_id (
+            clients:client_id (name, email)
+          )
+        `)
+        .eq('id', id)
+        .maybeSingle();
+
+      if (leadData) {
+        // Find associated reward
+        const { data: leadReward } = await supabase
+          .from('referral_rewards')
+          .select(`*`)
+          .eq('referral_lead_id', id)
+          .maybeSingle();
+
+        return { 
+          type: 'lead', 
+          data: { 
+            ...leadData, 
+            reward: leadReward,
+            amount: leadReward?.amount || 0,
+            status: leadReward?.status || 'pending'
+          } 
+        };
+      }
+
+      // Try as affiliate lead - find the associated reward
+      const { data: affLeadData } = await supabase
+        .from('affiliate_leads')
+        .select(`
+          *,
+          affiliate_links:affiliate_link_id (
+            affiliates:affiliate_id (name, email)
+          )
+        `)
+        .eq('id', id)
+        .maybeSingle();
+
+      if (affLeadData) {
+        // Find associated reward
+        const { data: affLeadReward } = await supabase
+          .from('affiliate_rewards')
+          .select(`*`)
+          .eq('affiliate_lead_id', id)
+          .maybeSingle();
+
+        return { 
+          type: 'affiliate_lead', 
+          data: { 
+            ...affLeadData, 
+            reward: affLeadReward,
+            amount: affLeadReward?.amount || 0,
+            status: affLeadReward?.status || 'pending'
+          } 
+        };
       }
 
       return null;
@@ -253,11 +315,90 @@ const Receipt = () => {
     );
   };
 
+  const renderLeadReceipt = () => {
+    const data = coupon.data as any;
+    const leadName = data.lead_name || "Lead";
+    const ownerName = data.referral_links?.clients?.name || data.affiliate_links?.affiliates?.name || "Indicador";
+
+    return (
+      <Card className="max-w-lg mx-4 bg-card/95 backdrop-blur-sm border-primary/20 shadow-2xl">
+        <CardHeader className="text-center border-b border-border/50 pb-6">
+          <img 
+            src="/images/logo-pcon-white.png" 
+            alt="P-CON" 
+            className="h-12 mx-auto mb-4"
+          />
+          <CardTitle className="text-2xl">Comprovante de Indicação</CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">Programa de Indicações P-CON</p>
+        </CardHeader>
+        <CardContent className="pt-6 space-y-6">
+          <div className="flex items-center gap-3 p-4 bg-muted/30 rounded-lg">
+            <User className="h-5 w-5 text-primary" />
+            <div>
+              <p className="text-sm text-muted-foreground">Indicador</p>
+              <p className="font-medium">{ownerName}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-4 bg-muted/30 rounded-lg">
+            <Gift className="h-5 w-5 text-primary" />
+            <div>
+              <p className="text-sm text-muted-foreground">Lead Indicado</p>
+              <p className="font-medium">{leadName}</p>
+            </div>
+          </div>
+
+          {data.amount > 0 && (
+            <div className="flex items-center gap-3 p-4 bg-green-500/10 rounded-lg border border-green-500/20">
+              <DollarSign className="h-6 w-6 text-green-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Valor da Recompensa</p>
+                <p className="font-bold text-2xl text-green-500">
+                  R$ {data.amount?.toFixed(2) || "0.00"}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 p-4 bg-muted/30 rounded-lg">
+            <CheckCircle className="h-5 w-5 text-primary" />
+            <div>
+              <p className="text-sm text-muted-foreground">Conversão</p>
+              <p className="font-medium">{data.is_converted ? "Convertido" : "Aguardando conversão"}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-4 border-t border-border/50">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                {format(new Date(data.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+              </span>
+            </div>
+            {getStatusBadge(data.status)}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderReceipt = () => {
+    switch (coupon.type) {
+      case 'coupon':
+        return renderCouponReceipt();
+      case 'lead':
+      case 'affiliate_lead':
+        return renderLeadReceipt();
+      default:
+        return renderRewardReceipt();
+    }
+  };
+
   return (
     <div className="relative min-h-screen">
       <BlueBackground />
       <div className="relative z-10 flex min-h-screen items-center justify-center py-8">
-        {coupon.type === 'coupon' ? renderCouponReceipt() : renderRewardReceipt()}
+        {renderReceipt()}
       </div>
     </div>
   );
