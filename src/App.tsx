@@ -34,6 +34,7 @@ import AffiliateDashboard from "./pages/AffiliateDashboard";
 import AffiliateLanding from "./pages/AffiliateLanding";
 
 import NotFound from "./pages/NotFound";
+import Receipt from "./pages/Receipt";
 
 const queryClient = new QueryClient();
 
@@ -82,6 +83,9 @@ const App = () => (
                   <Route path="/afiliado" element={<AffiliateLogin />} />
                   <Route path="/afiliado/cadastro" element={<AffiliateRegister />} />
                   <Route path="/afiliado/dashboard" element={<AffiliateDashboard />} />
+                  
+                  {/* Receipt Route (Public) */}
+                  <Route path="/:id" element={<Receipt />} />
                   
                   <Route path="*" element={<NotFound />} />
                 </Routes>
