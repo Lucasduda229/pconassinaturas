@@ -330,6 +330,56 @@ export function useReferrals() {
       toast.error('Erro ao atualizar recompensa');
       return false;
     }
+
+    // If a coupon-type reward is marked as paid, ensure the client coupon is created
+    // so the public receipt link (/:id) can resolve the coupon record.
+    if (status === 'paid') {
+      try {
+        const { data: rewardData, error: rewardFetchError } = await supabase
+          .from('referral_rewards')
+          .select('id, amount, reward_type, description, referral_link_id, referral_links:referral_link_id (client_id)')
+          .eq('id', rewardId)
+          .maybeSingle();
+
+        if (rewardFetchError) throw rewardFetchError;
+
+        if (rewardData && (rewardData as any).reward_type === 'coupon') {
+          const clientId = (rewardData as any).referral_links?.client_id;
+          if (clientId) {
+            const { data: existingCoupon, error: existingError } = await supabase
+              .from('client_coupons' as any)
+              .select('id')
+              .eq('referral_reward_id', rewardId)
+              .maybeSingle();
+
+            if (existingError) throw existingError;
+
+            if (!existingCoupon) {
+              const amount = Number((rewardData as any).amount || 0);
+              const description = (rewardData as any).description || 'Cupom de desconto para projetos futuros';
+
+              const { error: createCouponError } = await supabase
+                .from('client_coupons' as any)
+                .insert({
+                  client_id: clientId,
+                  initial_amount: amount,
+                  current_balance: amount,
+                  description,
+                  status: 'active',
+                  origin: 'referral',
+                  referral_reward_id: rewardId,
+                });
+
+              if (createCouponError) throw createCouponError;
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Error ensuring client coupon after paid reward:', e);
+        // Don't block the status update UX, but inform the admin.
+        toast.error('Recompensa marcada como paga, mas houve erro ao criar o cupom do cliente');
+      }
+    }
     
     await fetchRewards();
     toast.success('Recompensa atualizada!');
