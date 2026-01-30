@@ -220,6 +220,9 @@ const ClientCoupons = () => {
     const formattedValue = formatCurrency(coupon.initial_amount);
     const formattedDate = format(new Date(coupon.created_at), "dd/MM/yyyy", { locale: ptBR });
     
+    // Link público do comprovante
+    const receiptLink = `https://www.assinaturaspcon.sbs/${coupon.id}`;
+    
     let message = `🎉 *COMPROVANTE DE CUPOM DE DESCONTO* 🎉\n\n`;
     message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
     message += `📋 *P-CON Construct*\n`;
@@ -239,6 +242,7 @@ const ClientCoupons = () => {
     
     message += `\n💳 *Saldo Atual:* ${formatCurrency(coupon.current_balance)}\n`;
     message += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
+    message += `📎 *Ver Comprovante Online:*\n${receiptLink}\n\n`;
     message += `Este cupom pode ser utilizado em projetos e serviços futuros.\n\n`;
     message += `Qualquer dúvida, estamos à disposição! 🙌`;
 
