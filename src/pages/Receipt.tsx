@@ -15,64 +15,67 @@ const Receipt = () => {
     queryKey: ['receipt', id],
     queryFn: async () => {
       // Try to find as a coupon first
-      const { data: couponData } = await supabase
+      const { data: couponData, error: couponError } = await supabase
         .from('client_coupons')
-        .select(`
-          *,
-          clients:client_id (name, email)
-        `)
+        .select('*')
         .eq('id', id)
         .maybeSingle();
+
+      if (couponError) {
+        // Public receipts must not depend on private joins (like clients). Log for debugging.
+        console.error('Receipt coupon query error:', couponError);
+      }
 
       if (couponData) {
         return { type: 'coupon', data: couponData };
       }
 
       // Try as referral reward
-      const { data: rewardData } = await supabase
+      const { data: rewardData, error: rewardError } = await supabase
         .from('referral_rewards')
         .select(`
           *,
-          referral_leads:referral_lead_id (lead_name, lead_email, lead_phone),
-          referral_links:referral_link_id (
-            clients:client_id (name, email)
-          )
+          referral_leads:referral_lead_id (lead_name, lead_email, lead_phone)
         `)
         .eq('id', id)
         .maybeSingle();
+
+      if (rewardError) {
+        console.error('Receipt referral reward query error:', rewardError);
+      }
 
       if (rewardData) {
         return { type: 'reward', data: rewardData };
       }
 
       // Try as affiliate reward
-      const { data: affiliateRewardData } = await supabase
+      const { data: affiliateRewardData, error: affRewardError } = await supabase
         .from('affiliate_rewards')
         .select(`
           *,
-          affiliate_leads:affiliate_lead_id (lead_name, lead_email, lead_phone),
-          affiliate_links:affiliate_link_id (
-            affiliates:affiliate_id (name, email)
-          )
+          affiliate_leads:affiliate_lead_id (lead_name, lead_email, lead_phone)
         `)
         .eq('id', id)
         .maybeSingle();
+
+      if (affRewardError) {
+        console.error('Receipt affiliate reward query error:', affRewardError);
+      }
 
       if (affiliateRewardData) {
         return { type: 'affiliate_reward', data: affiliateRewardData };
       }
 
       // Try as referral lead - find the associated reward
-      const { data: leadData } = await supabase
+      const { data: leadData, error: leadError } = await supabase
         .from('referral_leads')
-        .select(`
-          *,
-          referral_links:referral_link_id (
-            clients:client_id (name, email)
-          )
-        `)
+        .select('*')
         .eq('id', id)
         .maybeSingle();
+
+      if (leadError) {
+        console.error('Receipt referral lead query error:', leadError);
+      }
 
       if (leadData) {
         // Find associated reward
@@ -94,16 +97,15 @@ const Receipt = () => {
       }
 
       // Try as affiliate lead - find the associated reward
-      const { data: affLeadData } = await supabase
+      const { data: affLeadData, error: affLeadError } = await supabase
         .from('affiliate_leads')
-        .select(`
-          *,
-          affiliate_links:affiliate_link_id (
-            affiliates:affiliate_id (name, email)
-          )
-        `)
+        .select('*')
         .eq('id', id)
         .maybeSingle();
+
+      if (affLeadError) {
+        console.error('Receipt affiliate lead query error:', affLeadError);
+      }
 
       if (affLeadData) {
         // Find associated reward
@@ -177,7 +179,7 @@ const Receipt = () => {
 
   const renderCouponReceipt = () => {
     const data = coupon.data as any;
-    const clientName = data.clients?.name || "Cliente";
+    const clientName = "Cliente";
     
     return (
       <Card className="max-w-lg mx-4 bg-card/95 backdrop-blur-sm border-primary/20 shadow-2xl">
@@ -254,7 +256,7 @@ const Receipt = () => {
   const renderRewardReceipt = () => {
     const data = coupon.data as any;
     const leadName = data.referral_leads?.lead_name || data.affiliate_leads?.lead_name || "Lead";
-    const ownerName = data.referral_links?.clients?.name || data.affiliate_links?.affiliates?.name || "Indicador";
+    const ownerName = "Indicador";
 
     return (
       <Card className="max-w-lg mx-4 bg-card/95 backdrop-blur-sm border-primary/20 shadow-2xl">
@@ -318,7 +320,7 @@ const Receipt = () => {
   const renderLeadReceipt = () => {
     const data = coupon.data as any;
     const leadName = data.lead_name || "Lead";
-    const ownerName = data.referral_links?.clients?.name || data.affiliate_links?.affiliates?.name || "Indicador";
+    const ownerName = "Indicador";
 
     return (
       <Card className="max-w-lg mx-4 bg-card/95 backdrop-blur-sm border-primary/20 shadow-2xl">

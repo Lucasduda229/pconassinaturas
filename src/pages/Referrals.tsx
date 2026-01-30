@@ -61,6 +61,7 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { useReferrals, ReferralLead, ReferralReward } from '@/hooks/useReferrals';
 import { useGlobalData } from '@/contexts/GlobalDataContext';
+import { supabase } from '@/integrations/supabase/client';
 
 
 const formatCurrency = (value: number) => {
@@ -118,6 +119,30 @@ const Referrals = () => {
   );
 
   const REFERRAL_DOMAIN = 'https://www.assinaturaspcon.sbs';
+
+  const copyCouponReceiptLinkFromReward = async (rewardId: string) => {
+    try {
+      const { data, error } = await (supabase
+        .from('client_coupons' as any) as any)
+        .select('id')
+        .eq('referral_reward_id', rewardId)
+        .maybeSingle();
+
+      if (error) throw error;
+      const row = data as any;
+      if (!row?.id) {
+        toast.error('Cupom ainda não foi gerado para esta recompensa');
+        return;
+      }
+
+      const url = `${REFERRAL_DOMAIN}/${row.id}`;
+      await navigator.clipboard.writeText(url);
+      toast.success('Link do comprovante copiado!');
+    } catch (e) {
+      console.error('Error copying coupon receipt link:', e);
+      toast.error('Erro ao gerar link do comprovante');
+    }
+  };
 
   const handleCopyLink = (slug: string) => {
     const url = `${REFERRAL_DOMAIN}/r/${slug}`;
@@ -895,15 +920,28 @@ const Referrals = () => {
                                   </Button>
                                 )}
                                 {reward.status === 'paid' && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => generateCouponPDF(reward)}
-                                    className="gap-1"
-                                  >
-                                    <FileText className="h-4 w-4" />
-                                    <span className="hidden sm:inline">PDF</span>
-                                  </Button>
+                                  <>
+                                    {reward.reward_type === 'coupon' && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => copyCouponReceiptLinkFromReward(reward.id)}
+                                        className="gap-1"
+                                      >
+                                        <Link2 className="h-4 w-4" />
+                                        <span className="hidden sm:inline">Link</span>
+                                      </Button>
+                                    )}
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => generateCouponPDF(reward)}
+                                      className="gap-1"
+                                    >
+                                      <FileText className="h-4 w-4" />
+                                      <span className="hidden sm:inline">PDF</span>
+                                    </Button>
+                                  </>
                                 )}
                                 <Button
                                   variant="ghost"
