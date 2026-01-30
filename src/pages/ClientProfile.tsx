@@ -464,25 +464,25 @@ const ClientProfile = () => {
 
       {/* Tabs */}
       <Tabs defaultValue="subscriptions" className="w-full">
-        <TabsList className="w-full sm:w-auto glass-card border-border/50 mb-4 flex-wrap">
-          <TabsTrigger value="subscriptions" className="flex-1 sm:flex-none gap-2">
-            <CreditCard className="w-4 h-4" />
+        <TabsList className="w-full glass-card border-border/50 mb-4 grid grid-cols-4">
+          <TabsTrigger value="subscriptions" className="gap-1 px-2 text-xs sm:text-sm sm:px-3">
+            <CreditCard className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Assinaturas</span>
             <span className="sm:hidden">Planos</span>
           </TabsTrigger>
-          <TabsTrigger value="payments" className="flex-1 sm:flex-none gap-2">
-            <FileText className="w-4 h-4" />
-            <span>Pagamentos</span>
+          <TabsTrigger value="payments" className="gap-1 px-2 text-xs sm:text-sm sm:px-3">
+            <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Pagamentos</span>
+            <span className="sm:hidden">Pag.</span>
           </TabsTrigger>
-          <TabsTrigger value="contracts" className="flex-1 sm:flex-none gap-2">
-            <FileSignature className="w-4 h-4" />
+          <TabsTrigger value="contracts" className="gap-1 px-2 text-xs sm:text-sm sm:px-3">
+            <FileSignature className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Contratos</span>
             <span className="sm:hidden">Docs</span>
           </TabsTrigger>
-          <TabsTrigger value="vault" className="flex-1 sm:flex-none gap-2">
-            <Lock className="w-4 h-4" />
-            <span className="hidden sm:inline">Cofre</span>
-            <span className="sm:hidden">🔒</span>
+          <TabsTrigger value="vault" className="gap-1 px-2 text-xs sm:text-sm sm:px-3">
+            <Lock className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span>Cofre</span>
           </TabsTrigger>
           <TabsTrigger value="rewards" className="flex-1 sm:flex-none gap-2">
             <Gift className="w-4 h-4" />
