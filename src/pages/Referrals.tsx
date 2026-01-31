@@ -27,6 +27,7 @@ import {
   Percent,
   ArrowRight,
   FileText,
+  MessageSquare,
 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -120,7 +121,8 @@ const Referrals = () => {
 
   const REFERRAL_DOMAIN = 'https://www.assinaturaspcon.sbs';
 
-  const copyCouponReceiptLinkFromReward = async (reward: ReferralReward) => {
+  // Helper to get or create coupon for a reward
+  const getOrCreateCouponForReward = async (reward: ReferralReward): Promise<string | null> => {
     try {
       // 1) Try to find the coupon linked to this reward
       const { data: existing, error: existingError } = await (supabase as any)
@@ -138,7 +140,7 @@ const Referrals = () => {
         const clientId = reward.referral_link?.client_id;
         if (!clientId) {
           toast.error('Não foi possível identificar o cliente desta recompensa');
-          return;
+          return null;
         }
 
         const amount = Number(reward.amount || 0);
@@ -163,17 +165,81 @@ const Referrals = () => {
         couponId = (created as any)?.id;
       }
 
+      return couponId || null;
+    } catch (e) {
+      console.error('Error getting/creating coupon:', e);
+      return null;
+    }
+  };
+
+  const copyCouponReceiptLinkFromReward = async (reward: ReferralReward) => {
+    const couponId = await getOrCreateCouponForReward(reward);
+    if (!couponId) {
+      toast.error('Não foi possível gerar o cupom desta recompensa');
+      return;
+    }
+
+    const url = `${REFERRAL_DOMAIN}/${couponId}`;
+    await navigator.clipboard.writeText(url);
+    toast.success('Link do comprovante copiado!');
+  };
+
+  const sendCouponReceiptViaWhatsApp = async (reward: ReferralReward) => {
+    try {
+      const couponId = await getOrCreateCouponForReward(reward);
       if (!couponId) {
         toast.error('Não foi possível gerar o cupom desta recompensa');
         return;
       }
 
-      const url = `${REFERRAL_DOMAIN}/${couponId}`;
-      await navigator.clipboard.writeText(url);
-      toast.success('Link do comprovante copiado!');
+      // Get client phone
+      const clientId = reward.referral_link?.client_id;
+      const client = clients.find(c => c.id === clientId);
+      
+      if (!client?.phone) {
+        toast.error('Cliente não possui telefone cadastrado');
+        return;
+      }
+
+      const amount = Number(reward.amount || 0);
+      const receiptUrl = `${REFERRAL_DOMAIN}/${couponId}`;
+      
+      const message = `🎉 *PARABÉNS! CUPOM DE DESCONTO LIBERADO!*
+
+Você recebeu um cupom de *${formatCurrency(amount)}* através do nosso Programa de Indicação!
+
+📋 *Detalhes:*
+• Valor: ${formatCurrency(amount)}
+• Saldo disponível: ${formatCurrency(amount)}
+• Validade: Uso em projetos futuros
+
+🔗 *Acesse seu comprovante:*
+${receiptUrl}
+
+Obrigado por fazer parte da família P-CON! 💙`;
+
+      toast.loading('Enviando via WhatsApp...');
+
+      const { data, error } = await supabase.functions.invoke('whatsapp-send', {
+        body: {
+          phone: client.phone,
+          message,
+          clientId: client.id,
+          type: 'coupon_receipt',
+          sendImage: true,
+        },
+      });
+
+      toast.dismiss();
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Erro ao enviar');
+
+      toast.success('Comprovante enviado via WhatsApp!');
     } catch (e) {
-      console.error('Error copying coupon receipt link:', e);
-      toast.error('Erro ao gerar link do comprovante');
+      toast.dismiss();
+      console.error('Error sending coupon receipt via WhatsApp:', e);
+      toast.error('Erro ao enviar comprovante via WhatsApp');
     }
   };
 
@@ -955,21 +1021,35 @@ const Referrals = () => {
                                 {reward.status === 'paid' && (
                                   <>
                                     {reward.reward_type === 'coupon' && (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => copyCouponReceiptLinkFromReward(reward)}
-                                        className="gap-1"
-                                      >
-                                        <Link2 className="h-4 w-4" />
-                                        <span className="hidden sm:inline">Link</span>
-                                      </Button>
+                                      <>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => sendCouponReceiptViaWhatsApp(reward)}
+                                          className="gap-1 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                          title="Enviar comprovante via WhatsApp"
+                                        >
+                                          <MessageSquare className="h-4 w-4" />
+                                          <span className="hidden sm:inline">WhatsApp</span>
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => copyCouponReceiptLinkFromReward(reward)}
+                                          className="gap-1"
+                                          title="Copiar link do comprovante"
+                                        >
+                                          <Link2 className="h-4 w-4" />
+                                          <span className="hidden sm:inline">Link</span>
+                                        </Button>
+                                      </>
                                     )}
                                     <Button
                                       variant="outline"
                                       size="sm"
                                       onClick={() => generateCouponPDF(reward)}
                                       className="gap-1"
+                                      title="Baixar PDF"
                                     >
                                       <FileText className="h-4 w-4" />
                                       <span className="hidden sm:inline">PDF</span>
