@@ -184,7 +184,7 @@ const Referrals = () => {
     toast.success('Link do comprovante copiado!');
   };
 
-  const sendCouponReceiptViaWhatsApp = async (reward: ReferralReward) => {
+  const openWhatsAppWithCouponReceipt = async (reward: ReferralReward) => {
     try {
       const couponId = await getOrCreateCouponForReward(reward);
       if (!couponId) {
@@ -218,28 +218,20 @@ ${receiptUrl}
 
 Obrigado por fazer parte da família P-CON! 💙`;
 
-      toast.loading('Enviando via WhatsApp...');
+      // Format phone for wa.me (remove non-digits)
+      let formattedPhone = client.phone.replace(/\D/g, '');
+      if (!formattedPhone.startsWith('55')) {
+        formattedPhone = '55' + formattedPhone;
+      }
 
-      const { data, error } = await supabase.functions.invoke('whatsapp-send', {
-        body: {
-          phone: client.phone,
-          message,
-          clientId: client.id,
-          type: 'coupon_receipt',
-          sendImage: true,
-        },
-      });
-
-      toast.dismiss();
-
-      if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || 'Erro ao enviar');
-
-      toast.success('Comprovante enviado via WhatsApp!');
+      // Open WhatsApp with pre-filled message
+      const waUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
+      window.open(waUrl, '_blank');
+      
+      toast.success('WhatsApp aberto!');
     } catch (e) {
-      toast.dismiss();
-      console.error('Error sending coupon receipt via WhatsApp:', e);
-      toast.error('Erro ao enviar comprovante via WhatsApp');
+      console.error('Error opening WhatsApp:', e);
+      toast.error('Erro ao abrir WhatsApp');
     }
   };
 
@@ -1025,7 +1017,7 @@ Obrigado por fazer parte da família P-CON! 💙`;
                                         <Button
                                           variant="outline"
                                           size="sm"
-                                          onClick={() => sendCouponReceiptViaWhatsApp(reward)}
+                                          onClick={() => openWhatsAppWithCouponReceipt(reward)}
                                           className="gap-1 text-green-600 hover:text-green-700 hover:bg-green-50"
                                           title="Enviar comprovante via WhatsApp"
                                         >
