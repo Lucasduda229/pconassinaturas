@@ -120,22 +120,55 @@ const Referrals = () => {
 
   const REFERRAL_DOMAIN = 'https://www.assinaturaspcon.sbs';
 
-  const copyCouponReceiptLinkFromReward = async (rewardId: string) => {
+  const copyCouponReceiptLinkFromReward = async (reward: ReferralReward) => {
     try {
-      const { data, error } = await (supabase
-        .from('client_coupons' as any) as any)
+      // 1) Try to find the coupon linked to this reward
+      const { data: existing, error: existingError } = await (supabase as any)
+        .from('client_coupons')
         .select('id')
-        .eq('referral_reward_id', rewardId)
+        .eq('referral_reward_id', reward.id)
         .maybeSingle();
 
-      if (error) throw error;
-      const row = data as any;
-      if (!row?.id) {
-        toast.error('Cupom ainda não foi gerado para esta recompensa');
+      if (existingError) throw existingError;
+
+      let couponId = (existing as any)?.id as string | undefined;
+
+      // 2) If missing (old data), create it now so the public receipt resolves
+      if (!couponId) {
+        const clientId = reward.referral_link?.client_id;
+        if (!clientId) {
+          toast.error('Não foi possível identificar o cliente desta recompensa');
+          return;
+        }
+
+        const amount = Number(reward.amount || 0);
+        const description = reward.description || settings?.client_reward_description || 'Cupom de desconto para projetos futuros';
+
+        const { data: created, error: createError } = await (supabase as any)
+          .from('client_coupons')
+          .insert({
+            client_id: clientId,
+            initial_amount: amount,
+            current_balance: amount,
+            description,
+            status: 'active',
+            origin: 'referral',
+            referral_reward_id: reward.id,
+          })
+          .select('id')
+          .maybeSingle();
+
+        if (createError) throw createError;
+
+        couponId = (created as any)?.id;
+      }
+
+      if (!couponId) {
+        toast.error('Não foi possível gerar o cupom desta recompensa');
         return;
       }
 
-      const url = `${REFERRAL_DOMAIN}/${row.id}`;
+      const url = `${REFERRAL_DOMAIN}/${couponId}`;
       await navigator.clipboard.writeText(url);
       toast.success('Link do comprovante copiado!');
     } catch (e) {
@@ -925,7 +958,7 @@ const Referrals = () => {
                                       <Button
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => copyCouponReceiptLinkFromReward(reward.id)}
+                                        onClick={() => copyCouponReceiptLinkFromReward(reward)}
                                         className="gap-1"
                                       >
                                         <Link2 className="h-4 w-4" />
