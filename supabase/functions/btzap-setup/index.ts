@@ -206,13 +206,28 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    if (action === "debug") {
+      // Debug action to verify token is being read correctly
+      const tokenPreview = apiToken ? `${apiToken.substring(0, 8)}...${apiToken.substring(apiToken.length - 4)}` : "NOT SET";
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          action: "debug",
+          token_preview: tokenPreview,
+          token_length: apiToken?.length || 0,
+          base_url: UAZAPI_BASE_URL,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     // Default: return current configuration
     return new Response(
       JSON.stringify({ 
         success: true,
         action: "status",
         webhook_url: webhookUrl,
-        available_actions: ["configure_webhook", "get_qrcode", "reconnect", "get_status", "test_send"]
+        available_actions: ["configure_webhook", "get_qrcode", "reconnect", "get_status", "test_send", "debug"]
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
