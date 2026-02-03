@@ -12,8 +12,8 @@ const PROMO_IMAGE_URL = "https://pconassinaturas.lovable.app/images/whatsapp-pro
 // Client area URL
 const CLIENT_AREA_URL = "https://www.assinaturaspcon.sbs/cliente";
 
-// UAZAPI base URL with instance name
-const UAZAPI_BASE_URL = "https://btzap.uazapi.com/P-CON";
+// UAZAPI base URL (token identifies the instance via header)
+const UAZAPI_BASE_URL = "https://btzap.uazapi.com";
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -103,6 +103,7 @@ const handler = async (req: Request): Promise<Response> => {
       "Accept": "application/json",
       "Content-Type": "application/json",
       "token": apiToken,
+      "admintoken": apiToken,
     };
 
     // Helper function to send message with image using UAZAPI
