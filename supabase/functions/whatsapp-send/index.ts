@@ -18,8 +18,8 @@ interface SendMessageRequest {
 // Default promo image URL
 const DEFAULT_IMAGE_URL = "https://pconassinaturas.lovable.app/images/whatsapp-promo-v2.png";
 
-// UAZAPI base URL - will be built with instance ID
-const UAZAPI_DOMAIN = "https://btzap.uazapi.com";
+// UAZAPI base URL
+const UAZAPI_BASE_URL = "https://btzap.uazapi.com";
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -28,18 +28,14 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const apiToken = Deno.env.get("BTZAP_API_KEY");
-    const instanceId = Deno.env.get("BTZAP_INSTANCE_ID");
 
-    if (!apiToken || !instanceId) {
-      console.error("UAZAPI token or instance ID not configured");
+    if (!apiToken) {
+      console.error("UAZAPI token not configured");
       return new Response(
-        JSON.stringify({ success: false, error: "UAZAPI não configurado (token ou instance ID)" }),
+        JSON.stringify({ success: false, error: "UAZAPI não configurado" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
-
-    // Build base URL with instance ID
-    const UAZAPI_BASE_URL = `${UAZAPI_DOMAIN}/${instanceId}`;
 
     const { phone, message, clientId, type, sendImage = true, imageUrl }: SendMessageRequest = await req.json();
 
