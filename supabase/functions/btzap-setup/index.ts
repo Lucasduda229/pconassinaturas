@@ -5,18 +5,20 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// UAZAPI base URL
+const UAZAPI_BASE_URL = "https://btzap.uazapi.com";
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const apiKey = Deno.env.get("BTZAP_API_KEY");
-    const instanceId = Deno.env.get("BTZAP_INSTANCE_ID");
+    const apiToken = Deno.env.get("BTZAP_API_KEY");
 
-    if (!apiKey || !instanceId) {
+    if (!apiToken) {
       return new Response(
-        JSON.stringify({ success: false, error: "BTZap não configurado" }),
+        JSON.stringify({ success: false, error: "UAZAPI não configurado" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -28,25 +30,27 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const webhookUrl = `${supabaseUrl}/functions/v1/btzap-webhook`;
 
+    // Headers for UAZAPI
+    const uazapiHeaders = {
+      "Content-Type": "application/json",
+      "token": apiToken,
+    };
+
     if (action === "configure_webhook") {
-      // Configure webhook in BTZap
+      // Configure webhook in UAZAPI
       console.log(`Configuring webhook URL: ${webhookUrl}`);
       
-      // Use POST with form-encoded params as per BTZap docs
-      const params = new URLSearchParams({
-        webhook_url: webhookUrl,
-        enable: "true",
-        instance_id: instanceId,
-        access_token: apiKey,
+      const response = await fetch(`${UAZAPI_BASE_URL}/webhook/set`, {
+        method: "POST",
+        headers: uazapiHeaders,
+        body: JSON.stringify({
+          url: webhookUrl,
+          enabled: true,
+        }),
       });
 
-      const response = await fetch(
-        `https://btzap.uazapi.com/api/set_webhook?${params.toString()}`,
-        { method: "GET" }
-      );
-
       const result = await response.text();
-      console.log("BTZap set_webhook response:", result);
+      console.log("UAZAPI set_webhook response:", result);
 
       let parsedResult;
       try {
@@ -60,7 +64,7 @@ const handler = async (req: Request): Promise<Response> => {
           success: true, 
           action: "configure_webhook",
           webhook_url: webhookUrl,
-          btzap_response: parsedResult 
+          uazapi_response: parsedResult 
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
@@ -70,13 +74,13 @@ const handler = async (req: Request): Promise<Response> => {
       // Get QR code for connection
       console.log("Getting QR code...");
       
-      const response = await fetch(
-        `https://btzap.uazapi.com/api/get_qrcode?instance_id=${instanceId}&access_token=${apiKey}`,
-        { method: "GET" }
-      );
+      const response = await fetch(`${UAZAPI_BASE_URL}/instance/qrcode`, {
+        method: "GET",
+        headers: uazapiHeaders,
+      });
 
       const result = await response.text();
-      console.log("BTZap get_qrcode response:", result);
+      console.log("UAZAPI get_qrcode response:", result);
 
       let parsedResult;
       try {
@@ -89,7 +93,7 @@ const handler = async (req: Request): Promise<Response> => {
         JSON.stringify({ 
           success: true, 
           action: "get_qrcode",
-          btzap_response: parsedResult 
+          uazapi_response: parsedResult 
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
@@ -99,13 +103,13 @@ const handler = async (req: Request): Promise<Response> => {
       // Reconnect instance
       console.log("Reconnecting instance...");
       
-      const response = await fetch(
-        `https://btzap.uazapi.com/api/reconnect?instance_id=${instanceId}&access_token=${apiKey}`,
-        { method: "GET" }
-      );
+      const response = await fetch(`${UAZAPI_BASE_URL}/instance/reconnect`, {
+        method: "POST",
+        headers: uazapiHeaders,
+      });
 
       const result = await response.text();
-      console.log("BTZap reconnect response:", result);
+      console.log("UAZAPI reconnect response:", result);
 
       let parsedResult;
       try {
@@ -118,7 +122,36 @@ const handler = async (req: Request): Promise<Response> => {
         JSON.stringify({ 
           success: true, 
           action: "reconnect",
-          btzap_response: parsedResult 
+          uazapi_response: parsedResult 
+        }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    if (action === "get_status") {
+      // Get instance status
+      console.log("Getting instance status...");
+      
+      const response = await fetch(`${UAZAPI_BASE_URL}/instance/status`, {
+        method: "GET",
+        headers: uazapiHeaders,
+      });
+
+      const result = await response.text();
+      console.log("UAZAPI status response:", result);
+
+      let parsedResult;
+      try {
+        parsedResult = JSON.parse(result);
+      } catch {
+        parsedResult = { raw: result };
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          action: "get_status",
+          uazapi_response: parsedResult 
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
@@ -141,20 +174,17 @@ const handler = async (req: Request): Promise<Response> => {
 
       console.log(`Testing send to: ${formattedPhone}`);
 
-      const response = await fetch("https://btzap.uazapi.com/api/send", {
+      const response = await fetch(`${UAZAPI_BASE_URL}/send/text`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: uazapiHeaders,
         body: JSON.stringify({
           number: formattedPhone,
-          type: "text",
-          message: "Teste de conexao BTZap - P-CON",
-          instance_id: instanceId,
-          access_token: apiKey,
+          text: "Teste de conexao UAZAPI - P-CON",
         }),
       });
 
       const result = await response.text();
-      console.log("BTZap test send response:", result);
+      console.log("UAZAPI test send response:", result);
 
       let parsedResult;
       try {
@@ -165,10 +195,10 @@ const handler = async (req: Request): Promise<Response> => {
 
       return new Response(
         JSON.stringify({ 
-          success: true, 
+          success: response.ok, 
           action: "test_send",
           phone: formattedPhone,
-          btzap_response: parsedResult 
+          uazapi_response: parsedResult 
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
@@ -179,9 +209,8 @@ const handler = async (req: Request): Promise<Response> => {
       JSON.stringify({ 
         success: true,
         action: "status",
-        instance_id: instanceId,
         webhook_url: webhookUrl,
-        available_actions: ["configure_webhook", "get_qrcode", "reconnect", "test_send"]
+        available_actions: ["configure_webhook", "get_qrcode", "reconnect", "get_status", "test_send"]
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );

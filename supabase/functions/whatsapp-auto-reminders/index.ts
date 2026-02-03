@@ -12,21 +12,23 @@ const PROMO_IMAGE_URL = "https://pconassinaturas.lovable.app/images/whatsapp-pro
 // Client area URL
 const CLIENT_AREA_URL = "https://www.assinaturaspcon.sbs/cliente";
 
+// UAZAPI base URL
+const UAZAPI_BASE_URL = "https://btzap.uazapi.com";
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const apiKey = Deno.env.get("BTZAP_API_KEY");
-    const instanceId = Deno.env.get("BTZAP_INSTANCE_ID");
+    const apiToken = Deno.env.get("BTZAP_API_KEY");
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    if (!apiKey || !instanceId) {
-      console.error("BTZap not configured");
+    if (!apiToken) {
+      console.error("UAZAPI not configured");
       return new Response(
-        JSON.stringify({ success: false, error: "BTZap não configurado" }),
+        JSON.stringify({ success: false, error: "UAZAPI não configurado" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -96,24 +98,36 @@ const handler = async (req: Request): Promise<Response> => {
       errors: [] as string[],
     };
 
-    // Helper function to send message with image
+    // Headers for UAZAPI
+    const uazapiHeaders = {
+      "Content-Type": "application/json",
+      "token": apiToken,
+    };
+
+    // Helper function to send message with image using UAZAPI
     const sendMessageWithImage = async (phone: string, message: string) => {
       const baseImageUrl = PROMO_IMAGE_URL;
       const cacheBustedImageUrl = `${baseImageUrl}${baseImageUrl.includes("?") ? "&" : "?"}v=${Date.now()}`;
 
-      const response = await fetch("https://btzap.uazapi.com/api/send", {
+      const response = await fetch(`${UAZAPI_BASE_URL}/send/media`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: uazapiHeaders,
         body: JSON.stringify({
           number: phone,
+          url: cacheBustedImageUrl,
+          caption: message,
           type: "image",
-          message: message,
-          media_url: cacheBustedImageUrl,
-          instance_id: instanceId,
-          access_token: apiKey,
         }),
       });
-      return response.json();
+      
+      const responseText = await response.text();
+      console.log(`UAZAPI response for ${phone}:`, responseText);
+      
+      try {
+        return { ...JSON.parse(responseText), httpStatus: response.status };
+      } catch {
+        return { raw: responseText, httpStatus: response.status };
+      }
     };
 
     // Send D-1 reminders
@@ -132,9 +146,11 @@ const handler = async (req: Request): Promise<Response> => {
           if (!phone.startsWith("55")) phone = "55" + phone;
 
           const result = await sendMessageWithImage(phone, message);
-          console.log(`D-1 reminder with image sent to ${client.name}:`, result.status);
+          console.log(`D-1 reminder with image sent to ${client.name}:`, result.httpStatus);
 
-          if (result.status === "success") {
+          const isSuccess = result.httpStatus === 200 && (result.status === "success" || result.key);
+          
+          if (isSuccess) {
             results.reminders_sent++;
 
             // Log to whatsapp_messages
@@ -143,10 +159,12 @@ const handler = async (req: Request): Promise<Response> => {
               phone: phone,
               message: message,
               message_type: "auto_reminder",
-              btzap_message_id: result.message?.key?.id || null,
-              remote_jid: result.message?.key?.remoteJid || null,
+              btzap_message_id: result.key?.id || result.messageId || null,
+              remote_jid: result.key?.remoteJid || null,
               status: "sent",
             });
+          } else {
+            results.errors.push(`${client.name}: HTTP ${result.httpStatus}`);
           }
         } catch (err: any) {
           console.error(`Error sending to ${client.name}:`, err.message);
@@ -172,9 +190,11 @@ const handler = async (req: Request): Promise<Response> => {
           if (!phone.startsWith("55")) phone = "55" + phone;
 
           const result = await sendMessageWithImage(phone, message);
-          console.log(`Overdue reminder with image sent to ${client.name}:`, result.status);
+          console.log(`Overdue reminder with image sent to ${client.name}:`, result.httpStatus);
 
-          if (result.status === "success") {
+          const isSuccess = result.httpStatus === 200 && (result.status === "success" || result.key);
+          
+          if (isSuccess) {
             results.overdue_sent++;
 
             await supabase.from("whatsapp_messages").insert({
@@ -182,10 +202,12 @@ const handler = async (req: Request): Promise<Response> => {
               phone: phone,
               message: message,
               message_type: "auto_overdue",
-              btzap_message_id: result.message?.key?.id || null,
-              remote_jid: result.message?.key?.remoteJid || null,
+              btzap_message_id: result.key?.id || result.messageId || null,
+              remote_jid: result.key?.remoteJid || null,
               status: "sent",
             });
+          } else {
+            results.errors.push(`${client.name}: HTTP ${result.httpStatus}`);
           }
         } catch (err: any) {
           console.error(`Error sending overdue to ${client.name}:`, err.message);

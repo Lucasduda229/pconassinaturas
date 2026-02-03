@@ -18,19 +18,21 @@ interface SendMessageRequest {
 // Default promo image URL
 const DEFAULT_IMAGE_URL = "https://pconassinaturas.lovable.app/images/whatsapp-promo-v2.png";
 
+// UAZAPI base URL
+const UAZAPI_BASE_URL = "https://btzap.uazapi.com";
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const apiKey = Deno.env.get("BTZAP_API_KEY");
-    const instanceId = Deno.env.get("BTZAP_INSTANCE_ID");
+    const apiToken = Deno.env.get("BTZAP_API_KEY");
 
-    if (!apiKey || !instanceId) {
-      console.error("BTZap API key or Instance ID not configured");
+    if (!apiToken) {
+      console.error("UAZAPI token not configured");
       return new Response(
-        JSON.stringify({ success: false, error: "BTZap não configurado" }),
+        JSON.stringify({ success: false, error: "UAZAPI não configurado" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -57,41 +59,42 @@ const handler = async (req: Request): Promise<Response> => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     let result;
-    let btzapMessageId = null;
-    let remoteJid = null;
+    let messageId = null;
     let messageStatus = "failed";
 
-    // If sendImage is true, first send the image with caption
+    // Headers for UAZAPI
+    const uazapiHeaders = {
+      "Content-Type": "application/json",
+      "token": apiToken,
+    };
+
+    // If sendImage is true, send media with caption
     if (sendImage) {
       const baseImageUrl = imageUrl || DEFAULT_IMAGE_URL;
       const cacheBustedImageUrl = `${baseImageUrl}${baseImageUrl.includes("?") ? "&" : "?"}v=${Date.now()}`;
       console.log(`Sending image: ${cacheBustedImageUrl}`);
 
-      // Send image with caption using BTZap media endpoint
-      const imageResponse = await fetch("https://btzap.uazapi.com/api/send", {
+      // Send media using UAZAPI /send/media endpoint
+      const imageResponse = await fetch(`${UAZAPI_BASE_URL}/send/media`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: uazapiHeaders,
         body: JSON.stringify({
           number: formattedPhone,
+          url: cacheBustedImageUrl,
+          caption: message,
           type: "image",
-          message: message,
-          media_url: cacheBustedImageUrl,
-          instance_id: instanceId,
-          access_token: apiKey,
         }),
       });
 
-      console.log(`BTZap API image response status: ${imageResponse.status}`);
+      console.log(`UAZAPI image response status: ${imageResponse.status}`);
 
       const imageResponseText = await imageResponse.text();
-      console.log("BTZap image raw response:", imageResponseText);
+      console.log("UAZAPI image raw response:", imageResponseText);
 
       try {
         result = JSON.parse(imageResponseText);
       } catch {
-        console.error("Failed to parse BTZap image response as JSON:", imageResponseText);
+        console.error("Failed to parse UAZAPI image response as JSON:", imageResponseText);
         if (!imageResponse.ok) {
           // Fallback to text-only message if image fails
           console.log("Image send failed, falling back to text-only message");
@@ -99,50 +102,43 @@ const handler = async (req: Request): Promise<Response> => {
         result = { raw: imageResponseText };
       }
 
-      btzapMessageId = result?.message?.key?.id || null;
-      remoteJid = result?.message?.key?.remoteJid || null;
-      messageStatus = result?.status === "success" ? "sent" : "failed";
+      messageId = result?.key?.id || result?.messageId || null;
+      messageStatus = imageResponse.ok && (result?.status === "success" || result?.key) ? "sent" : "failed";
 
     } else {
-      // Send text-only message
-      const response = await fetch("https://btzap.uazapi.com/api/send", {
+      // Send text-only message using UAZAPI /send/text endpoint
+      const response = await fetch(`${UAZAPI_BASE_URL}/send/text`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: uazapiHeaders,
         body: JSON.stringify({
           number: formattedPhone,
-          type: "text",
-          message: message,
-          instance_id: instanceId,
-          access_token: apiKey,
+          text: message,
         }),
       });
 
-      console.log(`BTZap API response status: ${response.status}`);
+      console.log(`UAZAPI text response status: ${response.status}`);
 
       const responseText = await response.text();
-      console.log("BTZap raw response:", responseText);
+      console.log("UAZAPI text raw response:", responseText);
 
       try {
         result = JSON.parse(responseText);
       } catch {
-        console.error("Failed to parse BTZap response as JSON:", responseText);
+        console.error("Failed to parse UAZAPI response as JSON:", responseText);
         if (!response.ok) {
           return new Response(
-            JSON.stringify({ success: false, error: "Erro ao enviar mensagem via BTZap" }),
+            JSON.stringify({ success: false, error: "Erro ao enviar mensagem via UAZAPI" }),
             { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
           );
         }
         result = { raw: responseText };
       }
 
-      btzapMessageId = result?.message?.key?.id || null;
-      remoteJid = result?.message?.key?.remoteJid || null;
-      messageStatus = result?.status === "success" ? "sent" : "failed";
+      messageId = result?.key?.id || result?.messageId || null;
+      messageStatus = response.ok && (result?.status === "success" || result?.key) ? "sent" : "failed";
     }
 
-    console.log("BTZap response:", result);
+    console.log("UAZAPI response:", result);
 
     // Save to whatsapp_messages table for tracking
     await supabase.from("whatsapp_messages").insert({
@@ -150,8 +146,8 @@ const handler = async (req: Request): Promise<Response> => {
       phone: formattedPhone,
       message: message,
       message_type: type || "manual",
-      btzap_message_id: btzapMessageId,
-      remote_jid: remoteJid,
+      btzap_message_id: messageId,
+      remote_jid: result?.key?.remoteJid || null,
       status: messageStatus,
     });
 
@@ -166,7 +162,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, data: result }),
+      JSON.stringify({ success: messageStatus === "sent", data: result }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (error: any) {
