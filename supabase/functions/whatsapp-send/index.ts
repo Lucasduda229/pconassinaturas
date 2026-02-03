@@ -18,8 +18,8 @@ interface SendMessageRequest {
 // Default promo image URL
 const DEFAULT_IMAGE_URL = "https://pconassinaturas.lovable.app/images/whatsapp-promo-v2.png";
 
-// UAZAPI base URL with instance name
-const UAZAPI_BASE_URL = "https://btzap.uazapi.com/P-CON";
+// UAZAPI base URL (token identifies the instance via header)
+const UAZAPI_BASE_URL = "https://btzap.uazapi.com";
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -67,6 +67,7 @@ const handler = async (req: Request): Promise<Response> => {
       "Accept": "application/json",
       "Content-Type": "application/json",
       "token": apiToken,
+      "admintoken": apiToken,
     };
 
     // If sendImage is true, send media with caption

@@ -5,8 +5,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// UAZAPI base URL with instance name
-const UAZAPI_BASE_URL = "https://btzap.uazapi.com/P-CON";
+// UAZAPI base URL (token identifies the instance via header)
+const UAZAPI_BASE_URL = "https://btzap.uazapi.com";
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -30,11 +30,12 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const webhookUrl = `${supabaseUrl}/functions/v1/btzap-webhook`;
 
-    // Headers for UAZAPI
+    // Headers for UAZAPI - trying different token header names
     const uazapiHeaders = {
       "Accept": "application/json",
       "Content-Type": "application/json",
       "token": apiToken,
+      "admintoken": apiToken,
     };
 
     if (action === "configure_webhook") {
