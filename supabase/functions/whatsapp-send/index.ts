@@ -64,6 +64,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Headers for UAZAPI
     const uazapiHeaders = {
+      "Accept": "application/json",
       "Content-Type": "application/json",
       "token": apiToken,
     };
