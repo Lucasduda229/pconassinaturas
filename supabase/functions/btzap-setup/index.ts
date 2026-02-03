@@ -5,8 +5,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// UAZAPI base URL
-const UAZAPI_BASE_URL = "https://btzap.uazapi.com";
+// UAZAPI base URL with instance name
+const UAZAPI_BASE_URL = "https://btzap.uazapi.com/P-CON";
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {

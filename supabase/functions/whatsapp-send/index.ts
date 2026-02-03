@@ -18,8 +18,8 @@ interface SendMessageRequest {
 // Default promo image URL
 const DEFAULT_IMAGE_URL = "https://pconassinaturas.lovable.app/images/whatsapp-promo-v2.png";
 
-// UAZAPI base URL
-const UAZAPI_BASE_URL = "https://btzap.uazapi.com";
+// UAZAPI base URL with instance name
+const UAZAPI_BASE_URL = "https://btzap.uazapi.com/P-CON";
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
