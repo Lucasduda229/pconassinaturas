@@ -101,7 +101,7 @@ const handler = async (req: Request): Promise<Response> => {
       const baseImageUrl = PROMO_IMAGE_URL;
       const cacheBustedImageUrl = `${baseImageUrl}${baseImageUrl.includes("?") ? "&" : "?"}v=${Date.now()}`;
 
-      const response = await fetch("https://adm.btzap.com.br/api/send", {
+      const response = await fetch("https://btzap.uazapi.com/api/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

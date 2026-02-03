@@ -41,7 +41,7 @@ const handler = async (req: Request): Promise<Response> => {
       });
 
       const response = await fetch(
-        `https://adm.btzap.com.br/api/set_webhook?${params.toString()}`,
+        `https://btzap.uazapi.com/api/set_webhook?${params.toString()}`,
         { method: "GET" }
       );
 
@@ -71,7 +71,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("Getting QR code...");
       
       const response = await fetch(
-        `https://adm.btzap.com.br/api/get_qrcode?instance_id=${instanceId}&access_token=${apiKey}`,
+        `https://btzap.uazapi.com/api/get_qrcode?instance_id=${instanceId}&access_token=${apiKey}`,
         { method: "GET" }
       );
 
@@ -100,7 +100,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("Reconnecting instance...");
       
       const response = await fetch(
-        `https://adm.btzap.com.br/api/reconnect?instance_id=${instanceId}&access_token=${apiKey}`,
+        `https://btzap.uazapi.com/api/reconnect?instance_id=${instanceId}&access_token=${apiKey}`,
         { method: "GET" }
       );
 
@@ -141,7 +141,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       console.log(`Testing send to: ${formattedPhone}`);
 
-      const response = await fetch("https://adm.btzap.com.br/api/send", {
+      const response = await fetch("https://btzap.uazapi.com/api/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
