@@ -70,42 +70,83 @@ const handler = async (req: Request): Promise<Response> => {
       "admintoken": apiToken,
     };
 
-    // If sendImage is true, send media with caption
+    // If sendImage is true, try to send media with caption, fallback to text
     if (sendImage) {
       const baseImageUrl = imageUrl || DEFAULT_IMAGE_URL;
       const cacheBustedImageUrl = `${baseImageUrl}${baseImageUrl.includes("?") ? "&" : "?"}v=${Date.now()}`;
-      console.log(`Sending image: ${cacheBustedImageUrl}`);
+      console.log(`Attempting to send image: ${cacheBustedImageUrl}`);
 
-      // Send media using UAZAPI /send/media endpoint
-      const imageResponse = await fetch(`${UAZAPI_BASE_URL}/send/media`, {
-        method: "POST",
-        headers: uazapiHeaders,
-        body: JSON.stringify({
+      // Try different UAZAPI image endpoints
+      const imageEndpoints = [
+        { url: `${UAZAPI_BASE_URL}/send/imageUrl`, field: "imageUrl" },
+        { url: `${UAZAPI_BASE_URL}/send/image/url`, field: "url" },
+        { url: `${UAZAPI_BASE_URL}/sendImageUrl`, field: "imageUrl" },
+      ];
+
+      let imageSuccess = false;
+
+      for (const endpoint of imageEndpoints) {
+        if (imageSuccess) break;
+
+        const bodyData: Record<string, string> = {
           number: formattedPhone,
-          url: cacheBustedImageUrl,
           caption: message,
-          type: "image",
-        }),
-      });
+        };
+        bodyData[endpoint.field] = cacheBustedImageUrl;
 
-      console.log(`UAZAPI image response status: ${imageResponse.status}`);
+        console.log(`Trying endpoint: ${endpoint.url}`);
+        
+        const imageResponse = await fetch(endpoint.url, {
+          method: "POST",
+          headers: uazapiHeaders,
+          body: JSON.stringify(bodyData),
+        });
 
-      const imageResponseText = await imageResponse.text();
-      console.log("UAZAPI image raw response:", imageResponseText);
+        console.log(`Response status: ${imageResponse.status}`);
 
-      try {
-        result = JSON.parse(imageResponseText);
-      } catch {
-        console.error("Failed to parse UAZAPI image response as JSON:", imageResponseText);
-        if (!imageResponse.ok) {
-          // Fallback to text-only message if image fails
-          console.log("Image send failed, falling back to text-only message");
+        if (imageResponse.ok || imageResponse.status === 200) {
+          const imageResponseText = await imageResponse.text();
+          console.log("UAZAPI image response:", imageResponseText);
+
+          try {
+            result = JSON.parse(imageResponseText);
+            if (result.messageid || result.key || result.chatid) {
+              imageSuccess = true;
+              messageId = result?.key?.id || result?.messageid || result?.messageId || null;
+              messageStatus = "sent";
+              console.log("Image sent successfully via:", endpoint.url);
+            }
+          } catch {
+            result = { raw: imageResponseText };
+          }
         }
-        result = { raw: imageResponseText };
       }
 
-      messageId = result?.key?.id || result?.messageId || null;
-      messageStatus = imageResponse.ok && (result?.status === "success" || result?.key) ? "sent" : "failed";
+      // Fallback to text-only if all image endpoints failed
+      if (!imageSuccess) {
+        console.log("All image endpoints failed, sending text-only message");
+        
+        const textResponse = await fetch(`${UAZAPI_BASE_URL}/send/text`, {
+          method: "POST",
+          headers: uazapiHeaders,
+          body: JSON.stringify({
+            number: formattedPhone,
+            text: message,
+          }),
+        });
+
+        const textResponseText = await textResponse.text();
+        console.log("UAZAPI text fallback response:", textResponseText);
+
+        try {
+          result = JSON.parse(textResponseText);
+        } catch {
+          result = { raw: textResponseText };
+        }
+
+        messageId = result?.key?.id || result?.messageid || result?.messageId || null;
+        messageStatus = textResponse.ok && (result?.chatid || result?.key) ? "sent" : "failed";
+      }
 
     } else {
       // Send text-only message using UAZAPI /send/text endpoint

@@ -111,14 +111,14 @@ const handler = async (req: Request): Promise<Response> => {
       const baseImageUrl = PROMO_IMAGE_URL;
       const cacheBustedImageUrl = `${baseImageUrl}${baseImageUrl.includes("?") ? "&" : "?"}v=${Date.now()}`;
 
-      const response = await fetch(`${UAZAPI_BASE_URL}/send/media`, {
+      // Use /sendImageUrl endpoint for URL-based images
+      const response = await fetch(`${UAZAPI_BASE_URL}/sendImageUrl`, {
         method: "POST",
         headers: uazapiHeaders,
         body: JSON.stringify({
           number: phone,
-          url: cacheBustedImageUrl,
+          imageUrl: cacheBustedImageUrl,
           caption: message,
-          type: "image",
         }),
       });
       

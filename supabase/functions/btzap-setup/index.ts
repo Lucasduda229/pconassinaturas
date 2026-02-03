@@ -39,16 +39,19 @@ const handler = async (req: Request): Promise<Response> => {
     };
 
     if (action === "configure_webhook") {
-      // Configure webhook in UAZAPI
+      // Configure webhook in UAZAPI using GET with query params (UAZAPI pattern)
       console.log(`Configuring webhook URL: ${webhookUrl}`);
       
-      const response = await fetch(`${UAZAPI_BASE_URL}/webhook/set`, {
-        method: "POST",
+      const webhookParams = new URLSearchParams({
+        url: webhookUrl,
+        enabled: "true",
+        webhookByEvents: "false",
+        webhookBase64: "false",
+      });
+      
+      const response = await fetch(`${UAZAPI_BASE_URL}/webhook/set?${webhookParams.toString()}`, {
+        method: "GET",
         headers: uazapiHeaders,
-        body: JSON.stringify({
-          url: webhookUrl,
-          enabled: true,
-        }),
       });
 
       const result = await response.text();
