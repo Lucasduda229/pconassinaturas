@@ -12,8 +12,8 @@ const PROMO_IMAGE_URL = "https://pconassinaturas.lovable.app/images/whatsapp-pro
 // Client area URL
 const CLIENT_AREA_URL = "https://www.assinaturaspcon.sbs/cliente";
 
-// UAZAPI base URL
-const UAZAPI_BASE_URL = "https://btzap.uazapi.com";
+// UAZAPI base URL with instance name
+const UAZAPI_BASE_URL = "https://btzap.uazapi.com/P-CON";
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
