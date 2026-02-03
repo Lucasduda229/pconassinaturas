@@ -12,8 +12,8 @@ const PROMO_IMAGE_URL = "https://pconassinaturas.lovable.app/images/whatsapp-pro
 // Client area URL
 const CLIENT_AREA_URL = "https://www.assinaturaspcon.sbs/cliente";
 
-// UAZAPI domain - will be built with instance ID
-const UAZAPI_DOMAIN = "https://btzap.uazapi.com";
+// UAZAPI base URL
+const UAZAPI_BASE_URL = "https://btzap.uazapi.com";
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -22,20 +22,16 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const apiToken = Deno.env.get("BTZAP_API_KEY");
-    const instanceId = Deno.env.get("BTZAP_INSTANCE_ID");
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    if (!apiToken || !instanceId) {
-      console.error("UAZAPI not configured (token or instance ID missing)");
+    if (!apiToken) {
+      console.error("UAZAPI not configured");
       return new Response(
-        JSON.stringify({ success: false, error: "UAZAPI não configurado (token ou instance ID)" }),
+        JSON.stringify({ success: false, error: "UAZAPI não configurado" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
-
-    // Build base URL with instance ID
-    const UAZAPI_BASE_URL = `${UAZAPI_DOMAIN}/${instanceId}`;
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
