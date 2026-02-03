@@ -68,7 +68,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.log(`Sending image: ${cacheBustedImageUrl}`);
 
       // Send image with caption using BTZap media endpoint
-      const imageResponse = await fetch("https://adm.btzap.com.br/api/send", {
+      const imageResponse = await fetch("https://btzap.uazapi.com/api/send", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -105,7 +105,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     } else {
       // Send text-only message
-      const response = await fetch("https://adm.btzap.com.br/api/send", {
+      const response = await fetch("https://btzap.uazapi.com/api/send", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
