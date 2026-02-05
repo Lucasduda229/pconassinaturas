@@ -41,7 +41,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGlobalData, Subscription } from '@/contexts/GlobalDataContext';
 import { useAsaas } from '@/hooks/useAsaas';
 import { supabase } from '@/integrations/supabase/client';
-import { differenceInDays, isPast, isToday, format, addDays } from 'date-fns';
+import { differenceInCalendarDays, isPast, isToday, format, addDays } from 'date-fns';
 import { formatBrazilDate, formatDateForInput, inputDateToISO, normalizeInputDate, toBrazilTime } from '@/utils/dateUtils';
 import { toast } from 'sonner';
 import { useWhatsAppReminder } from '@/hooks/useWhatsAppReminder';
@@ -293,7 +293,8 @@ const Subscriptions = () => {
   const getDaysUntilExpiration = (nextPayment: string) => {
     const paymentDate = new Date(nextPayment);
     const today = new Date();
-    return differenceInDays(paymentDate, today);
+    // Use differenceInCalendarDays to count calendar days, not 24h periods
+    return differenceInCalendarDays(paymentDate, today);
   };
 
   const getExpirationStatus = (nextPayment: string) => {
