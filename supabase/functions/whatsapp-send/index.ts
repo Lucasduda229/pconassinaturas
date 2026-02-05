@@ -63,10 +63,9 @@ const handler = async (req: Request): Promise<Response> => {
     let messageId = null;
     let messageStatus = "failed";
 
-    // Headers for UAZAPI (exactly as per documentation)
-    const uazapiHeaders = {
-      "Content-Type": "application/json",
-      "token": apiToken,
+    // UAZAPI auth header
+    const uazapiAuthHeaders = {
+      token: apiToken,
     };
 
     // If sendImage is true, send media with caption using /send/media endpoint
@@ -74,45 +73,59 @@ const handler = async (req: Request): Promise<Response> => {
       const finalImageUrl = imageUrl || DEFAULT_IMAGE_URL;
       console.log(`Sending media via /send/media endpoint: ${finalImageUrl}`);
 
-      const mediaResponse = await fetch(`${UAZAPI_BASE_URL}/send/media`, {
-        method: "POST",
-        headers: uazapiHeaders,
-        body: JSON.stringify({
-          number: formattedPhone,
-          caption: message,
-          medias: [
-            {
-              type: "image",
-              url: finalImageUrl,
-            },
-          ],
-        }),
-      });
-
-      console.log(`UAZAPI media response status: ${mediaResponse.status}`);
-
-      const mediaResponseText = await mediaResponse.text();
-      console.log("UAZAPI media raw response:", mediaResponseText);
-
+      // UAZAPI is returning "missing file field" for JSON payloads in /send/media.
+      // Workaround: fetch the image and send as multipart/form-data with a `file` field.
+      let mediaSent = false;
       try {
-        result = JSON.parse(mediaResponseText);
-      } catch {
-        console.error("Failed to parse UAZAPI media response as JSON:", mediaResponseText);
-        result = { raw: mediaResponseText };
+        const imgResp = await fetch(finalImageUrl, { redirect: "follow" });
+        if (!imgResp.ok) throw new Error(`Falha ao baixar imagem: HTTP ${imgResp.status}`);
+
+        const contentType = imgResp.headers.get("content-type") || "image/jpeg";
+        const buf = await imgResp.arrayBuffer();
+        const blob = new Blob([buf], { type: contentType });
+
+        const form = new FormData();
+        form.append("number", formattedPhone);
+        form.append("caption", message);
+        form.append("type", "image");
+        form.append("file", blob, "lembrete.jpg");
+
+        const mediaResponse = await fetch(`${UAZAPI_BASE_URL}/send/media`, {
+          method: "POST",
+          headers: uazapiAuthHeaders,
+          body: form,
+        });
+
+        console.log(`UAZAPI media response status: ${mediaResponse.status}`);
+        const mediaResponseText = await mediaResponse.text();
+        console.log("UAZAPI media raw response:", mediaResponseText);
+
+        try {
+          result = JSON.parse(mediaResponseText);
+        } catch {
+          result = { raw: mediaResponseText };
+        }
+
+        if (mediaResponse.ok && (result?.key || result?.messageid || result?.chatid)) {
+          messageId = result?.key?.id || result?.messageid || result?.messageId || null;
+          messageStatus = "sent";
+          mediaSent = true;
+          console.log("Media sent successfully via /send/media (multipart)");
+        }
+      } catch (e: any) {
+        console.error("Failed to send media (multipart):", e?.message || e);
       }
 
-      // Check if media was sent successfully
-      if (mediaResponse.ok && (result?.key || result?.messageid || result?.chatid)) {
-        messageId = result?.key?.id || result?.messageid || result?.messageId || null;
-        messageStatus = "sent";
-        console.log("Media sent successfully via /send/media");
-      } else {
+      if (!mediaSent) {
         // Fallback to text-only if media endpoint failed
         console.log("Media endpoint failed, sending text-only message as fallback");
         
         const textResponse = await fetch(`${UAZAPI_BASE_URL}/send/text`, {
           method: "POST",
-          headers: uazapiHeaders,
+          headers: {
+            "Content-Type": "application/json",
+            ...uazapiAuthHeaders,
+          },
           body: JSON.stringify({
             number: formattedPhone,
             text: message,
@@ -135,7 +148,10 @@ const handler = async (req: Request): Promise<Response> => {
       // Send text-only message using UAZAPI /send/text endpoint
       const response = await fetch(`${UAZAPI_BASE_URL}/send/text`, {
         method: "POST",
-        headers: uazapiHeaders,
+        headers: {
+          "Content-Type": "application/json",
+          ...uazapiAuthHeaders,
+        },
         body: JSON.stringify({
           number: formattedPhone,
           text: message,
