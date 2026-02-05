@@ -103,44 +103,12 @@ const handler = async (req: Request): Promise<Response> => {
       token: apiToken,
     };
 
-     // Helper function to send message with image and button using UAZAPI
-     const sendMessageWithImage = async (phone: string, message: string) => {
-       // Try sending with button first using /send/menu
-       const menuPayload = {
-         number: phone,
-         type: "button",
-         text: message,
-         choices: ["Acessar Área do Cliente | " + CLIENT_AREA_URL],
-       };
-
-       console.log("Attempting to send with button via /send/menu");
-       
-       const menuResponse = await fetch(`${UAZAPI_BASE_URL}/send/menu`, {
-         method: "POST",
-         headers: {
-           "Content-Type": "application/json",
-           ...uazapiAuthHeaders,
-         },
-         body: JSON.stringify(menuPayload),
-       });
-
-       const menuResponseText = await menuResponse.text();
-       console.log(`UAZAPI /send/menu response for ${phone}:`, menuResponseText);
-       
-       try {
-         const menuResult = JSON.parse(menuResponseText);
-         if (menuResponse.status === 200 && (menuResult.key || menuResult.chatid || menuResult.messageid)) {
-           return { ...menuResult, httpStatus: menuResponse.status };
-         }
-       } catch {
-         // Continue to fallback
-       }
-
-       // Fallback: send with image but no button using /send/media
-       console.log("Menu endpoint failed, falling back to /send/media");
+     // Helper function to send image with text, then button
+     const sendMessageWithImageAndButton = async (phone: string, message: string) => {
+       // Step 1: Send image with text caption
        const imageUrl = `${PROMO_IMAGE_URL}?v=${Date.now()}`;
        
-       const response = await fetch(`${UAZAPI_BASE_URL}/send/media`, {
+       const mediaResponse = await fetch(`${UAZAPI_BASE_URL}/send/media`, {
          method: "POST",
          headers: {
            "Content-Type": "application/json",
@@ -154,14 +122,45 @@ const handler = async (req: Request): Promise<Response> => {
          }),
        });
 
-       const responseText = await response.text();
-       console.log(`UAZAPI /send/media response for ${phone}:`, responseText);
+       const mediaResponseText = await mediaResponse.text();
+       console.log(`UAZAPI /send/media response for ${phone}:`, mediaResponseText);
        
+       let mediaResult;
        try {
-         return { ...JSON.parse(responseText), httpStatus: response.status };
+         mediaResult = JSON.parse(mediaResponseText);
        } catch {
-         return { raw: responseText, httpStatus: response.status };
+         mediaResult = { raw: mediaResponseText };
        }
+
+       const imageSuccess = mediaResponse.status === 200 && (mediaResult.key || mediaResult.chatid || mediaResult.messageid);
+       
+       if (imageSuccess) {
+         // Step 2: Send button after image
+         const menuPayload = {
+           number: phone,
+           type: "button",
+           text: "📱 Acesse sua área do cliente:",
+           choices: ["Acessar Área do Cliente | " + CLIENT_AREA_URL],
+         };
+
+         console.log("Sending button after image");
+         
+         const menuResponse = await fetch(`${UAZAPI_BASE_URL}/send/menu`, {
+           method: "POST",
+           headers: {
+             "Content-Type": "application/json",
+             ...uazapiAuthHeaders,
+           },
+           body: JSON.stringify(menuPayload),
+         });
+
+         const menuResponseText = await menuResponse.text();
+         console.log(`UAZAPI /send/menu response for ${phone}:`, menuResponseText);
+         
+         // Even if button fails, we consider success since image was sent
+       }
+
+       return { ...mediaResult, httpStatus: mediaResponse.status };
      };
 
     // Send D-1 reminders
@@ -173,13 +172,13 @@ const handler = async (req: Request): Promise<Response> => {
           continue;
         }
 
-        const message = `Ola ${client.name}! 💈\n\nPassando para lembrar que a fatura referente a sua assinatura ativa do *${sub.plan_name}* no valor de *R$ ${sub.value.toFixed(2).replace(".", ",")}* vence amanha.\n\n📱 *Acesse sua area do cliente:*\n${CLIENT_AREA_URL}\n\nQualquer duvida, estamos a disposicao.`;
+        const message = `Ola ${client.name}! 💈\n\nPassando para lembrar que a fatura referente a sua assinatura ativa do *${sub.plan_name}* no valor de *R$ ${sub.value.toFixed(2).replace(".", ",")}* vence amanha.\n\nQualquer duvida, estamos a disposicao.`;
 
         try {
           let phone = client.phone.replace(/\D/g, "");
           if (!phone.startsWith("55")) phone = "55" + phone;
 
-           const result = await sendMessageWithImage(phone, message);
+           const result = await sendMessageWithImageAndButton(phone, message);
            console.log(`D-1 reminder with image sent to ${client.name}:`, result.httpStatus);
 
            const isSuccess = result.httpStatus === 200 && (result.key || result.chatid || result.messageid);
@@ -217,13 +216,13 @@ const handler = async (req: Request): Promise<Response> => {
           (Date.now() - new Date(sub.next_payment).getTime()) / 86400000
         );
 
-        const message = `Ola ${client.name}! 💈\n\n⚠️ A fatura referente a sua assinatura ativa do *${sub.plan_name}* no valor de *R$ ${sub.value.toFixed(2).replace(".", ",")}* esta em atraso ha ${daysOverdue} dia(s).\n\nRegularize o pagamento para manter sua assinatura em dia.\n\n📱 *Acesse sua area do cliente:*\n${CLIENT_AREA_URL}\n\nQualquer duvida, entre em contato conosco!`;
+        const message = `Ola ${client.name}! 💈\n\n⚠️ A fatura referente a sua assinatura ativa do *${sub.plan_name}* no valor de *R$ ${sub.value.toFixed(2).replace(".", ",")}* esta em atraso ha ${daysOverdue} dia(s).\n\nRegularize o pagamento para manter sua assinatura em dia.\n\nQualquer duvida, entre em contato conosco!`;
 
         try {
           let phone = client.phone.replace(/\D/g, "");
           if (!phone.startsWith("55")) phone = "55" + phone;
 
-           const result = await sendMessageWithImage(phone, message);
+           const result = await sendMessageWithImageAndButton(phone, message);
            console.log(`Overdue reminder with image sent to ${client.name}:`, result.httpStatus);
 
            const isSuccess = result.httpStatus === 200 && (result.key || result.chatid || result.messageid);
