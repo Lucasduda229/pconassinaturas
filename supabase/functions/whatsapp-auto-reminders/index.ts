@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
  // Default promo image URL - hosted on Supabase Storage
- const PROMO_IMAGE_URL = "https://lcnaptefceboratxhzox.supabase.co/storage/v1/object/public/contracts/whatsapp/ft_lembrete.jpeg";
+ const PROMO_IMAGE_URL = "https://lcnaptefceboratxhzox.supabase.co/storage/v1/object/public/contracts/whatsapp/promo-pcon.jpg";
  
 // Client area URL
 const CLIENT_AREA_URL = "https://www.assinaturaspcon.sbs/cliente";
