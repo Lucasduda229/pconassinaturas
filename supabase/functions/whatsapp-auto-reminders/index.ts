@@ -103,35 +103,66 @@ const handler = async (req: Request): Promise<Response> => {
       token: apiToken,
     };
 
-     // Helper function to send message with image using UAZAPI
+     // Helper function to send message with image and button using UAZAPI
      const sendMessageWithImage = async (phone: string, message: string) => {
-       // Add cache-busting parameter to ensure fresh image
+       // Try sending with button first using /send/menu
+       const menuPayload = {
+         number: phone,
+         type: "button",
+         text: message,
+         choices: ["Acessar Área do Cliente | " + CLIENT_AREA_URL],
+       };
+
+       console.log("Attempting to send with button via /send/menu");
+       
+       const menuResponse = await fetch(`${UAZAPI_BASE_URL}/send/menu`, {
+         method: "POST",
+         headers: {
+           "Content-Type": "application/json",
+           ...uazapiAuthHeaders,
+         },
+         body: JSON.stringify(menuPayload),
+       });
+
+       const menuResponseText = await menuResponse.text();
+       console.log(`UAZAPI /send/menu response for ${phone}:`, menuResponseText);
+       
+       try {
+         const menuResult = JSON.parse(menuResponseText);
+         if (menuResponse.status === 200 && (menuResult.key || menuResult.chatid || menuResult.messageid)) {
+           return { ...menuResult, httpStatus: menuResponse.status };
+         }
+       } catch {
+         // Continue to fallback
+       }
+
+       // Fallback: send with image but no button using /send/media
+       console.log("Menu endpoint failed, falling back to /send/media");
        const imageUrl = `${PROMO_IMAGE_URL}?v=${Date.now()}`;
        
-       // Use correct payload structure per documentation
        const response = await fetch(`${UAZAPI_BASE_URL}/send/media`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...uazapiAuthHeaders,
-        },
-        body: JSON.stringify({
-          number: phone,
+         method: "POST",
+         headers: {
+           "Content-Type": "application/json",
+           ...uazapiAuthHeaders,
+         },
+         body: JSON.stringify({
+           number: phone,
            type: "image",
            file: imageUrl,
            text: message,
-        }),
-      });
+         }),
+       });
 
-      const responseText = await response.text();
-      console.log(`UAZAPI response for ${phone}:`, responseText);
-      
-      try {
-        return { ...JSON.parse(responseText), httpStatus: response.status };
-      } catch {
-        return { raw: responseText, httpStatus: response.status };
-      }
-    };
+       const responseText = await response.text();
+       console.log(`UAZAPI /send/media response for ${phone}:`, responseText);
+       
+       try {
+         return { ...JSON.parse(responseText), httpStatus: response.status };
+       } catch {
+         return { raw: responseText, httpStatus: response.status };
+       }
+     };
 
     // Send D-1 reminders
     if (dueTomorrow && dueTomorrow.length > 0) {
