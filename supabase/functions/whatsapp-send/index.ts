@@ -16,7 +16,8 @@ interface SendMessageRequest {
 }
 
 // Default promo image URL
-const DEFAULT_IMAGE_URL = "https://i.ibb.co/1t09K45X/ft-lembrete.jpg";
+// Prefer hosting on our own domain to avoid hotlink protections and to keep a stable, cache-bustable URL.
+const DEFAULT_IMAGE_URL = "https://pconassinaturas.lovable.app/images/ft_lembrete.jpeg";
 
 // UAZAPI base URL (token identifies the instance via header)
 const UAZAPI_BASE_URL = "https://btzap.uazapi.com";
@@ -72,8 +73,19 @@ const handler = async (req: Request): Promise<Response> => {
 
     // If sendImage is true, send media with caption using /send/media endpoint
     if (sendImage) {
-      const finalImageUrl = imageUrl || DEFAULT_IMAGE_URL;
+      const baseImageUrl = imageUrl || DEFAULT_IMAGE_URL;
+      // Cache-bust to avoid WhatsApp/media caching issues
+      const finalImageUrl = `${baseImageUrl}${baseImageUrl.includes("?") ? "&" : "?"}v=${Date.now()}`;
       console.log(`Sending media via /send/media endpoint: ${finalImageUrl}`);
+
+      // Quick sanity check: ensure the URL is reachable and looks like an image
+      try {
+        const probe = await fetch(finalImageUrl, { method: "GET", redirect: "follow" });
+        const contentType = probe.headers.get("content-type") || "";
+        console.log(`Media probe status=${probe.status} content-type=${contentType}`);
+      } catch (e) {
+        console.warn("Media probe failed:", (e as any)?.message || e);
+      }
 
       const mediaResponse = await fetch(`${UAZAPI_BASE_URL}/send/media`, {
         method: "POST",
