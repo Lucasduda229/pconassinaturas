@@ -11,8 +11,9 @@ interface SendMessageRequest {
   message: string;
   clientId: string;
   type: string;
-   sendImage?: boolean;
-   imageUrl?: string;
+  sendImage?: boolean;
+  imageUrl?: string;
+  sendButton?: boolean;
 }
 
  // Default promo image URL - hosted on Supabase Storage
@@ -37,7 +38,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-     const { phone, message, clientId, type, sendImage = true, imageUrl }: SendMessageRequest = await req.json();
+     const { phone, message, clientId, type, sendImage = true, imageUrl, sendButton = true }: SendMessageRequest = await req.json();
 
     if (!phone || !message) {
       return new Response(
@@ -67,13 +68,83 @@ const handler = async (req: Request): Promise<Response> => {
       token: apiToken,
     };
 
-     // If sendImage is true, send media with caption
-     if (sendImage) {
+     // If sendImage is true, send media with button
+     if (sendImage && sendButton) {
        // Add cache-busting parameter to ensure fresh image
+       const finalImageUrl = `${imageUrl || DEFAULT_IMAGE_URL}?v=${Date.now()}`;
+       console.log(`Sending media with button via /send/menu endpoint`);
+
+       // Use /send/menu endpoint for buttons
+       const menuPayload = {
+         number: formattedPhone,
+         type: "button",
+         text: message,
+         choices: ["Acessar Área do Cliente | https://www.assinaturaspcon.sbs/cliente"],
+       };
+
+       console.log("Menu payload:", JSON.stringify(menuPayload));
+
+       const menuResponse = await fetch(`${UAZAPI_BASE_URL}/send/menu`, {
+         method: "POST",
+         headers: {
+           "Content-Type": "application/json",
+           ...uazapiAuthHeaders,
+         },
+         body: JSON.stringify(menuPayload),
+       });
+  
+       console.log(`UAZAPI menu response status: ${menuResponse.status}`);
+       const menuResponseText = await menuResponse.text();
+       console.log("UAZAPI menu raw response:", menuResponseText);
+  
+       try {
+         result = JSON.parse(menuResponseText);
+       } catch {
+         result = { raw: menuResponseText };
+       }
+  
+       // Check if menu was sent successfully
+       if (menuResponse.ok && (result?.key || result?.messageid || result?.chatid)) {
+         messageId = result?.key?.id || result?.messageid || result?.messageId || null;
+         messageStatus = "sent";
+         console.log("Menu with button sent successfully via /send/menu");
+       } else {
+         // Fallback to media without button if menu endpoint failed
+         console.log("Menu endpoint failed, sending media without button as fallback");
+         
+         const mediaPayload = {
+           number: formattedPhone,
+           type: "image",
+           file: finalImageUrl,
+           text: message,
+         };
+
+         const mediaResponse = await fetch(`${UAZAPI_BASE_URL}/send/media`, {
+           method: "POST",
+           headers: {
+             "Content-Type": "application/json",
+             ...uazapiAuthHeaders,
+           },
+           body: JSON.stringify(mediaPayload),
+         });
+  
+         const mediaResponseText = await mediaResponse.text();
+         console.log("UAZAPI media fallback response:", mediaResponseText);
+  
+         try {
+           result = JSON.parse(mediaResponseText);
+         } catch {
+           result = { raw: mediaResponseText };
+         }
+  
+         messageId = result?.key?.id || result?.messageid || result?.messageId || null;
+         messageStatus = mediaResponse.ok && (result?.key || result?.chatid) ? "sent" : "failed";
+       }
+     } else if (sendImage) {
+       // Send media without button using UAZAPI /send/media endpoint
        const finalImageUrl = `${imageUrl || DEFAULT_IMAGE_URL}?v=${Date.now()}`;
        console.log(`Sending media via /send/media endpoint: ${finalImageUrl}`);
 
-       // Use correct payload structure per documentation
        const mediaPayload = {
          number: formattedPhone,
          type: "image",
@@ -91,24 +162,22 @@ const handler = async (req: Request): Promise<Response> => {
          },
          body: JSON.stringify(mediaPayload),
        });
- 
+  
        console.log(`UAZAPI media response status: ${mediaResponse.status}`);
        const mediaResponseText = await mediaResponse.text();
        console.log("UAZAPI media raw response:", mediaResponseText);
- 
+  
        try {
          result = JSON.parse(mediaResponseText);
        } catch {
          result = { raw: mediaResponseText };
-      }
- 
-       // Check if media was sent successfully
+       }
+  
        if (mediaResponse.ok && (result?.key || result?.messageid || result?.chatid)) {
          messageId = result?.key?.id || result?.messageid || result?.messageId || null;
          messageStatus = "sent";
          console.log("Media sent successfully via /send/media");
        } else {
-         // Fallback to text-only if media endpoint failed
          console.log("Media endpoint failed, sending text-only message as fallback");
          
          const textResponse = await fetch(`${UAZAPI_BASE_URL}/send/text`, {
@@ -122,16 +191,16 @@ const handler = async (req: Request): Promise<Response> => {
              text: message,
            }),
          });
- 
+  
          const textResponseText = await textResponse.text();
          console.log("UAZAPI text fallback response:", textResponseText);
- 
+  
          try {
            result = JSON.parse(textResponseText);
          } catch {
            result = { raw: textResponseText };
          }
- 
+  
          messageId = result?.key?.id || result?.messageid || result?.messageId || null;
          messageStatus = textResponse.ok && (result?.chatid || result?.key) ? "sent" : "failed";
        }
@@ -148,12 +217,12 @@ const handler = async (req: Request): Promise<Response> => {
            text: message,
          }),
        });
- 
+  
        console.log(`UAZAPI text response status: ${response.status}`);
- 
+  
        const responseText = await response.text();
        console.log("UAZAPI text raw response:", responseText);
- 
+  
        try {
          result = JSON.parse(responseText);
        } catch {
@@ -166,10 +235,10 @@ const handler = async (req: Request): Promise<Response> => {
          }
          result = { raw: responseText };
        }
- 
+  
        messageId = result?.key?.id || result?.messageId || null;
        messageStatus = response.ok && (result?.status === "success" || result?.key) ? "sent" : "failed";
-    }
+     }
 
     console.log("UAZAPI response:", result);
 
