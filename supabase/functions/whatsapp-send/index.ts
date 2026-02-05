@@ -68,77 +68,85 @@ const handler = async (req: Request): Promise<Response> => {
       token: apiToken,
     };
 
-     // If sendImage is true, send media with button
+     // If sendImage is true, send image first, then button
      if (sendImage && sendButton) {
        // Add cache-busting parameter to ensure fresh image
        const finalImageUrl = `${imageUrl || DEFAULT_IMAGE_URL}?v=${Date.now()}`;
-       console.log(`Sending media with button via /send/menu endpoint`);
+       console.log(`Sending image + text + button sequence`);
 
-       // Use /send/menu endpoint for buttons
-       const menuPayload = {
+       // Step 1: Send image with text as caption
+       const mediaPayload = {
          number: formattedPhone,
-         type: "button",
+         type: "image",
+         file: finalImageUrl,
          text: message,
-         choices: ["Acessar Área do Cliente | https://www.assinaturaspcon.sbs/cliente"],
        };
 
-       console.log("Menu payload:", JSON.stringify(menuPayload));
+       console.log("Media payload:", JSON.stringify(mediaPayload));
 
-       const menuResponse = await fetch(`${UAZAPI_BASE_URL}/send/menu`, {
+       const mediaResponse = await fetch(`${UAZAPI_BASE_URL}/send/media`, {
          method: "POST",
          headers: {
            "Content-Type": "application/json",
            ...uazapiAuthHeaders,
          },
-         body: JSON.stringify(menuPayload),
+         body: JSON.stringify(mediaPayload),
        });
-  
-       console.log(`UAZAPI menu response status: ${menuResponse.status}`);
-       const menuResponseText = await menuResponse.text();
-       console.log("UAZAPI menu raw response:", menuResponseText);
-  
+
+       console.log(`UAZAPI media response status: ${mediaResponse.status}`);
+       const mediaResponseText = await mediaResponse.text();
+       console.log("UAZAPI media raw response:", mediaResponseText);
+
        try {
-         result = JSON.parse(menuResponseText);
+         result = JSON.parse(mediaResponseText);
        } catch {
-         result = { raw: menuResponseText };
+         result = { raw: mediaResponseText };
        }
-  
-       // Check if menu was sent successfully
-       if (menuResponse.ok && (result?.key || result?.messageid || result?.chatid)) {
+
+       let imageSent = false;
+       if (mediaResponse.ok && (result?.key || result?.messageid || result?.chatid)) {
          messageId = result?.key?.id || result?.messageid || result?.messageId || null;
-         messageStatus = "sent";
-         console.log("Menu with button sent successfully via /send/menu");
-       } else {
-         // Fallback to media without button if menu endpoint failed
-         console.log("Menu endpoint failed, sending media without button as fallback");
-         
-         const mediaPayload = {
+         imageSent = true;
+         console.log("Image with caption sent successfully");
+
+         // Step 2: Send button after image
+         const menuPayload = {
            number: formattedPhone,
-           type: "image",
-           file: finalImageUrl,
-           text: message,
+           type: "button",
+           text: "📱 Acesse sua área do cliente:",
+           choices: ["Acessar Área do Cliente | https://www.assinaturaspcon.sbs/cliente"],
          };
 
-         const mediaResponse = await fetch(`${UAZAPI_BASE_URL}/send/media`, {
+         console.log("Menu payload:", JSON.stringify(menuPayload));
+
+         const menuResponse = await fetch(`${UAZAPI_BASE_URL}/send/menu`, {
            method: "POST",
            headers: {
              "Content-Type": "application/json",
              ...uazapiAuthHeaders,
            },
-           body: JSON.stringify(mediaPayload),
+           body: JSON.stringify(menuPayload),
          });
-  
-         const mediaResponseText = await mediaResponse.text();
-         console.log("UAZAPI media fallback response:", mediaResponseText);
-  
+
+         console.log(`UAZAPI menu response status: ${menuResponse.status}`);
+         const menuResponseText = await menuResponse.text();
+         console.log("UAZAPI menu raw response:", menuResponseText);
+
          try {
-           result = JSON.parse(mediaResponseText);
+           const menuResult = JSON.parse(menuResponseText);
+           if (menuResponse.ok && (menuResult?.key || menuResult?.messageid || menuResult?.chatid)) {
+             console.log("Button sent successfully after image");
+           } else {
+             console.log("Button send failed, but image was sent");
+           }
          } catch {
-           result = { raw: mediaResponseText };
+           console.log("Failed to parse menu response, but image was sent");
          }
-  
-         messageId = result?.key?.id || result?.messageid || result?.messageId || null;
-         messageStatus = mediaResponse.ok && (result?.key || result?.chatid) ? "sent" : "failed";
+
+         messageStatus = "sent";
+       } else {
+         console.log("Image send failed");
+         messageStatus = "failed";
        }
      } else if (sendImage) {
        // Send media without button using UAZAPI /send/media endpoint

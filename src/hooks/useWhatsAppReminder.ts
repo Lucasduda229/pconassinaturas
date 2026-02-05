@@ -11,9 +11,6 @@ interface SendReminderParams {
   description?: string;
 }
 
-// Client area URL
-const CLIENT_AREA_URL = "https://www.assinaturaspcon.sbs/cliente";
-
 export const useWhatsAppReminder = () => {
   const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
 
@@ -35,13 +32,11 @@ export const useWhatsAppReminder = () => {
       if (type === 'subscription') {
         message = `Ola ${clientName}! 💈\n\n` +
           `Passando para lembrar que a fatura referente a sua assinatura ativa${description ? ` do *${description}*` : ''} no valor de *R$ ${formattedAmount}* vence amanha.\n\n` +
-          `📱 *Acesse sua area do cliente:*\n${CLIENT_AREA_URL}\n\n` +
           `Qualquer duvida, estamos a disposicao.`;
       } else if (type === 'payment') {
         message = `Ola ${clientName}! 💈\n\n` +
           `A fatura referente a sua assinatura ativa no valor de *R$ ${formattedAmount}*` +
           (description ? ` (*${description}*)` : '') + ` esta pendente e vence amanha.\n\n` +
-          `📱 *Acesse sua area do cliente:*\n${CLIENT_AREA_URL}\n\n` +
           `Qualquer duvida, estamos a disposicao.`;
       } else if (type === 'overdue') {
         message = `Ola ${clientName}! 💈\n\n` +
@@ -49,7 +44,6 @@ export const useWhatsAppReminder = () => {
           (description ? ` (*${description}*)` : '') +
           ` esta vencida.\n\n` +
           `Regularize o pagamento para manter sua assinatura em dia.\n\n` +
-          `📱 *Acesse sua area do cliente:*\n${CLIENT_AREA_URL}\n\n` +
           `Entre em contato se precisar de ajuda.`;
       }
 
