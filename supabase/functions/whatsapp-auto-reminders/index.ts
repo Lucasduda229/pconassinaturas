@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 // Default promo image URL
-const PROMO_IMAGE_URL = "https://i.ibb.co/1t09K45X/ft-lembrete.jpg";
+const PROMO_IMAGE_URL = "https://pconassinaturas.lovable.app/images/ft_lembrete.jpeg";
 
 // Client area URL
 const CLIENT_AREA_URL = "https://www.assinaturaspcon.sbs/cliente";
@@ -108,6 +108,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Helper function to send message with image using UAZAPI
     const sendMessageWithImage = async (phone: string, message: string) => {
+      const cacheBustedImageUrl = `${PROMO_IMAGE_URL}${PROMO_IMAGE_URL.includes("?") ? "&" : "?"}v=${Date.now()}`;
       // Use /send/media endpoint with medias array format
       const response = await fetch(`${UAZAPI_BASE_URL}/send/media`, {
         method: "POST",
@@ -118,7 +119,7 @@ const handler = async (req: Request): Promise<Response> => {
           medias: [
             {
               type: "image",
-              url: PROMO_IMAGE_URL,
+              url: cacheBustedImageUrl,
             },
           ],
         }),
