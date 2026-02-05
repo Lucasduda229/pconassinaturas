@@ -98,28 +98,30 @@ const handler = async (req: Request): Promise<Response> => {
       errors: [] as string[],
     };
 
-    // Headers for UAZAPI
-    const uazapiHeaders = {
-      "Content-Type": "application/json",
-      "token": apiToken,
+    // UAZAPI auth header
+    const uazapiAuthHeaders = {
+      token: apiToken,
     };
 
     // Helper function to send message with image using UAZAPI
     const sendMessageWithImage = async (phone: string, message: string) => {
-      // Use /send/media endpoint with medias array format
+      // UAZAPI returns "missing file field" for JSON in /send/media.
+      // Workaround: download the image and send multipart/form-data with `file`.
+      const imgResp = await fetch(PROMO_IMAGE_URL, { redirect: "follow" });
+      const contentType = imgResp.headers.get("content-type") || "image/jpeg";
+      const buf = await imgResp.arrayBuffer();
+      const blob = new Blob([buf], { type: contentType });
+
+      const form = new FormData();
+      form.append("number", phone);
+      form.append("caption", message);
+      form.append("type", "image");
+      form.append("file", blob, "lembrete.jpg");
+
       const response = await fetch(`${UAZAPI_BASE_URL}/send/media`, {
         method: "POST",
-        headers: uazapiHeaders,
-        body: JSON.stringify({
-          number: phone,
-          caption: message,
-          medias: [
-            {
-              type: "image",
-              url: PROMO_IMAGE_URL,
-            },
-          ],
-        }),
+        headers: uazapiAuthHeaders,
+        body: form,
       });
 
       const responseText = await response.text();
