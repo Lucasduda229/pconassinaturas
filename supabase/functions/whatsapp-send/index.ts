@@ -16,7 +16,7 @@ interface SendMessageRequest {
 }
 
 // Default promo image URL
-const DEFAULT_IMAGE_URL = "https://pconassinaturas.lovable.app/images/ft_lembrete.jpeg";
+const DEFAULT_IMAGE_URL = "https://i.ibb.co/1t09K45X/ft-lembrete.jpg";
 
 // UAZAPI base URL (token identifies the instance via header)
 const UAZAPI_BASE_URL = "https://btzap.uazapi.com";
