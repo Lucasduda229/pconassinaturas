@@ -139,7 +139,7 @@ serve(async (req) => {
     const getSubscriptionByAsaasId = async (asaasId: string) => {
       const { data, error } = await supabase
         .from("subscriptions")
-        .select("id, client_id, plan_name, value")
+        .select("id, client_id, plan_name, value, status")
         .eq("asaas_id", asaasId)
         .maybeSingle();
       
@@ -500,9 +500,34 @@ serve(async (req) => {
         break;
       }
 
-      case "SUBSCRIPTION_CREATED":
+      case "SUBSCRIPTION_CREATED": {
+        // When subscription is first created, DO NOT update next_payment
+        // The frontend already saved the correct initial date
+        // ASAAS returns nextDueDate pointing to the NEXT cycle, not the first
+        const subscriptionData = await getSubscriptionByAsaasId(subscription?.id);
+        
+        if (subscriptionData) {
+          console.log(`Subscription ${subscription.id} created in ASAAS - keeping original next_payment date`);
+          // Only update status if needed, but NOT the next_payment date
+          const newStatus = subscriptionStatusMap[subscription.status] || "active";
+          
+          if (subscriptionData.status !== newStatus) {
+            const { error } = await supabase
+              .from("subscriptions")
+              .update({ status: newStatus })
+              .eq("id", subscriptionData.id);
+
+            if (error) {
+              console.error("Error updating subscription status:", error);
+            }
+          }
+        }
+        break;
+      }
+
       case "SUBSCRIPTION_UPDATED": {
-        // Find subscription by asaas_id
+        // For updates (not creation), we can update the next_payment
+        // But only if it's a renewal or manual change
         const subscriptionData = await getSubscriptionByAsaasId(subscription?.id);
         
         if (subscriptionData) {
@@ -512,6 +537,7 @@ serve(async (req) => {
             .from("subscriptions")
             .update({
               status: newStatus,
+              // Update next_payment only for SUBSCRIPTION_UPDATED, not CREATED
               next_payment: subscription.nextDueDate,
             })
             .eq("id", subscriptionData.id);
