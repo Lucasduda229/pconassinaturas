@@ -6,6 +6,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+ // Default promo image URL - hosted on Supabase Storage
+ const PROMO_IMAGE_URL = "https://lcnaptefceboratxhzox.supabase.co/storage/v1/object/public/contracts/whatsapp/ft_lembrete.jpeg";
+ 
 // Client area URL
 const CLIENT_AREA_URL = "https://www.assinaturaspcon.sbs/cliente";
 
@@ -100,9 +103,13 @@ const handler = async (req: Request): Promise<Response> => {
       token: apiToken,
     };
 
-     // Helper function to send text message using UAZAPI
-     const sendTextMessage = async (phone: string, message: string) => {
-       const response = await fetch(`${UAZAPI_BASE_URL}/send/text`, {
+     // Helper function to send message with image using UAZAPI
+     const sendMessageWithImage = async (phone: string, message: string) => {
+       // Add cache-busting parameter to ensure fresh image
+       const imageUrl = `${PROMO_IMAGE_URL}?v=${Date.now()}`;
+       
+       // Use correct payload structure per documentation
+       const response = await fetch(`${UAZAPI_BASE_URL}/send/media`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -110,6 +117,8 @@ const handler = async (req: Request): Promise<Response> => {
         },
         body: JSON.stringify({
           number: phone,
+           type: "image",
+           file: imageUrl,
            text: message,
         }),
       });
@@ -139,10 +148,10 @@ const handler = async (req: Request): Promise<Response> => {
           let phone = client.phone.replace(/\D/g, "");
           if (!phone.startsWith("55")) phone = "55" + phone;
 
-           const result = await sendTextMessage(phone, message);
-           console.log(`D-1 reminder sent to ${client.name}:`, result.httpStatus);
+           const result = await sendMessageWithImage(phone, message);
+           console.log(`D-1 reminder with image sent to ${client.name}:`, result.httpStatus);
 
-           const isSuccess = result.httpStatus === 200 && (result.status === "success" || result.key || result.chatid);
+           const isSuccess = result.httpStatus === 200 && (result.key || result.chatid || result.messageid);
           
           if (isSuccess) {
             results.reminders_sent++;
@@ -183,10 +192,10 @@ const handler = async (req: Request): Promise<Response> => {
           let phone = client.phone.replace(/\D/g, "");
           if (!phone.startsWith("55")) phone = "55" + phone;
 
-           const result = await sendTextMessage(phone, message);
-           console.log(`Overdue reminder sent to ${client.name}:`, result.httpStatus);
+           const result = await sendMessageWithImage(phone, message);
+           console.log(`Overdue reminder with image sent to ${client.name}:`, result.httpStatus);
 
-           const isSuccess = result.httpStatus === 200 && (result.status === "success" || result.key || result.chatid);
+           const isSuccess = result.httpStatus === 200 && (result.key || result.chatid || result.messageid);
           
           if (isSuccess) {
             results.overdue_sent++;
