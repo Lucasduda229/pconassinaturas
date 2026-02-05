@@ -6,8 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Default promo image URL
-const PROMO_IMAGE_URL = "https://pconassinaturas.lovable.app/images/ft_lembrete.jpeg";
+// Default promo image URL - hosted on Supabase Storage for reliable access
+const PROMO_IMAGE_URL = "https://lcnaptefceboratxhzox.supabase.co/storage/v1/object/public/contracts/whatsapp/ft_lembrete.jpeg";
 
 // Client area URL
 const CLIENT_AREA_URL = "https://www.assinaturaspcon.sbs/cliente";
@@ -105,23 +105,23 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Helper function to send message with image using UAZAPI
     const sendMessageWithImage = async (phone: string, message: string) => {
-      // UAZAPI returns "missing file field" for JSON in /send/media.
-      // Workaround: download the image and send multipart/form-data with `file`.
-      const imgResp = await fetch(PROMO_IMAGE_URL, { redirect: "follow" });
-      const contentType = imgResp.headers.get("content-type") || "image/jpeg";
-      const buf = await imgResp.arrayBuffer();
-      const blob = new Blob([buf], { type: contentType });
-
-      const form = new FormData();
-      form.append("number", phone);
-      form.append("caption", message);
-      form.append("type", "image");
-      form.append("file", blob, "lembrete.jpg");
-
+      // Use /send/media endpoint with JSON format per documentation
       const response = await fetch(`${UAZAPI_BASE_URL}/send/media`, {
         method: "POST",
-        headers: uazapiAuthHeaders,
-        body: form,
+        headers: {
+          "Content-Type": "application/json",
+          ...uazapiAuthHeaders,
+        },
+        body: JSON.stringify({
+          number: phone,
+          caption: message,
+          medias: [
+            {
+              type: "image",
+              url: PROMO_IMAGE_URL,
+            },
+          ],
+        }),
       });
 
       const responseText = await response.text();
