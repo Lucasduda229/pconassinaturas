@@ -100,15 +100,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Headers for UAZAPI
     const uazapiHeaders = {
-      "Accept": "application/json",
       "Content-Type": "application/json",
       "token": apiToken,
-      "admintoken": apiToken,
     };
 
     // Helper function to send message with image using UAZAPI
     const sendMessageWithImage = async (phone: string, message: string) => {
-      const cacheBustedImageUrl = `${PROMO_IMAGE_URL}${PROMO_IMAGE_URL.includes("?") ? "&" : "?"}v=${Date.now()}`;
       // Use /send/media endpoint with medias array format
       const response = await fetch(`${UAZAPI_BASE_URL}/send/media`, {
         method: "POST",
@@ -119,7 +116,7 @@ const handler = async (req: Request): Promise<Response> => {
           medias: [
             {
               type: "image",
-              url: cacheBustedImageUrl,
+              url: PROMO_IMAGE_URL,
             },
           ],
         }),

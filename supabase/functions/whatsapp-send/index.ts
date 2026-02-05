@@ -63,29 +63,16 @@ const handler = async (req: Request): Promise<Response> => {
     let messageId = null;
     let messageStatus = "failed";
 
-    // Headers for UAZAPI
+    // Headers for UAZAPI (exactly as per documentation)
     const uazapiHeaders = {
-      "Accept": "application/json",
       "Content-Type": "application/json",
       "token": apiToken,
-      "admintoken": apiToken,
     };
 
     // If sendImage is true, send media with caption using /send/media endpoint
     if (sendImage) {
-      const baseImageUrl = imageUrl || DEFAULT_IMAGE_URL;
-      // Cache-bust to avoid WhatsApp/media caching issues
-      const finalImageUrl = `${baseImageUrl}${baseImageUrl.includes("?") ? "&" : "?"}v=${Date.now()}`;
+      const finalImageUrl = imageUrl || DEFAULT_IMAGE_URL;
       console.log(`Sending media via /send/media endpoint: ${finalImageUrl}`);
-
-      // Quick sanity check: ensure the URL is reachable and looks like an image
-      try {
-        const probe = await fetch(finalImageUrl, { method: "GET", redirect: "follow" });
-        const contentType = probe.headers.get("content-type") || "";
-        console.log(`Media probe status=${probe.status} content-type=${contentType}`);
-      } catch (e) {
-        console.warn("Media probe failed:", (e as any)?.message || e);
-      }
 
       const mediaResponse = await fetch(`${UAZAPI_BASE_URL}/send/media`, {
         method: "POST",
