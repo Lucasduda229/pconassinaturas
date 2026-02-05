@@ -79,6 +79,9 @@ const handler = async (req: Request): Promise<Response> => {
          type: "image",
          file: finalImageUrl,
          text: message,
+          choices: [
+            "Acessar Área do Cliente | https://www.assinaturaspcon.sbs/cliente"
+          ],
        };
 
        console.log("Media payload:", JSON.stringify(mediaPayload));

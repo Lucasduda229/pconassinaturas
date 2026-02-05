@@ -120,6 +120,9 @@ const handler = async (req: Request): Promise<Response> => {
            type: "image",
            file: imageUrl,
            text: message,
+            choices: [
+              "Acessar Área do Cliente | https://www.assinaturaspcon.sbs/cliente"
+            ],
         }),
       });
 
