@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 // Default promo image URL
-const PROMO_IMAGE_URL = "https://pconassinaturas.lovable.app/images/whatsapp-promo-v2.png";
+const PROMO_IMAGE_URL = "https://pconassinaturas.lovable.app/images/ft_lembrete.jpeg";
 
 // Client area URL
 const CLIENT_AREA_URL = "https://www.assinaturaspcon.sbs/cliente";
