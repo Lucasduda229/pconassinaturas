@@ -15,9 +15,8 @@ interface SendMessageRequest {
   imageUrl?: string;
 }
 
-// Default promo image URL
-// Prefer hosting on our own domain to avoid hotlink protections and to keep a stable, cache-bustable URL.
-const DEFAULT_IMAGE_URL = "https://pconassinaturas.lovable.app/images/ft_lembrete.jpeg";
+// Default promo image URL - hosted on Supabase Storage for reliable access
+const DEFAULT_IMAGE_URL = "https://lcnaptefceboratxhzox.supabase.co/storage/v1/object/public/contracts/whatsapp/ft_lembrete.jpeg";
 
 // UAZAPI base URL (token identifies the instance via header)
 const UAZAPI_BASE_URL = "https://btzap.uazapi.com";
@@ -73,50 +72,45 @@ const handler = async (req: Request): Promise<Response> => {
       const finalImageUrl = imageUrl || DEFAULT_IMAGE_URL;
       console.log(`Sending media via /send/media endpoint: ${finalImageUrl}`);
 
-      // UAZAPI is returning "missing file field" for JSON payloads in /send/media.
-      // Workaround: fetch the image and send as multipart/form-data with a `file` field.
-      let mediaSent = false;
+      // Send media using JSON format per documentation
+      const mediaPayload = {
+        number: formattedPhone,
+        caption: message,
+        medias: [
+          {
+            type: "image",
+            url: finalImageUrl,
+          },
+        ],
+      };
+
+      console.log("Media payload:", JSON.stringify(mediaPayload));
+
+      const mediaResponse = await fetch(`${UAZAPI_BASE_URL}/send/media`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...uazapiAuthHeaders,
+        },
+        body: JSON.stringify(mediaPayload),
+      });
+
+      console.log(`UAZAPI media response status: ${mediaResponse.status}`);
+      const mediaResponseText = await mediaResponse.text();
+      console.log("UAZAPI media raw response:", mediaResponseText);
+
       try {
-        const imgResp = await fetch(finalImageUrl, { redirect: "follow" });
-        if (!imgResp.ok) throw new Error(`Falha ao baixar imagem: HTTP ${imgResp.status}`);
-
-        const contentType = imgResp.headers.get("content-type") || "image/jpeg";
-        const buf = await imgResp.arrayBuffer();
-        const blob = new Blob([buf], { type: contentType });
-
-        const form = new FormData();
-        form.append("number", formattedPhone);
-        form.append("caption", message);
-        form.append("type", "image");
-        form.append("file", blob, "lembrete.jpg");
-
-        const mediaResponse = await fetch(`${UAZAPI_BASE_URL}/send/media`, {
-          method: "POST",
-          headers: uazapiAuthHeaders,
-          body: form,
-        });
-
-        console.log(`UAZAPI media response status: ${mediaResponse.status}`);
-        const mediaResponseText = await mediaResponse.text();
-        console.log("UAZAPI media raw response:", mediaResponseText);
-
-        try {
-          result = JSON.parse(mediaResponseText);
-        } catch {
-          result = { raw: mediaResponseText };
-        }
-
-        if (mediaResponse.ok && (result?.key || result?.messageid || result?.chatid)) {
-          messageId = result?.key?.id || result?.messageid || result?.messageId || null;
-          messageStatus = "sent";
-          mediaSent = true;
-          console.log("Media sent successfully via /send/media (multipart)");
-        }
-      } catch (e: any) {
-        console.error("Failed to send media (multipart):", e?.message || e);
+        result = JSON.parse(mediaResponseText);
+      } catch {
+        result = { raw: mediaResponseText };
       }
 
-      if (!mediaSent) {
+      // Check if media was sent successfully
+      if (mediaResponse.ok && (result?.key || result?.messageid || result?.chatid)) {
+        messageId = result?.key?.id || result?.messageid || result?.messageId || null;
+        messageStatus = "sent";
+        console.log("Media sent successfully via /send/media");
+      } else {
         // Fallback to text-only if media endpoint failed
         console.log("Media endpoint failed, sending text-only message as fallback");
         
