@@ -98,28 +98,82 @@ serve(async (req: Request) => {
         console.log("Payment updated successfully:", { paymentId, status: dbStatus });
       }
 
-      // If payment was approved, update subscription status if applicable
+      // If payment was approved, handle subscription recurrence
       if (dbStatus === "paid") {
         const { data: paymentRecord } = await supabase
           .from("payments")
-          .select("subscription_id")
+          .select("subscription_id, client_id, amount, description")
           .eq("transaction_id", paymentId.toString())
           .single();
 
         if (paymentRecord?.subscription_id) {
-          // Calculate next payment date (30 days from now)
-          const nextPayment = new Date();
-          nextPayment.setDate(nextPayment.getDate() + 30);
-
-          await supabase
+          // Get current subscription data
+          const { data: subscription } = await supabase
             .from("subscriptions")
-            .update({
-              status: "active",
-              next_payment: nextPayment.toISOString(),
-            })
-            .eq("id", paymentRecord.subscription_id);
+            .select("*")
+            .eq("id", paymentRecord.subscription_id)
+            .single();
 
-          console.log("Subscription updated for payment:", paymentId);
+          if (subscription) {
+            // Calculate next payment date: same day next month
+            const currentDueDate = new Date(subscription.next_payment);
+            const nextPaymentDate = new Date(currentDueDate);
+            nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);
+            
+            // Handle month overflow (e.g., Jan 31 -> Feb 28)
+            if (nextPaymentDate.getDate() !== currentDueDate.getDate()) {
+              nextPaymentDate.setDate(0); // Go to last day of previous month
+            }
+
+            console.log("Recurrence: Current due date:", currentDueDate.toISOString());
+            console.log("Recurrence: Next payment date:", nextPaymentDate.toISOString());
+
+            // Update subscription with new next_payment date
+            await supabase
+              .from("subscriptions")
+              .update({
+                status: "active",
+                next_payment: nextPaymentDate.toISOString(),
+              })
+              .eq("id", paymentRecord.subscription_id);
+
+            // Create new pending payment for next month
+            const { error: newPaymentError } = await supabase
+              .from("payments")
+              .insert({
+                client_id: subscription.client_id,
+                subscription_id: subscription.id,
+                amount: subscription.value,
+                status: "pending",
+                payment_method: "PIX",
+                description: `Cobrança - ${subscription.plan_name}`,
+                due_date: nextPaymentDate.toISOString(),
+              });
+
+            if (newPaymentError) {
+              console.error("Error creating next month payment:", newPaymentError);
+            } else {
+              console.log("Created next month payment for:", nextPaymentDate.toISOString());
+            }
+
+            // Create invoice for the paid payment
+            const year = new Date().getFullYear();
+            const month = String(new Date().getMonth() + 1).padStart(2, "0");
+            const invoiceNumber = `NF-${year}${month}-${paymentId.toString().slice(-4)}`;
+
+            await supabase
+              .from("invoices")
+              .insert({
+                payment_id: paymentRecord.subscription_id ? undefined : paymentId.toString(),
+                client_id: paymentRecord.client_id,
+                number: invoiceNumber,
+                amount: paymentRecord.amount,
+                status: "issued",
+              });
+
+            console.log("Invoice created:", invoiceNumber);
+            console.log("Subscription recurrence completed for payment:", paymentId);
+          }
         }
       }
     }
