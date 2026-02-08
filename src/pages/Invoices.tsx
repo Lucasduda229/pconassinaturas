@@ -23,10 +23,12 @@ interface InvoiceWithClient {
   amount: number;
   status: string;
   issued_at: string;
+  description?: string;
   clientName?: string;
   clientEmail?: string;
   clientPhone?: string;
   clientDocument?: string;
+  planName?: string;
 }
 
 const Invoices = () => {
@@ -51,12 +53,17 @@ const Invoices = () => {
   const enrichedInvoices = useMemo(() => {
     return invoices.map(inv => {
       const client = clients.find(c => c.id === inv.client_id);
+      // Extract plan name from description if available
+      const descriptionMatch = (inv as any).description?.match(/plano ativo:\s*(.+)$/i);
+      const planName = descriptionMatch ? descriptionMatch[1] : null;
       return {
         ...inv,
+        description: (inv as any).description || '',
         clientName: client?.name || 'Cliente não encontrado',
         clientEmail: client?.email || '',
         clientPhone: client?.phone || '',
         clientDocument: client?.document || '',
+        planName: planName,
       };
     });
   }, [invoices, clients]);
@@ -239,9 +246,12 @@ const Invoices = () => {
       doc.text('DESCRICAO', 25, 193);
       doc.text('VALOR', pageWidth - 25, 193, { align: 'right' });
       
-      // Table row
+      // Table row - show plan name if available
       doc.setFont('helvetica', 'normal');
-      doc.text('Servico conforme contrato', 25, 208);
+      const serviceDescription = invoice.planName 
+        ? `Valor pago referente ao plano ativo: ${invoice.planName}`
+        : (invoice.description || 'Servico conforme contrato');
+      doc.text(serviceDescription, 25, 208);
       doc.setFont('helvetica', 'bold');
       doc.text(formatCurrency(invoice.amount), pageWidth - 25, 208, { align: 'right' });
       
@@ -480,6 +490,16 @@ const Invoices = () => {
                   <span className="text-muted-foreground text-sm">Valor:</span>
                   <span className="font-bold text-success text-lg">{formatCurrency(selectedInvoice.amount)}</span>
                 </div>
+                {(selectedInvoice.planName || selectedInvoice.description) && (
+                  <div className="flex flex-col gap-1 pt-2 border-t border-border/30">
+                    <span className="text-muted-foreground text-sm">Descrição:</span>
+                    <span className="font-medium text-foreground text-sm">
+                      {selectedInvoice.planName 
+                        ? `Valor pago referente ao plano ativo: ${selectedInvoice.planName}`
+                        : selectedInvoice.description}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground text-sm">Data de Emissão:</span>
                   <span className="font-medium text-foreground">{formatBrazilDate(selectedInvoice.issued_at)}</span>
