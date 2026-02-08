@@ -15,9 +15,21 @@ const CLIENT_AREA_URL = "https://www.assinaturaspcon.sbs/cliente";
 // UAZAPI base URL (token identifies the instance via header)
 const UAZAPI_BASE_URL = "https://btzap.uazapi.com";
 
+// TEMPORARIAMENTE DESATIVADO - Altere para true para reativar
+const AUTO_REMINDERS_ENABLED = false;
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Check if auto reminders are enabled
+  if (!AUTO_REMINDERS_ENABLED) {
+    console.log("Auto reminders are temporarily disabled");
+    return new Response(
+      JSON.stringify({ success: true, message: "Auto reminders temporarily disabled", results: { reminders_sent: 0, overdue_sent: 0, errors: [] } }),
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+    );
   }
 
   try {
