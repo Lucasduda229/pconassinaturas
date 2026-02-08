@@ -326,10 +326,10 @@ export const GlobalDataProvider = ({ children }: { children: ReactNode }) => {
   // CRUD - Payments
   const markPaymentAsPaid = async (id: string): Promise<boolean> => {
     try {
-      // First get the payment details with client info
+      // First get the payment details with client info and subscription
       const { data: paymentData, error: fetchError } = await supabase
         .from('payments')
-        .select('*, clients(id, name, phone)')
+        .select('*, clients(id, name, phone), subscriptions(plan_name)')
         .eq('id', id)
         .single();
 
@@ -345,6 +345,28 @@ export const GlobalDataProvider = ({ children }: { children: ReactNode }) => {
         .eq('id', id);
 
       if (error) throw error;
+
+      // Create invoice with plan description
+      const planName = paymentData?.subscriptions?.plan_name || 'Pagamento Avulso';
+      const year = new Date().getFullYear();
+      const month = String(new Date().getMonth() + 1).padStart(2, "0");
+      const invoiceNumber = `NF-${year}${month}-${id.slice(-4).toUpperCase()}`;
+      const invoiceDescription = `Valor pago referente ao plano ativo: ${planName}`;
+
+      const { error: invoiceError } = await supabase
+        .from('invoices')
+        .insert({
+          payment_id: id,
+          client_id: paymentData?.client_id,
+          number: invoiceNumber,
+          amount: paymentData?.amount,
+          status: 'issued',
+          description: invoiceDescription,
+        });
+
+      if (invoiceError) {
+        console.error('Error creating invoice:', invoiceError);
+      }
 
       // Send WhatsApp confirmation if client has phone
       const client = paymentData?.clients;
@@ -369,12 +391,11 @@ export const GlobalDataProvider = ({ children }: { children: ReactNode }) => {
           });
         } catch (whatsappError) {
           console.error('Error sending WhatsApp:', whatsappError);
-          // Don't fail the payment update if WhatsApp fails
         }
       }
 
       toast.success('Pagamento marcado como pago!');
-      await fetchPayments(); // Refresh data
+      await Promise.all([fetchPayments(), fetchInvoices()]);
       return true;
     } catch (error) {
       console.error('Error marking payment as paid:', error);
