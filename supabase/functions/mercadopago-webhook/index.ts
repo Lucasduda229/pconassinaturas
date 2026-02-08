@@ -156,10 +156,11 @@ serve(async (req: Request) => {
               console.log("Created next month payment for:", nextPaymentDate.toISOString());
             }
 
-            // Create invoice for the paid payment
+            // Create invoice for the paid payment with plan description
             const year = new Date().getFullYear();
             const month = String(new Date().getMonth() + 1).padStart(2, "0");
             const invoiceNumber = `NF-${year}${month}-${paymentId.toString().slice(-4)}`;
+            const invoiceDescription = `Valor pago referente ao plano ativo: ${subscription.plan_name}`;
 
             await supabase
               .from("invoices")
@@ -169,9 +170,10 @@ serve(async (req: Request) => {
                 number: invoiceNumber,
                 amount: paymentRecord.amount,
                 status: "issued",
+                description: invoiceDescription,
               });
 
-            console.log("Invoice created:", invoiceNumber);
+            console.log("Invoice created:", invoiceNumber, "with description:", invoiceDescription);
             console.log("Subscription recurrence completed for payment:", paymentId);
           }
         }
