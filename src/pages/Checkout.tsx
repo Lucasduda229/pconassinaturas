@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useClientAuth } from '@/contexts/ClientAuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useAsaas } from '@/hooks/useAsaas';
+import { useMercadoPago } from '@/hooks/useMercadoPago';
 import { useContracts, Contract } from '@/hooks/useContracts';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -33,7 +33,6 @@ import {
   Rocket
 } from 'lucide-react';
 import logo from '@/assets/logo-pcon-grande.png';
-import logoAsaas from '@/assets/logo-asaas-white.png';
 import BlueBackground from '@/components/BlueBackground';
 import ClientReferrals from '@/components/ClientReferrals';
 
@@ -55,6 +54,7 @@ interface Payment {
   paid_at: string | null;
   description: string | null;
   asaas_id: string | null;
+  transaction_id: string | null;
   subscription_id: string | null;
   subscriptions?: {
     plan_name: string;
@@ -64,7 +64,7 @@ interface Payment {
 const Checkout = () => {
   const { client, isAuthenticated, isLoading: authLoading, logout } = useClientAuth();
   const navigate = useNavigate();
-  const { createCustomer, createPayment, getPixQrCode, getBoletoData, loading: asaasLoading } = useAsaas();
+  const { createPixPayment, checkPaymentStatus, loading: mpLoading } = useMercadoPago();
   const { contracts, loading: contractsLoading } = useContracts(client?.id);
   
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -76,11 +76,10 @@ const Checkout = () => {
   const [isPaidDetailsOpen, setIsPaidDetailsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CREDIT_CARD' | 'BOLETO' | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CREDIT_CARD' | null>(null);
   const [pixData, setPixData] = useState<{ qrCode: string; copyPaste: string } | null>(null);
-  const [boletoData, setBoletoData] = useState<{ identificationField: string; bankSlipUrl: string } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentStep, setPaymentStep] = useState<'select' | 'processing' | 'pix' | 'boleto' | 'success' | 'error'>('select');
+  const [paymentStep, setPaymentStep] = useState<'select' | 'processing' | 'pix' | 'success' | 'error'>('select');
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
 
@@ -178,7 +177,6 @@ const Checkout = () => {
     setIsPaymentDialogOpen(true);
     setPaymentStep('select');
     setPixData(null);
-    setBoletoData(null);
   };
 
   const openChargePaymentModal = (charge: Payment) => {
@@ -187,7 +185,6 @@ const Checkout = () => {
     setIsPaymentDialogOpen(true);
     setPaymentStep('select');
     setPixData(null);
-    setBoletoData(null);
   };
 
   const openPaidPaymentDetails = (payment: Payment) => {
@@ -195,7 +192,7 @@ const Checkout = () => {
     setIsPaidDetailsOpen(true);
   };
 
-  const handlePayment = async (method: 'PIX' | 'CREDIT_CARD') => {
+  const handlePayment = async (method: 'PIX') => {
     if (!client) return;
     
     // Determina se é assinatura ou cobrança única
@@ -210,85 +207,27 @@ const Checkout = () => {
     setPaymentStep('processing');
     setIsProcessing(true);
     setPixData(null);
-    setBoletoData(null);
 
     try {
-      // Se é cobrança única e já tem asaas_id, usa ele diretamente
-      if (!isSubscription && selectedCharge?.asaas_id) {
-        const asaasPaymentId = selectedCharge.asaas_id;
-        
-        if (method === 'PIX') {
-          const pixResult = await getPixQrCode(asaasPaymentId);
-          if (pixResult) {
-            setPixData({
-              qrCode: pixResult.encodedImage,
-              copyPaste: pixResult.payload,
-            });
-            setPaymentStep('pix');
-          }
-        } else if (method === 'CREDIT_CARD') {
-          // Para cartão, redireciona para a URL de pagamento
-          const paymentData = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/asaas?action=getPayment&paymentId=${asaasPaymentId}`,
-            {
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-                'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-              },
-            }
-          ).then(r => r.json());
-          
-          if (paymentData.invoiceUrl) {
-            window.open(paymentData.invoiceUrl, '_blank');
-            setPaymentStep('success');
-            toast.success('Redirecionando para pagamento...');
-          }
-        }
-        return;
-      }
-
-      // Para assinaturas ou cobranças sem asaas_id, cria nova cobrança
-      const customerResult = await createCustomer({
-        name: client.name,
-        email: client.email,
-        cpfCnpj: client.document || undefined,
-        phone: client.phone || undefined,
-      });
-
-      if (!customerResult?.id) {
-        throw new Error('Erro ao criar cliente no gateway de pagamento');
-      }
-
-      const dueDate = format(new Date(), 'yyyy-MM-dd');
-      const paymentResult = await createPayment({
-        customer: customerResult.id,
-        billingType: method,
-        value: paymentValue,
-        dueDate,
+      // Criar pagamento PIX via Mercado Pago
+      const pixResult = await createPixPayment({
+        amount: paymentValue,
         description: paymentDescription,
-        externalReference: externalRef,
+        clientId: client.id,
+        clientEmail: client.email,
+        clientName: client.name,
+        clientDocument: client.document || undefined,
+        subscriptionId: isSubscription ? selectedSubscription!.id : undefined,
       });
 
-      if (!paymentResult?.id) {
-        throw new Error('Erro ao criar cobrança');
-      }
-
-      if (method === 'PIX') {
-        const pixResult = await getPixQrCode(paymentResult.id);
-        if (pixResult) {
-          setPixData({
-            qrCode: pixResult.encodedImage,
-            copyPaste: pixResult.payload,
-          });
-          setPaymentStep('pix');
-        }
-      } else if (method === 'CREDIT_CARD') {
-        if (paymentResult.invoiceUrl) {
-          window.open(paymentResult.invoiceUrl, '_blank');
-          setPaymentStep('success');
-          toast.success('Redirecionando para pagamento...');
-        }
+      if (pixResult?.success && pixResult.qrCode) {
+        setPixData({
+          qrCode: pixResult.qrCodeBase64 || '',
+          copyPaste: pixResult.qrCode,
+        });
+        setPaymentStep('pix');
+      } else {
+        throw new Error('Erro ao gerar QR Code PIX');
       }
     } catch (error: any) {
       console.error('Payment error:', error);
@@ -303,13 +242,6 @@ const Checkout = () => {
     if (pixData?.copyPaste) {
       navigator.clipboard.writeText(pixData.copyPaste);
       toast.success('Código PIX copiado!');
-    }
-  };
-
-  const copyBoletoCode = () => {
-    if (boletoData?.identificationField) {
-      navigator.clipboard.writeText(boletoData.identificationField);
-      toast.success('Linha digitável copiada!');
     }
   };
 
@@ -526,7 +458,7 @@ const Checkout = () => {
                         size="default"
                         className="w-full h-10 btn-blue text-sm"
                         onClick={() => openChargePaymentModal(charge)}
-                        disabled={isProcessing || asaasLoading}
+                        disabled={isProcessing || mpLoading}
                       >
                         <span className="flex items-center justify-center gap-2">
                           Pagar Agora
@@ -621,7 +553,7 @@ const Checkout = () => {
                         size="default"
                         className="w-full h-11 btn-blue text-sm"
                         onClick={() => openPaymentModal(subscription)}
-                        disabled={isProcessing || asaasLoading}
+                        disabled={isProcessing || mpLoading}
                       >
                         {isProcessing ? (
                           <span className="flex items-center justify-center gap-2">
@@ -891,15 +823,11 @@ const Checkout = () => {
         >
           <div className="flex flex-col items-center gap-4">
             <p className="text-xs text-gray-neutral">Pagamentos processados por</p>
-            <img src={logoAsaas} alt="ASAAS" className="h-8 w-auto opacity-80" />
+            <div className="text-lg font-bold text-primary">Mercado Pago</div>
             <div className="flex items-center gap-3 mt-2 flex-wrap justify-center">
               <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/30 border border-border/30">
                 <QrCode className="h-5 w-5 text-primary" />
                 <span className="text-sm text-muted-foreground">PIX</span>
-              </div>
-              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/30 border border-border/30">
-                <CreditCard className="h-5 w-5 text-primary" />
-                <span className="text-sm text-muted-foreground">Cartão</span>
               </div>
             </div>
           </div>
@@ -1032,53 +960,7 @@ const Checkout = () => {
                   </motion.div>
                 )}
 
-                {/* Boleto */}
-                {paymentStep === 'boleto' && boletoData && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="space-y-6"
-                  >
-                    <div className="text-center">
-                      <h2 className="text-xl font-heading font-semibold text-foreground mb-2">
-                        Boleto Bancário
-                      </h2>
-                      <p className="text-gray-neutral text-sm">
-                        Copie a linha digitável ou baixe o boleto
-                      </p>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className="flex gap-2">
-                        <code className="flex-1 p-3 bg-secondary/40 rounded-lg text-xs break-all border border-border/30 text-muted-foreground">
-                          {boletoData.identificationField}
-                        </code>
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          className="flex-shrink-0 border-border/30"
-                          onClick={copyBoletoCode}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      
-                      {boletoData.bankSlipUrl && (
-                        <Button 
-                          className="w-full btn-blue"
-                          onClick={() => window.open(boletoData.bankSlipUrl, '_blank')}
-                        >
-                          <FileText className="h-4 w-4 mr-2" />
-                          Baixar Boleto PDF
-                        </Button>
-                      )}
-                    </div>
-
-                    <p className="text-xs text-gray-neutral text-center">
-                      Vencimento em 3 dias úteis. O pagamento será confirmado em até 2 dias úteis após o pagamento.
-                    </p>
-                  </motion.div>
-                )}
+                {/* Seção de boleto removida - sistema agora usa apenas PIX via Mercado Pago */}
 
                 {/* Success */}
                 {paymentStep === 'success' && (
