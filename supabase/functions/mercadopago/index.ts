@@ -67,6 +67,7 @@ serve(async (req: Request) => {
             number: body.clientDocument.replace(/[^\d]/g, ""),
           } : undefined,
         },
+        external_reference: body.description, // Shows in bank statement
         notification_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/mercadopago-webhook`,
       };
 
