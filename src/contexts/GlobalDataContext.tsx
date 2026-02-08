@@ -383,10 +383,11 @@ export const GlobalDataProvider = ({ children }: { children: ReactNode }) => {
                 `✅ *Pagamento confirmado!*\n\n` +
                 `Recebemos seu pagamento de *${formattedAmount}* com sucesso.\n\n` +
                 `Obrigado por manter sua assinatura em dia!\n\n` +
-                `📱 *Acesse sua area do cliente:*\nhttps://www.assinaturaspcon.sbs/cliente\n\n` +
                 `Qualquer duvida, estamos a disposicao.`,
               clientId: client.id,
-              type: 'payment_confirmed_manual'
+              type: 'payment_confirmed_manual',
+              sendImage: true,
+              sendButton: true
             }
           });
         } catch (whatsappError) {
