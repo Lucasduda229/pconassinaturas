@@ -171,7 +171,8 @@ const Financial = () => {
   const methodData = useMemo(() => {
     const methodMap: Record<string, { count: number; value: number }> = {};
     payments.filter(p => p.status === 'paid').forEach(p => {
-      const method = p.payment_method || 'Outros';
+      const rawMethod = (p.payment_method || 'Outros').toUpperCase();
+      const method = rawMethod === 'PIX' ? 'PIX' : rawMethod === 'CREDIT_CARD' ? 'Cartão de Crédito' : rawMethod === 'CARTÃO DE CRÉDITO' ? 'Cartão de Crédito' : p.payment_method || 'Outros';
       if (!methodMap[method]) methodMap[method] = { count: 0, value: 0 };
       methodMap[method].count++;
       methodMap[method].value += Number(p.amount);
