@@ -24,6 +24,7 @@ import { useAdminNotifications } from '@/hooks/useAdminNotifications';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import logo from '@/assets/logo-pcon-grande.png';
+import WhatsAppIcon from '@/components/WhatsAppIcon';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
@@ -34,7 +35,7 @@ const navItems = [
   { icon: Receipt, label: 'Pagamentos', path: '/payments' },
   { icon: FileSignature, label: 'Contratos', path: '/contracts' },
   { icon: FileText, label: 'Notas Fiscais', path: '/invoices' },
-  { icon: MessageSquare, label: 'WhatsApp', path: '/whatsapp' },
+  { icon: WhatsAppIcon, label: 'WhatsApp', path: '/whatsapp' },
   { icon: BellRing, label: 'Lembretes', path: '/whatsapp/lembretes' },
   { icon: Rocket, label: 'Implantações', path: '/implementations' },
   { icon: Ticket, label: 'Cupons', path: '/coupons' },
