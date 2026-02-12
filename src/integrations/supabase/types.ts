@@ -581,6 +581,51 @@ export type Database = {
         }
         Relationships: []
       }
+      expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          description: string
+          due_date: string | null
+          expense_type: string
+          id: string
+          notes: string | null
+          paid_at: string | null
+          recurrence: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category?: string
+          created_at?: string
+          description: string
+          due_date?: string | null
+          expense_type?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          recurrence?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          description?: string
+          due_date?: string | null
+          expense_type?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          recurrence?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       implementation_requests: {
         Row: {
           admin_notes: string | null
