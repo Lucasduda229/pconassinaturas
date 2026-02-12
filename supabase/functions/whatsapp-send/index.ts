@@ -14,6 +14,8 @@ interface SendMessageRequest {
   sendImage?: boolean;
   imageUrl?: string;
   sendButton?: boolean;
+  buttonText?: string;
+  buttonUrl?: string;
 }
 
  // Default promo image URL - hosted on Supabase Storage
@@ -38,7 +40,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-     const { phone, message, clientId, type, sendImage = true, imageUrl, sendButton = true }: SendMessageRequest = await req.json();
+     const { phone, message, clientId, type, sendImage = true, imageUrl, sendButton = true, buttonText, buttonUrl }: SendMessageRequest = await req.json();
 
     if (!phone || !message) {
       return new Response(
@@ -110,12 +112,14 @@ const handler = async (req: Request): Promise<Response> => {
          console.log("Image with caption sent successfully");
 
          // Step 2: Send button after image
-         const menuPayload = {
-           number: formattedPhone,
-           type: "button",
-           text: "📱 Acesse sua área do cliente:",
-           choices: ["Acessar Área do Cliente | https://www.assinaturaspcon.sbs/cliente"],
-         };
+          const finalButtonText = buttonText || "Acessar Área do Cliente";
+          const finalButtonUrl = buttonUrl || "https://www.assinaturaspcon.sbs/cliente";
+          const menuPayload = {
+            number: formattedPhone,
+            type: "button",
+            text: "📱 Acesse sua área do cliente:",
+            choices: [`${finalButtonText} | ${finalButtonUrl}`],
+          };
 
          console.log("Menu payload:", JSON.stringify(menuPayload));
 
