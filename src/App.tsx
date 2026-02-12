@@ -22,6 +22,7 @@ import Affiliates from "./pages/Affiliates";
 import Implementations from "./pages/Implementations";
 import ClientCoupons from "./pages/ClientCoupons";
 import ReferralLanding from "./pages/ReferralLanding";
+import WhatsAppMessages from "./pages/WhatsAppMessages";
 
 import ClientLogin from "./pages/ClientLogin";
 import ClientRegister from "./pages/ClientRegister";
@@ -57,12 +58,13 @@ const App = () => (
                   <Route path="/subscriptions" element={<ProtectedRoute><Subscriptions /></ProtectedRoute>} />
                   <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
                   <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
-                  <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-                  <Route path="/contracts" element={<ProtectedRoute><Contracts /></ProtectedRoute>} />
-                  <Route path="/referrals" element={<ProtectedRoute><Referrals /></ProtectedRoute>} />
-                  <Route path="/affiliates" element={<ProtectedRoute><Affiliates /></ProtectedRoute>} />
-                  <Route path="/implementations" element={<ProtectedRoute><Implementations /></ProtectedRoute>} />
-                  <Route path="/coupons" element={<ProtectedRoute><ClientCoupons /></ProtectedRoute>} />
+                   <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+                   <Route path="/whatsapp" element={<ProtectedRoute><WhatsAppMessages /></ProtectedRoute>} />
+                   <Route path="/contracts" element={<ProtectedRoute><Contracts /></ProtectedRoute>} />
+                   <Route path="/referrals" element={<ProtectedRoute><Referrals /></ProtectedRoute>} />
+                   <Route path="/affiliates" element={<ProtectedRoute><Affiliates /></ProtectedRoute>} />
+                   <Route path="/implementations" element={<ProtectedRoute><Implementations /></ProtectedRoute>} />
+                   <Route path="/coupons" element={<ProtectedRoute><ClientCoupons /></ProtectedRoute>} />
                   {/* Referral Landing Page (Public) - Clients */}
                   <Route path="/r/:slug" element={<ReferralLanding />} />
                   
