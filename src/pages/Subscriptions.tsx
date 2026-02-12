@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Filter, MoreHorizontal, Trash2, Calendar, AlertTriangle, Plus, Pencil, CreditCard, Loader2, Receipt, QrCode, FileText } from 'lucide-react';
+import { Search, Filter, MoreHorizontal, Trash2, Calendar, AlertTriangle, Plus, Pencil, CreditCard, Loader2, Receipt, QrCode, FileText, CheckCircle } from 'lucide-react';
 
 // WhatsApp Icon Component
 const WhatsAppIcon = ({ className }: { className?: string }) => (
@@ -54,6 +54,7 @@ const Subscriptions = () => {
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
   const [generatingChargeId, setGeneratingChargeId] = useState<string | null>(null);
+  const [markingPaidId, setMarkingPaidId] = useState<string | null>(null);
   const [newSubscription, setNewSubscription] = useState({
     clientId: '',
     planName: '',
@@ -215,6 +216,183 @@ const Subscriptions = () => {
     }
   };
 
+  const handleMarkSubscriptionPaid = async (subscription: Subscription) => {
+    if (!subscription.clients) {
+      toast.error('Cliente não encontrado para esta assinatura.');
+      return;
+    }
+
+    setMarkingPaidId(subscription.id);
+
+    try {
+      const planName = subscription.plan_name;
+      const clientName = subscription.clients?.name || 'Cliente';
+      const clientPhone = subscription.clients?.phone || null;
+      const amount = Number(subscription.value);
+
+      // 1. Find pending payment for this subscription
+      const { data: pendingPayment } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('subscription_id', subscription.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (pendingPayment) {
+        // Mark existing payment as paid
+        await supabase
+          .from('payments')
+          .update({ status: 'paid', paid_at: new Date().toISOString() })
+          .eq('id', pendingPayment.id);
+
+        // Create invoice for the paid payment
+        const year = new Date().getFullYear();
+        const month = String(new Date().getMonth() + 1).padStart(2, '0');
+        const invoiceNumber = `NF-${year}${month}-${pendingPayment.id.slice(-4).toUpperCase()}`;
+        const invoiceDescription = `Valor pago referente ao plano ativo: ${planName}`;
+
+        await supabase
+          .from('invoices')
+          .insert({
+            payment_id: pendingPayment.id,
+            client_id: subscription.client_id,
+            number: invoiceNumber,
+            amount: pendingPayment.amount,
+            status: 'issued',
+            description: invoiceDescription,
+          });
+      } else {
+        // No pending payment found, create a paid payment record
+        const year = new Date().getFullYear();
+        const month = String(new Date().getMonth() + 1).padStart(2, '0');
+        
+        const { data: newPayment } = await supabase
+          .from('payments')
+          .insert({
+            subscription_id: subscription.id,
+            client_id: subscription.client_id,
+            amount,
+            status: 'paid',
+            paid_at: new Date().toISOString(),
+            payment_method: 'manual',
+            description: `Pagamento manual - ${planName}`,
+          })
+          .select()
+          .single();
+
+        if (newPayment) {
+          const invoiceNumber = `NF-${year}${month}-${newPayment.id.slice(-4).toUpperCase()}`;
+          await supabase
+            .from('invoices')
+            .insert({
+              payment_id: newPayment.id,
+              client_id: subscription.client_id,
+              number: invoiceNumber,
+              amount,
+              status: 'issued',
+              description: `Valor pago referente ao plano ativo: ${planName}`,
+            });
+        }
+      }
+
+      // 2. Advance next_payment to next month
+      const currentNext = new Date(subscription.next_payment);
+      const nextDay = currentNext.getDate();
+      const nextMonth = currentNext.getMonth() + 1;
+      const nextYear = currentNext.getFullYear();
+      
+      let newDate: Date;
+      if (nextMonth > 11) {
+        newDate = new Date(nextYear + 1, 0, 1);
+      } else {
+        newDate = new Date(nextYear, nextMonth, 1);
+      }
+      // Set to the same day, clamping to last day of month
+      const lastDay = new Date(newDate.getFullYear(), newDate.getMonth() + 1, 0).getDate();
+      newDate.setDate(Math.min(nextDay, lastDay));
+      newDate.setHours(12, 0, 0, 0);
+
+      await updateSubscription(subscription.id, {
+        next_payment: newDate.toISOString(),
+      });
+
+      // 3. Create new pending payment for next cycle
+      await supabase
+        .from('payments')
+        .insert({
+          subscription_id: subscription.id,
+          client_id: subscription.client_id,
+          amount,
+          status: 'pending',
+          payment_method: 'pix',
+          description: planName,
+          due_date: newDate.toISOString(),
+        });
+
+      // 4. Send WhatsApp confirmation if client has phone
+      if (clientPhone) {
+        const formattedAmount = amount.toFixed(2).replace('.', ',');
+        try {
+          const { data: templateData } = await supabase
+            .from('whatsapp_templates')
+            .select('*')
+            .eq('template_key', 'payment_confirmed')
+            .eq('is_active', true)
+            .maybeSingle();
+
+          let message: string;
+          let sendImage = true;
+          let imageUrl: string | undefined;
+          let sendButton = true;
+          let buttonText: string | undefined;
+          let buttonUrl: string | undefined;
+
+          if (templateData) {
+            message = templateData.message_template
+              .replace(/\{\{client_name\}\}/g, clientName)
+              .replace(/\{\{amount\}\}/g, `R$ ${formattedAmount}`)
+              .replace(/\{\{plan_name\}\}/g, planName);
+            imageUrl = templateData.image_url || undefined;
+            sendImage = !!templateData.image_url;
+            sendButton = templateData.button_enabled;
+            buttonText = templateData.button_text || undefined;
+            buttonUrl = templateData.button_url || undefined;
+          } else {
+            message = `Ola ${clientName}! 💈\n\n✅ *Pagamento confirmado!*\n\nRecebemos seu pagamento de *R$ ${formattedAmount}* referente ao plano *${planName}* com sucesso.\n\nObrigado por manter sua assinatura em dia!\n\nQualquer duvida, estamos a disposicao.`;
+          }
+
+          let formattedPhone = clientPhone.replace(/\D/g, '');
+          if (!formattedPhone.startsWith('55')) formattedPhone = '55' + formattedPhone;
+
+          await supabase.functions.invoke('whatsapp-send', {
+            body: {
+              phone: formattedPhone,
+              message,
+              clientId: subscription.client_id,
+              type: 'payment_confirmed_manual',
+              sendImage,
+              imageUrl,
+              sendButton,
+              buttonText,
+              buttonUrl,
+            },
+          });
+        } catch (whatsappError) {
+          console.error('Error sending WhatsApp:', whatsappError);
+        }
+      }
+
+      toast.success('Pagamento confirmado! Fatura do próximo mês gerada.');
+    } catch (error) {
+      console.error('Error marking subscription as paid:', error);
+      toast.error('Erro ao confirmar pagamento da assinatura');
+    } finally {
+      setMarkingPaidId(null);
+    }
+  };
+
   const openDetailsDialog = (subscription: Subscription) => {
     setSelectedSubscription(subscription);
     setIsDetailsDialogOpen(true);
@@ -312,6 +490,19 @@ const Subscriptions = () => {
               <Pencil className="w-4 h-4 mr-2" />
               Editar
             </DropdownMenuItem>
+            {item.status === 'active' && (
+              <DropdownMenuItem 
+                onClick={() => handleMarkSubscriptionPaid(item)}
+                disabled={markingPaidId === item.id}
+              >
+                {markingPaidId === item.id ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                )}
+                {markingPaidId === item.id ? 'Processando...' : 'Marcar como paga'}
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem 
               onClick={() => handleGenerateCharge(item)}
               disabled={generatingChargeId === item.id}
