@@ -331,6 +331,7 @@ const Subscriptions = () => {
                 type: 'subscription',
                 amount: Number(item.value),
                 description: item.plan_name,
+                dueDate: item.next_payment,
               })}
               disabled={sendingReminderId === item.client_id || !item.clients?.phone}
             >

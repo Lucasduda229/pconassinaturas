@@ -245,6 +245,7 @@ const Payments = () => {
                   type: item.status === 'overdue' ? 'overdue' : 'payment',
                   amount: Number(item.amount),
                   description: item.description || undefined,
+                  dueDate: item.due_date,
                 })}
                 disabled={sendingReminderId === item.client_id || !item.clients?.phone}
               >
