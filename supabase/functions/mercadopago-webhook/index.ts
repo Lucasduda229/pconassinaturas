@@ -177,6 +177,53 @@ serve(async (req: Request) => {
             console.log("Subscription recurrence completed for payment:", paymentId);
           }
         }
+
+        // Send WhatsApp payment confirmation
+        if (paymentRecord?.client_id) {
+          try {
+            const { data: client } = await supabase
+              .from("clients")
+              .select("id, name, phone")
+              .eq("id", paymentRecord.client_id)
+              .single();
+
+            if (client?.phone) {
+              let phone = client.phone.replace(/\D/g, "");
+              if (!phone.startsWith("55")) phone = "55" + phone;
+
+              const formattedAmount = `R$ ${paymentRecord.amount.toFixed(2).replace(".", ",")}`;
+              const planName = paymentRecord.description?.replace("Cobrança - ", "") || "Assinatura";
+
+              const confirmMessage = `Ola ${client.name}! 💈\n\n` +
+                `✅ *Pagamento confirmado!*\n\n` +
+                `Recebemos seu pagamento de *${formattedAmount}* referente ao plano *${planName}* com sucesso.\n\n` +
+                `Obrigado por manter sua assinatura em dia!\n\n` +
+                `Qualquer duvida, estamos a disposicao.`;
+
+              const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+
+              const whatsappResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${supabaseAnonKey}`,
+                },
+                body: JSON.stringify({
+                  phone,
+                  message: confirmMessage,
+                  clientId: client.id,
+                  type: "payment_confirmed_auto",
+                  sendImage: true,
+                  sendButton: true,
+                }),
+              });
+
+              console.log("WhatsApp payment confirmation sent:", whatsappResponse.status);
+            }
+          } catch (whatsappErr: any) {
+            console.error("Error sending WhatsApp confirmation:", whatsappErr.message);
+          }
+        }
       }
     }
 
