@@ -53,8 +53,9 @@ const GRADIENT_ID = {
 
 const Financial = () => {
   const { clients, subscriptions, payments, invoices, loadingPayments } = useGlobalData();
-  const [period, setPeriod] = useState('12');
+  const [period, setPeriod] = useState('month');
   const [tab, setTab] = useState('overview');
+  const [customDateRange, setCustomDateRange] = useState<{ from?: Date; to?: Date }>({});
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -64,9 +65,30 @@ const Financial = () => {
     return `R$ ${value.toFixed(0)}`;
   };
 
+  // ─── Calculate date range based on selected period ───
+  const getDateRange = () => {
+    const now = new Date();
+    switch (period) {
+      case 'today':
+        return { start: startOfMonth(now), end: endOfMonth(now) };
+      case 'week': {
+        const weekAgo = new Date(now);
+        weekAgo.setDate(now.getDate() - 7);
+        return { start: weekAgo, end: now };
+      }
+      case 'month':
+        return { start: startOfMonth(now), end: endOfMonth(now) };
+      case 'custom':
+        return { start: customDateRange.from || startOfMonth(now), end: customDateRange.to || now };
+      default:
+        return { start: startOfMonth(now), end: endOfMonth(now) };
+    }
+  };
+
   // ─── Monthly breakdown data ────────────────────────
   const monthlyData = useMemo(() => {
-    const months = parseInt(period);
+    const dateRange = getDateRange();
+    const months = 12; // Always show 12 months for context
     const result = [];
 
     for (let i = months - 1; i >= 0; i--) {
@@ -100,14 +122,14 @@ const Financial = () => {
         receita: revenue,
         pendente: pendingVal,
         prejuizo: lostVal,
-        lucro: revenue, // no expenses tracked, revenue = profit
+        lucro: revenue,
         paidCount: paid.length,
         pendingCount: pending.length,
         failedCount: failed.length,
       });
     }
     return result;
-  }, [payments, period]);
+  }, [payments, period, customDateRange]);
 
   // ─── Summary KPIs ─────────────────────────────────
   const kpis = useMemo(() => {
@@ -212,7 +234,7 @@ const Financial = () => {
 
   // ─── Monthly type breakdown ──────────────────────────
   const monthlyTypeData = useMemo(() => {
-    const months = parseInt(period);
+    const months = 12; // Always show 12 months for context
     const result = [];
     for (let i = months - 1; i >= 0; i--) {
       const date = subMonths(new Date(), i);
@@ -310,10 +332,10 @@ const Financial = () => {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="3">Últimos 3 meses</SelectItem>
-            <SelectItem value="6">Últimos 6 meses</SelectItem>
-            <SelectItem value="12">Últimos 12 meses</SelectItem>
-            <SelectItem value="24">Últimos 24 meses</SelectItem>
+            <SelectItem value="today">Hoje</SelectItem>
+            <SelectItem value="week">Semana</SelectItem>
+            <SelectItem value="month">Mês</SelectItem>
+            <SelectItem value="custom">Personalizado</SelectItem>
           </SelectContent>
         </Select>
       </div>
