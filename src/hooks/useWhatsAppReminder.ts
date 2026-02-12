@@ -11,6 +11,30 @@ interface SendReminderParams {
   description?: string;
 }
 
+// Map reminder type to template_key in whatsapp_templates
+const typeToTemplateKey: Record<string, string> = {
+  subscription: 'subscription_reminder',
+  payment: 'due_today',
+  overdue: 'subscription_reminder', // fallback
+};
+
+// Fallback messages if no template found
+const fallbackMessages: Record<string, (name: string, amount: string, desc?: string) => string> = {
+  subscription: (name, amount, desc) =>
+    `Ola ${name}! 💈\n\nPassando para lembrar que a fatura referente a sua assinatura ativa${desc ? ` do *${desc}*` : ''} no valor de *R$ ${amount}* vence amanha.\n\nQualquer duvida, estamos a disposicao.`,
+  payment: (name, amount, desc) =>
+    `Ola ${name}! 💈\n\nA fatura referente a sua assinatura ativa no valor de *R$ ${amount}*${desc ? ` (*${desc}*)` : ''} esta pendente e vence amanha.\n\nQualquer duvida, estamos a disposicao.`,
+  overdue: (name, amount, desc) =>
+    `Ola ${name}! 💈\n\n⚠️ A fatura referente a sua assinatura ativa de *R$ ${amount}*${desc ? ` (*${desc}*)` : ''} esta vencida.\n\nRegularize o pagamento para manter sua assinatura em dia.\n\nEntre em contato se precisar de ajuda.`,
+};
+
+const replacePlaceholders = (template: string, clientName: string, formattedAmount: string, planName?: string) => {
+  return template
+    .replace(/\{\{client_name\}\}/g, clientName)
+    .replace(/\{\{amount\}\}/g, `R$ ${formattedAmount}`)
+    .replace(/\{\{plan_name\}\}/g, planName || 'Assinatura');
+};
+
 export const useWhatsAppReminder = () => {
   const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
 
@@ -25,26 +49,38 @@ export const useWhatsAppReminder = () => {
     setSendingReminderId(clientId);
 
     try {
-      // Build the message based on type
-      let message = '';
       const formattedAmount = amount.toFixed(2).replace('.', ',');
 
-      if (type === 'subscription') {
-        message = `Ola ${clientName}! 💈\n\n` +
-          `Passando para lembrar que a fatura referente a sua assinatura ativa${description ? ` do *${description}*` : ''} no valor de *R$ ${formattedAmount}* vence amanha.\n\n` +
-          `Qualquer duvida, estamos a disposicao.`;
-      } else if (type === 'payment') {
-        message = `Ola ${clientName}! 💈\n\n` +
-          `A fatura referente a sua assinatura ativa no valor de *R$ ${formattedAmount}*` +
-          (description ? ` (*${description}*)` : '') + ` esta pendente e vence amanha.\n\n` +
-          `Qualquer duvida, estamos a disposicao.`;
-      } else if (type === 'overdue') {
-        message = `Ola ${clientName}! 💈\n\n` +
-          `⚠️ A fatura referente a sua assinatura ativa de *R$ ${formattedAmount}*` +
-          (description ? ` (*${description}*)` : '') +
-          ` esta vencida.\n\n` +
-          `Regularize o pagamento para manter sua assinatura em dia.\n\n` +
-          `Entre em contato se precisar de ajuda.`;
+      // Try to fetch template from whatsapp_templates
+      const templateKey = typeToTemplateKey[type] || 'subscription_reminder';
+      const { data: templateData } = await supabase
+        .from('whatsapp_templates')
+        .select('*')
+        .eq('template_key', templateKey)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      let message: string;
+      let sendImage = true;
+      let imageUrl: string | undefined;
+      let sendButton = true;
+      let buttonText: string | undefined;
+      let buttonUrl: string | undefined;
+
+      if (templateData) {
+        // Use template from database
+        message = replacePlaceholders(templateData.message_template, clientName, formattedAmount, description);
+        imageUrl = templateData.image_url || undefined;
+        sendImage = !!templateData.image_url;
+        sendButton = templateData.button_enabled;
+        buttonText = templateData.button_text || undefined;
+        buttonUrl = templateData.button_url || undefined;
+        console.log(`Using template "${templateData.name}" for type "${type}"`);
+      } else {
+        // Use fallback hardcoded message
+        const fallback = fallbackMessages[type];
+        message = fallback ? fallback(clientName, formattedAmount, description) : '';
+        console.log(`No template found for key "${templateKey}", using fallback`);
       }
 
       // Format phone number
@@ -57,9 +93,14 @@ export const useWhatsAppReminder = () => {
       const { data, error } = await supabase.functions.invoke('whatsapp-send', {
         body: {
           phone: formattedPhone,
-          message: message,
-          clientId: clientId,
-          type: type,
+          message,
+          clientId,
+          type,
+          sendImage,
+          imageUrl,
+          sendButton,
+          buttonText,
+          buttonUrl,
         },
       });
 
