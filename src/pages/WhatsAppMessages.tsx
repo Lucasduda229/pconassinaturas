@@ -7,6 +7,7 @@ import {
   AlertCircle,
   Clock,
   X,
+  Trash,
 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 
 interface WhatsAppMessage {
   id: string;
@@ -189,6 +202,21 @@ export default function WhatsAppMessages() {
     setTypeFilter([]);
   };
 
+  const clearAllMessages = async () => {
+    try {
+      const { error } = await supabase
+        .from('whatsapp_messages')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+      if (error) throw error;
+      setMessages([]);
+      toast.success('Histórico de mensagens limpo com sucesso!');
+    } catch (error) {
+      console.error('Error clearing messages:', error);
+      toast.error('Erro ao limpar mensagens.');
+    }
+  };
+
   return (
     <DashboardLayout
       title="Mensagens WhatsApp"
@@ -206,6 +234,7 @@ export default function WhatsAppMessages() {
           />
         </div>
 
+        <div className="flex gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -267,6 +296,39 @@ export default function WhatsAppMessages() {
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+
+          {messages.length > 0 && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-10 sm:h-11 gap-2 border-destructive/50 text-destructive hover:bg-destructive/10"
+                >
+                  <Trash className="w-4 h-4" />
+                  <span className="hidden sm:inline">Limpar</span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Limpar histórico de mensagens?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta ação irá apagar permanentemente todas as {messages.length} mensagens do histórico. Esta ação não pode ser desfeita.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={clearAllMessages}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Limpar tudo
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
       </div>
 
       {/* Stats */}
