@@ -194,11 +194,31 @@ serve(async (req: Request) => {
               const formattedAmount = `R$ ${paymentRecord.amount.toFixed(2).replace(".", ",")}`;
               const planName = paymentRecord.description?.replace("Cobrança - ", "") || "Assinatura";
 
-              const confirmMessage = `Ola ${client.name}! 💈\n\n` +
-                `✅ *Pagamento confirmado!*\n\n` +
-                `Recebemos seu pagamento de *${formattedAmount}* referente ao plano *${planName}* com sucesso.\n\n` +
-                `Obrigado por manter sua assinatura em dia!\n\n` +
-                `Qualquer duvida, estamos a disposicao.`;
+              // Fetch template from DB
+              const { data: templateData } = await supabase
+                .from("whatsapp_templates")
+                .select("*")
+                .eq("template_key", "payment_confirmed")
+                .eq("is_active", true)
+                .single();
+
+              let confirmMessage: string;
+              let sendImage = true;
+              let sendButton = true;
+
+              if (templateData) {
+                confirmMessage = templateData.message_template
+                  .replace(/\{\{client_name\}\}/g, client.name)
+                  .replace(/\{\{plan_name\}\}/g, planName)
+                  .replace(/\{\{amount\}\}/g, formattedAmount);
+                sendButton = templateData.button_enabled;
+              } else {
+                confirmMessage = `Ola ${client.name}! 💈\n\n` +
+                  `✅ *Pagamento confirmado!*\n\n` +
+                  `Recebemos seu pagamento de *${formattedAmount}* referente ao plano *${planName}* com sucesso.\n\n` +
+                  `Obrigado por manter sua assinatura em dia!\n\n` +
+                  `Qualquer duvida, estamos a disposicao.`;
+              }
 
               const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
 
@@ -213,8 +233,9 @@ serve(async (req: Request) => {
                   message: confirmMessage,
                   clientId: client.id,
                   type: "payment_confirmed_auto",
-                  sendImage: true,
-                  sendButton: true,
+                  sendImage,
+                  imageUrl: templateData?.image_url || undefined,
+                  sendButton,
                 }),
               });
 
