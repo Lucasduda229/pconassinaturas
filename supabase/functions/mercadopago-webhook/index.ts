@@ -191,43 +191,8 @@ serve(async (req: Request) => {
 
           console.log("Subscription updated with next_payment:", nextPaymentDate.toISOString());
 
-          // Check if a pending payment already exists for this subscription next month
-          const nextMonthStart = new Date(nextPaymentDate);
-          nextMonthStart.setDate(1);
-          nextMonthStart.setHours(0, 0, 0, 0);
-          const nextMonthEnd = new Date(nextMonthStart.getFullYear(), nextMonthStart.getMonth() + 1, 0, 23, 59, 59, 999);
-
-          const { data: existingNextPayment } = await supabase
-            .from("payments")
-            .select("id")
-            .eq("subscription_id", subscription.id)
-            .eq("status", "pending")
-            .gte("due_date", nextMonthStart.toISOString())
-            .lte("due_date", nextMonthEnd.toISOString())
-            .limit(1)
-            .maybeSingle();
-
-          if (existingNextPayment) {
-            console.log("Pending payment already exists for next month, skipping creation:", existingNextPayment.id);
-          } else {
-            const { error: newPaymentError } = await supabase
-              .from("payments")
-              .insert({
-                client_id: subscription.client_id,
-                subscription_id: subscription.id,
-                amount: subscription.value,
-                status: "pending",
-                payment_method: "PIX",
-                description: subscription.plan_name,
-                due_date: nextPaymentDate.toISOString(),
-              });
-
-            if (newPaymentError) {
-              console.error("Error creating next month payment:", newPaymentError);
-            } else {
-              console.log("Created next month payment for:", nextPaymentDate.toISOString());
-            }
-          }
+          // Do NOT create a new pending payment - the client generates PIX from portal
+          console.log("Subscription advanced to next_payment:", nextPaymentDate.toISOString());
 
           // Create invoice
           const year = new Date().getFullYear();
