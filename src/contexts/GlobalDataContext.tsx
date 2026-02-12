@@ -372,22 +372,54 @@ export const GlobalDataProvider = ({ children }: { children: ReactNode }) => {
       const client = paymentData?.clients;
       if (client?.phone) {
         const formattedAmount = paymentData?.amount 
-          ? `R$ ${paymentData.amount.toFixed(2).replace(".", ",")}`
-          : '';
+          ? paymentData.amount.toFixed(2).replace(".", ",")
+          : '0,00';
         
         try {
+          // Fetch payment_confirmed template from DB
+          const { data: templateData } = await supabase
+            .from('whatsapp_templates')
+            .select('*')
+            .eq('template_key', 'payment_confirmed')
+            .eq('is_active', true)
+            .maybeSingle();
+
+          let message: string;
+          let sendImage = true;
+          let imageUrl: string | undefined;
+          let sendButton = true;
+          let buttonText: string | undefined;
+          let buttonUrl: string | undefined;
+
+          if (templateData) {
+            message = templateData.message_template
+              .replace(/\{\{client_name\}\}/g, client.name)
+              .replace(/\{\{amount\}\}/g, `R$ ${formattedAmount}`)
+              .replace(/\{\{plan_name\}\}/g, planName);
+            imageUrl = templateData.image_url || undefined;
+            sendImage = !!templateData.image_url;
+            sendButton = templateData.button_enabled;
+            buttonText = templateData.button_text || undefined;
+            buttonUrl = templateData.button_url || undefined;
+          } else {
+            message = `Ola ${client.name}! 💈\n\n` +
+              `✅ *Pagamento confirmado!*\n\n` +
+              `Recebemos seu pagamento de *R$ ${formattedAmount}* com sucesso.\n\n` +
+              `Obrigado por manter sua assinatura em dia!\n\n` +
+              `Qualquer duvida, estamos a disposicao.`;
+          }
+
           await supabase.functions.invoke('whatsapp-send', {
             body: {
               phone: client.phone,
-              message: `Ola ${client.name}! 💈\n\n` +
-                `✅ *Pagamento confirmado!*\n\n` +
-                `Recebemos seu pagamento de *${formattedAmount}* com sucesso.\n\n` +
-                `Obrigado por manter sua assinatura em dia!\n\n` +
-                `Qualquer duvida, estamos a disposicao.`,
+              message,
               clientId: client.id,
               type: 'payment_confirmed_manual',
-              sendImage: true,
-              sendButton: true
+              sendImage,
+              imageUrl,
+              sendButton,
+              buttonText,
+              buttonUrl,
             }
           });
         } catch (whatsappError) {
