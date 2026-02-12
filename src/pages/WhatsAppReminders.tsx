@@ -9,6 +9,8 @@ import {
   Eye,
   EyeOff,
   Info,
+  Check,
+  X,
 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -51,6 +53,7 @@ export default function WhatsAppReminders() {
   const [editedTemplates, setEditedTemplates] = useState<Record<string, Partial<WhatsAppTemplate>>>({});
   const [previewKey, setPreviewKey] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState<string | null>(null);
+  const [pendingImage, setPendingImage] = useState<Record<string, { file: File; preview: string }>>({});
 
   useEffect(() => {
     fetchTemplates();
@@ -135,7 +138,7 @@ export default function WhatsAppReminders() {
     }
   };
 
-  const handleImageUpload = async (templateId: string, file: File) => {
+  const handleImageSelect = (templateId: string, file: File) => {
     if (!file.type.startsWith('image/')) {
       toast.error('Apenas imagens são permitidas');
       return;
@@ -146,27 +149,38 @@ export default function WhatsAppReminders() {
       return;
     }
 
+    const preview = URL.createObjectURL(file);
+    setPendingImage(prev => ({ ...prev, [templateId]: { file, preview } }));
+  };
+
+  const handleImageCancel = (templateId: string) => {
+    const pending = pendingImage[templateId];
+    if (pending) URL.revokeObjectURL(pending.preview);
+    setPendingImage(prev => {
+      const next = { ...prev };
+      delete next[templateId];
+      return next;
+    });
+  };
+
+  const handleImageConfirm = async (templateId: string) => {
+    const pending = pendingImage[templateId];
+    if (!pending) return;
+
     setUploadingImage(templateId);
     try {
-      const ext = file.name.split('.').pop() || 'jpg';
+      const ext = pending.file.name.split('.').pop() || 'jpg';
       const fileName = `whatsapp/template-${templateId}-${Date.now()}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from('contracts')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: true,
-        });
+        .upload(fileName, pending.file, { cacheControl: '3600', upsert: true });
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
-        .from('contracts')
-        .getPublicUrl(fileName);
-
+      const { data: urlData } = supabase.storage.from('contracts').getPublicUrl(fileName);
       const imageUrl = urlData.publicUrl;
 
-      // Save to template immediately
       const { error: updateError } = await supabase
         .from('whatsapp_templates')
         .update({ image_url: imageUrl })
@@ -174,19 +188,14 @@ export default function WhatsAppReminders() {
 
       if (updateError) throw updateError;
 
-      // Update local state
-      setTemplates(prev =>
-        prev.map(t =>
-          t.id === templateId ? { ...t, image_url: imageUrl } : t
-        )
-      );
-
+      setTemplates(prev => prev.map(t => t.id === templateId ? { ...t, image_url: imageUrl } : t));
       toast.success('Imagem atualizada com sucesso!');
     } catch (error) {
       console.error('Error uploading image:', error);
       toast.error('Erro ao fazer upload da imagem');
     } finally {
       setUploadingImage(null);
+      handleImageCancel(templateId);
     }
   };
 
@@ -352,7 +361,7 @@ export default function WhatsAppReminders() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {template.image_url && (
-                      <div className="relative rounded-lg overflow-hidden border border-border/50">
+                       <div className="relative rounded-lg overflow-hidden border border-border/50">
                         <img
                           src={`${template.image_url}?v=${Date.now()}`}
                           alt="Imagem promocional"
@@ -360,29 +369,69 @@ export default function WhatsAppReminders() {
                         />
                       </div>
                     )}
-                    <div className="flex items-center gap-3">
-                      <label className="flex-1">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleImageUpload(template.id, file);
-                          }}
-                        />
-                        <div className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 border-dashed border-border/50 hover:border-primary/50 hover:bg-primary/5 cursor-pointer transition-all">
-                          {uploadingImage === template.id ? (
-                            <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                          ) : (
-                            <Upload className="w-5 h-5 text-muted-foreground" />
-                          )}
-                          <span className="text-sm text-muted-foreground">
-                            {uploadingImage === template.id ? 'Enviando...' : 'Clique para trocar a imagem'}
-                          </span>
+
+                    {/* Pending image preview with confirm/cancel */}
+                    {pendingImage[template.id] && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-primary">Nova imagem selecionada:</p>
+                        <div className="relative rounded-lg overflow-hidden border-2 border-primary/50 bg-secondary/30">
+                          <img
+                            src={pendingImage[template.id].preview}
+                            alt="Preview da nova imagem"
+                            className="w-full h-auto max-h-[200px] object-contain"
+                          />
                         </div>
-                      </label>
-                    </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleImageConfirm(template.id)}
+                            disabled={uploadingImage === template.id}
+                            className="flex-1"
+                          >
+                            {uploadingImage === template.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                            ) : (
+                              <Check className="w-4 h-4 mr-1" />
+                            )}
+                            {uploadingImage === template.id ? 'Enviando...' : 'Confirmar'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleImageCancel(template.id)}
+                            disabled={uploadingImage === template.id}
+                            className="flex-1"
+                          >
+                            <X className="w-4 h-4 mr-1" />
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {!pendingImage[template.id] && (
+                      <div className="flex items-center gap-3">
+                        <label className="flex-1">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleImageSelect(template.id, file);
+                              e.target.value = '';
+                            }}
+                          />
+                          <div className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 border-dashed border-border/50 hover:border-primary/50 hover:bg-primary/5 cursor-pointer transition-all">
+                            <Upload className="w-5 h-5 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">
+                              Clique para selecionar uma imagem
+                            </span>
+                          </div>
+                        </label>
+                      </div>
+                    )}
+
                     {template.image_url && (
                       <Input
                         value={template.image_url}
