@@ -55,6 +55,7 @@ const replacePlaceholders = (template: string, clientName: string, formattedAmou
 
 export const useWhatsAppReminder = () => {
   const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
+  const [pendingRequests, setPendingRequests] = useState<Set<string>>(new Set());
 
   const sendReminder = async (params: SendReminderParams): Promise<boolean> => {
     const { clientId, clientName, clientPhone, type, amount, description, dueDate } = params;
@@ -64,7 +65,14 @@ export const useWhatsAppReminder = () => {
       return false;
     }
 
+    // Prevent duplicate requests for same client
+    if (pendingRequests.has(clientId)) {
+      console.warn(`Already sending reminder for client ${clientId}, ignoring duplicate request`);
+      return false;
+    }
+
     setSendingReminderId(clientId);
+    setPendingRequests(prev => new Set(prev).add(clientId));
 
     try {
       const formattedAmount = amount.toFixed(2).replace('.', ',');
@@ -141,6 +149,11 @@ export const useWhatsAppReminder = () => {
       return false;
     } finally {
       setSendingReminderId(null);
+      setPendingRequests(prev => {
+        const next = new Set(prev);
+        next.delete(clientId);
+        return next;
+      });
     }
   };
 
