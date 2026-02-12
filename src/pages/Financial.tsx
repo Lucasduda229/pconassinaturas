@@ -144,41 +144,14 @@ const Financial = () => {
           ...bucketPayments(hStart, hEnd),
         });
       }
-    } else if (period === 'week' || diffDays <= 14) {
-      // Group by day
+    } else {
+      // Always group by day regardless of range
       const days = eachDayOfInterval({ start, end });
       days.forEach(day => {
         result.push({
           month: format(day, 'dd/MM', { locale: ptBR }),
-          fullMonth: format(day, "EEEE, dd 'de' MMMM", { locale: ptBR }),
+          fullMonth: format(day, "EEEE, dd 'de' MMMM yyyy", { locale: ptBR }),
           ...bucketPayments(startOfDay(day), endOfDay(day)),
-        });
-      });
-    } else if (diffDays <= 90) {
-      // Group by week for ranges up to ~3 months
-      let weekStart = new Date(start);
-      while (weekStart <= end) {
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekEnd.getDate() + 6);
-        const actualEnd = weekEnd > end ? end : weekEnd;
-        
-        result.push({
-          month: `${format(weekStart, 'dd/MM', { locale: ptBR })}`,
-          fullMonth: `${format(weekStart, 'dd/MM', { locale: ptBR })} - ${format(actualEnd, 'dd/MM/yyyy', { locale: ptBR })}`,
-          ...bucketPayments(startOfDay(weekStart), endOfDay(actualEnd)),
-        });
-        
-        weekStart = new Date(weekStart);
-        weekStart.setDate(weekStart.getDate() + 7);
-      }
-    } else {
-      // Group by month for very large ranges
-      const months = eachMonthOfInterval({ start, end });
-      months.forEach(m => {
-        result.push({
-          month: format(m, 'MMM yy', { locale: ptBR }),
-          fullMonth: format(m, 'MMMM yyyy', { locale: ptBR }),
-          ...bucketPayments(startOfMonth(m), endOfMonth(m)),
         });
       });
     }
