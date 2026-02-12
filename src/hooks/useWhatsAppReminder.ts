@@ -9,13 +9,31 @@ interface SendReminderParams {
   type: 'subscription' | 'payment' | 'overdue';
   amount: number;
   description?: string;
+  dueDate?: string | null;
 }
 
-// Map reminder type to template_key in whatsapp_templates
-const typeToTemplateKey: Record<string, string> = {
-  subscription: 'subscription_reminder',
-  payment: 'due_today',
-  overdue: 'subscription_reminder', // fallback
+// Resolve the correct template key based on type and due date
+const resolveTemplateKey = (type: string, dueDate?: string | null): string => {
+  if (type === 'overdue') return 'subscription_reminder'; // fallback
+
+  // If we have a due date, check if it's today or tomorrow to pick the right template
+  if (dueDate) {
+    const now = new Date();
+    const due = new Date(dueDate);
+    // Compare only dates (ignore time)
+    const todayStr = now.toISOString().slice(0, 10);
+    const dueStr = due.toISOString().slice(0, 10);
+
+    if (dueStr === todayStr) {
+      return 'due_today';
+    }
+  }
+
+  // For payment type, default to due_today
+  if (type === 'payment') return 'due_today';
+
+  // For subscription type without a due date or future date, use D-1
+  return 'subscription_reminder';
 };
 
 // Fallback messages if no template found
@@ -39,7 +57,7 @@ export const useWhatsAppReminder = () => {
   const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
 
   const sendReminder = async (params: SendReminderParams): Promise<boolean> => {
-    const { clientId, clientName, clientPhone, type, amount, description } = params;
+    const { clientId, clientName, clientPhone, type, amount, description, dueDate } = params;
 
     if (!clientPhone) {
       toast.error('Cliente não possui telefone cadastrado');
@@ -51,8 +69,8 @@ export const useWhatsAppReminder = () => {
     try {
       const formattedAmount = amount.toFixed(2).replace('.', ',');
 
-      // Try to fetch template from whatsapp_templates
-      const templateKey = typeToTemplateKey[type] || 'subscription_reminder';
+      // Resolve template key based on type and due date
+      const templateKey = resolveTemplateKey(type, dueDate);
       const { data: templateData } = await supabase
         .from('whatsapp_templates')
         .select('*')
