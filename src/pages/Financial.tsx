@@ -33,6 +33,7 @@ import { ptBR } from 'date-fns/locale';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useGlobalData } from '@/contexts/GlobalDataContext';
 import { useExpenses } from '@/hooks/useExpenses';
+import ExpensesChart from '@/components/ExpensesChart';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -134,62 +135,74 @@ const Financial = () => {
     });
   }, [expenses, dateRange]);
 
-  // ─── Helper to bucket payments by interval ─────────
-  const bucketPayments = (bucketStart: Date, bucketEnd: Date) => {
-    const paid = filteredPayments.filter(p => {
-      if (p.status !== 'paid') return false;
-      const d = new Date(p.paid_at || p.created_at);
-      return isWithinInterval(d, { start: bucketStart, end: bucketEnd });
-    });
-    const pending = filteredPayments.filter(p => {
-      if (p.status !== 'pending') return false;
-      const d = new Date(p.due_date || p.created_at);
-      return isWithinInterval(d, { start: bucketStart, end: bucketEnd });
-    });
-    const failed = filteredPayments.filter(p => {
-      if (p.status !== 'failed' && p.status !== 'overdue') return false;
-      const d = new Date(p.due_date || p.created_at);
-      return isWithinInterval(d, { start: bucketStart, end: bucketEnd });
-    });
-    return {
-      receita: paid.reduce((s, p) => s + Number(p.amount), 0),
-      pendente: pending.reduce((s, p) => s + Number(p.amount), 0),
-      prejuizo: failed.reduce((s, p) => s + Number(p.amount), 0),
-      lucro: paid.reduce((s, p) => s + Number(p.amount), 0),
-      paidCount: paid.length, pendingCount: pending.length, failedCount: failed.length,
-    };
-  };
+   // ─── Helper to bucket payments by interval ─────────
+   const bucketPayments = (bucketStart: Date, bucketEnd: Date) => {
+     const paid = filteredPayments.filter(p => {
+       if (p.status !== 'paid') return false;
+       const d = new Date(p.paid_at || p.created_at);
+       return isWithinInterval(d, { start: bucketStart, end: bucketEnd });
+     });
+     const pending = filteredPayments.filter(p => {
+       if (p.status !== 'pending') return false;
+       const d = new Date(p.due_date || p.created_at);
+       return isWithinInterval(d, { start: bucketStart, end: bucketEnd });
+     });
+     const failed = filteredPayments.filter(p => {
+       if (p.status !== 'failed' && p.status !== 'overdue') return false;
+       const d = new Date(p.due_date || p.created_at);
+       return isWithinInterval(d, { start: bucketStart, end: bucketEnd });
+     });
+     return {
+       receita: paid.reduce((s, p) => s + Number(p.amount), 0),
+       pendente: pending.reduce((s, p) => s + Number(p.amount), 0),
+       prejuizo: failed.reduce((s, p) => s + Number(p.amount), 0),
+       lucro: paid.reduce((s, p) => s + Number(p.amount), 0),
+       paidCount: paid.length, pendingCount: pending.length, failedCount: failed.length,
+     };
+   };
 
-  // ─── Chart data: adapts granularity to period ──────
-  const monthlyData = useMemo(() => {
-    const { start, end } = dateRange;
-    type ChartRow = { month: string; fullMonth: string; receita: number; pendente: number; prejuizo: number; lucro: number; paidCount: number; pendingCount: number; failedCount: number; };
-    const result: ChartRow[] = [];
-    const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+   // ─── Helper to bucket expenses by interval ─────────
+   const bucketExpenses = (bucketStart: Date, bucketEnd: Date) => {
+     const expenses = filteredExpenses.filter(e => {
+       if (e.status === 'cancelled') return false;
+       const d = new Date(e.paid_at || e.due_date || e.created_at);
+       return isWithinInterval(d, { start: bucketStart, end: bucketEnd });
+     });
+     return expenses.reduce((s, e) => s + Number(e.amount), 0);
+   };
 
-    if (period === 'today') {
-      for (let h = 0; h < 24; h++) {
-        const hStart = new Date(start); hStart.setHours(h, 0, 0, 0);
-        const hEnd = new Date(start); hEnd.setHours(h, 59, 59, 999);
-        result.push({
-          month: `${String(h).padStart(2, '0')}h`,
-          fullMonth: `${format(start, 'dd/MM/yyyy', { locale: ptBR })} às ${String(h).padStart(2, '0')}:00`,
-          ...bucketPayments(hStart, hEnd),
-        });
-      }
-    } else {
-      // Always group by day regardless of range
-      const days = eachDayOfInterval({ start, end });
-      days.forEach(day => {
-        result.push({
-          month: format(day, 'dd/MM', { locale: ptBR }),
-          fullMonth: format(day, "EEEE, dd 'de' MMMM yyyy", { locale: ptBR }),
-          ...bucketPayments(startOfDay(day), endOfDay(day)),
-        });
-      });
-    }
-    return result;
-  }, [filteredPayments, dateRange, period]);
+   // ─── Chart data: adapts granularity to period ──────
+   const monthlyData = useMemo(() => {
+     const { start, end } = dateRange;
+     type ChartRow = { month: string; fullMonth: string; receita: number; pendente: number; prejuizo: number; lucro: number; gastos: number; paidCount: number; pendingCount: number; failedCount: number; };
+     const result: ChartRow[] = [];
+     const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+
+     if (period === 'today') {
+       for (let h = 0; h < 24; h++) {
+         const hStart = new Date(start); hStart.setHours(h, 0, 0, 0);
+         const hEnd = new Date(start); hEnd.setHours(h, 59, 59, 999);
+         result.push({
+           month: `${String(h).padStart(2, '0')}h`,
+           fullMonth: `${format(start, 'dd/MM/yyyy', { locale: ptBR })} às ${String(h).padStart(2, '0')}:00`,
+           ...bucketPayments(hStart, hEnd),
+           gastos: bucketExpenses(hStart, hEnd),
+         });
+       }
+     } else {
+       // Always group by day regardless of range
+       const days = eachDayOfInterval({ start, end });
+       days.forEach(day => {
+         result.push({
+           month: format(day, 'dd/MM', { locale: ptBR }),
+           fullMonth: format(day, "EEEE, dd 'de' MMMM yyyy", { locale: ptBR }),
+           ...bucketPayments(startOfDay(day), endOfDay(day)),
+           gastos: bucketExpenses(startOfDay(day), endOfDay(day)),
+         });
+       });
+     }
+     return result;
+   }, [filteredPayments, filteredExpenses, dateRange, period]);
 
   // ─── Summary KPIs (filtered by period) ──────────────
   const kpis = useMemo(() => {
@@ -715,7 +728,7 @@ const Financial = () => {
           {/* Monthly comparison bars */}
           <div className="glass-card p-4 sm:p-6">
             <h3 className="font-heading text-lg font-semibold text-foreground mb-1">Comparativo por Período</h3>
-            <p className="text-sm text-muted-foreground mb-4">Receita, pendências e prejuízos detalhados</p>
+            <p className="text-sm text-muted-foreground mb-4">Receita, pendências, prejuízos e gastos detalhados</p>
             <div className="h-[360px]">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={monthlyData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
@@ -754,6 +767,7 @@ const Financial = () => {
                   <Bar dataKey="receita" name="Receita" fill="url(#barRevenue)" radius={[6, 6, 0, 0]} maxBarSize={28} />
                   <Bar dataKey="pendente" name="Pendente" fill="url(#barPending)" radius={[6, 6, 0, 0]} maxBarSize={28} />
                   <Bar dataKey="prejuizo" name="Prejuízo" fill="url(#barLoss)" radius={[6, 6, 0, 0]} maxBarSize={28} />
+                  <Line type="monotone" dataKey="gastos" name="Gastos" stroke={CHART_COLORS.purple} strokeWidth={2.5} dot={{ r: 3, fill: CHART_COLORS.purple }} />
                   <Line type="monotone" dataKey="receita" name="Tendência" stroke={CHART_COLORS.successLight} strokeWidth={2} dot={false} strokeDasharray="4 4" legendType="none" />
                 </ComposedChart>
               </ResponsiveContainer>
@@ -775,6 +789,9 @@ const Financial = () => {
               </div>
             </div>
           </div>
+
+          {/* Expenses by Category Chart */}
+          <ExpensesChart expenses={filteredExpenses} />
         </TabsContent>
 
         {/* Revenue Tab */}
