@@ -32,6 +32,7 @@ import {
 import { ptBR } from 'date-fns/locale';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useGlobalData } from '@/contexts/GlobalDataContext';
+import { useExpenses } from '@/hooks/useExpenses';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -65,6 +66,7 @@ const GRADIENT_ID = {
 
 const Financial = () => {
   const { clients, subscriptions, payments, invoices, loadingPayments } = useGlobalData();
+  const { expenses } = useExpenses();
   const [period, setPeriod] = useState('month');
   const [tab, setTab] = useState('overview');
   const [customDateRange, setCustomDateRange] = useState<{ from?: Date; to?: Date }>({});
@@ -100,11 +102,18 @@ const Financial = () => {
   // ─── Filtered payments based on period ─────────────
   const filteredPayments = useMemo(() => {
     return payments.filter(p => {
-      // Use the most relevant date for each payment
       const d = new Date(p.paid_at || p.due_date || p.created_at);
       return isWithinInterval(d, { start: dateRange.start, end: dateRange.end });
     });
   }, [payments, dateRange]);
+
+  // ─── Filtered expenses based on period ─────────────
+  const filteredExpenses = useMemo(() => {
+    return expenses.filter(e => {
+      const d = new Date(e.paid_at || e.due_date || e.created_at);
+      return isWithinInterval(d, { start: dateRange.start, end: dateRange.end });
+    });
+  }, [expenses, dateRange]);
 
   // ─── Helper to bucket payments by interval ─────────
   const bucketPayments = (bucketStart: Date, bucketEnd: Date) => {
@@ -173,6 +182,11 @@ const Financial = () => {
     const totalPending = pendingFiltered.reduce((s, p) => s + Number(p.amount), 0);
     const totalLost = lostFiltered.reduce((s, p) => s + Number(p.amount), 0);
 
+    const totalExpenses = filteredExpenses.filter(e => e.status !== 'cancelled').reduce((s, e) => s + Number(e.amount), 0);
+    const totalExpensesPaid = filteredExpenses.filter(e => e.status === 'paid').reduce((s, e) => s + Number(e.amount), 0);
+    const totalExpensesPending = filteredExpenses.filter(e => e.status === 'pending').reduce((s, e) => s + Number(e.amount), 0);
+    const netProfit = totalRevenue - totalExpensesPaid;
+
     const activeSubsValue = subscriptions.filter(s => s.status === 'active').reduce((s, sub) => s + Number(sub.value), 0);
     const avgTicket = paidFiltered.length > 0 ? totalRevenue / paidFiltered.length : 0;
 
@@ -180,12 +194,16 @@ const Financial = () => {
       totalRevenue,
       totalPending,
       totalLost,
+      totalExpenses,
+      totalExpensesPaid,
+      totalExpensesPending,
+      netProfit,
       activeSubsValue,
       avgTicket,
       invoicesCount: invoices.length,
       paidCount: paidFiltered.length,
     };
-  }, [filteredPayments, subscriptions, invoices]);
+  }, [filteredPayments, filteredExpenses, subscriptions, invoices]);
 
   // ─── Plan distribution ─────────────────────────────
   const planData = useMemo(() => {
@@ -555,8 +573,8 @@ const Financial = () => {
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+      {/* KPI Cards - Main */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
         <KPICard
           title="Receita no Período"
           value={formatCurrency(kpis.totalRevenue)}
@@ -564,10 +582,18 @@ const Financial = () => {
           color="success"
         />
         <KPICard
-          title="Receita Recorrente (MRR)"
-          value={formatCurrency(kpis.activeSubsValue)}
+          title="Gastos no Período"
+          value={formatCurrency(kpis.totalExpenses)}
+          icon={Wallet}
+          color="danger"
+        />
+        <KPICard
+          title="Lucro Real"
+          value={formatCurrency(kpis.netProfit)}
           icon={TrendingUp}
-          color="primary"
+          color={kpis.netProfit >= 0 ? 'success' : 'danger'}
+          trend={kpis.netProfit >= 0 ? 'up' : 'down'}
+          trendValue={kpis.totalRevenue > 0 ? `${((kpis.netProfit / kpis.totalRevenue) * 100).toFixed(0)}%` : '0%'}
         />
         <KPICard
           title="Pendente no Período"
@@ -584,21 +610,29 @@ const Financial = () => {
       </div>
 
       {/* Secondary KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-8">
         <KPICard
-          title="Receita Total Acumulada"
-          value={formatCurrency(kpis.totalRevenue)}
-          icon={BarChart3}
+          title="Receita Recorrente (MRR)"
+          value={formatCurrency(kpis.activeSubsValue)}
+          icon={TrendingUp}
+          color="primary"
+        />
+        <KPICard
+          title="Gastos Pagos"
+          value={formatCurrency(kpis.totalExpensesPaid)}
+          icon={Receipt}
+          color="danger"
+        />
+        <KPICard
+          title="Gastos Pendentes"
+          value={formatCurrency(kpis.totalExpensesPending)}
+          icon={Receipt}
+          color="warning"
         />
         <KPICard
           title="Ticket Médio"
           value={formatCurrency(kpis.avgTicket)}
           icon={CreditCard}
-        />
-        <KPICard
-          title="Notas Fiscais Emitidas"
-          value={String(kpis.invoicesCount)}
-          icon={Receipt}
         />
         <KPICard
           title="Clientes Ativos"
