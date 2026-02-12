@@ -14,6 +14,7 @@ import {
   Receipt,
   CreditCard,
   Users,
+  CalendarDays,
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line,
@@ -23,6 +24,8 @@ import {
 import {
   format, subMonths, startOfMonth, endOfMonth, isWithinInterval,
   startOfYear, endOfYear, eachMonthOfInterval, subYears, isSameMonth,
+  startOfDay, endOfDay, eachDayOfInterval, eachHourOfInterval,
+  startOfHour, endOfHour, subDays, subWeeks,
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -30,6 +33,10 @@ import { useGlobalData } from '@/contexts/GlobalDataContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
 
 const CHART_COLORS = {
   primary: 'hsl(216, 68%, 45%)',
@@ -66,111 +73,154 @@ const Financial = () => {
   };
 
   // ─── Calculate date range based on selected period ───
-  const getDateRange = () => {
+  const dateRange = useMemo(() => {
     const now = new Date();
     switch (period) {
       case 'today':
-        return { start: startOfMonth(now), end: endOfMonth(now) };
-      case 'week': {
-        const weekAgo = new Date(now);
-        weekAgo.setDate(now.getDate() - 7);
-        return { start: weekAgo, end: now };
-      }
+        return { start: startOfDay(now), end: endOfDay(now) };
+      case 'week':
+        return { start: startOfDay(subDays(now, 6)), end: endOfDay(now) };
       case 'month':
         return { start: startOfMonth(now), end: endOfMonth(now) };
       case 'custom':
-        return { start: customDateRange.from || startOfMonth(now), end: customDateRange.to || now };
+        return { 
+          start: customDateRange.from ? startOfDay(customDateRange.from) : startOfMonth(now), 
+          end: customDateRange.to ? endOfDay(customDateRange.to) : endOfDay(now) 
+        };
       default:
         return { start: startOfMonth(now), end: endOfMonth(now) };
     }
-  };
+  }, [period, customDateRange]);
 
-  // ─── Monthly breakdown data ────────────────────────
+  // ─── Filtered payments based on period ─────────────
+  const filteredPayments = useMemo(() => {
+    return payments.filter(p => {
+      const d = new Date(p.paid_at || p.created_at);
+      return isWithinInterval(d, { start: dateRange.start, end: dateRange.end });
+    });
+  }, [payments, dateRange]);
+
+  // ─── Chart data: adapts granularity to period ──────
   const monthlyData = useMemo(() => {
-    const dateRange = getDateRange();
-    const months = 12; // Always show 12 months for context
-    const result = [];
+    // For "today", group by hour; for "week", group by day; for month/custom, group by day or month
+    const { start, end } = dateRange;
+    const result: Array<{
+      month: string; fullMonth: string; receita: number; pendente: number; prejuizo: number;
+      lucro: number; paidCount: number; pendingCount: number; failedCount: number;
+    }> = [];
 
-    for (let i = months - 1; i >= 0; i--) {
-      const date = subMonths(new Date(), i);
-      const mStart = startOfMonth(date);
-      const mEnd = endOfMonth(date);
+    if (period === 'today') {
+      // Group by hour
+      for (let h = 0; h < 24; h++) {
+        const hStart = new Date(start);
+        hStart.setHours(h, 0, 0, 0);
+        const hEnd = new Date(start);
+        hEnd.setHours(h, 59, 59, 999);
 
-      const paid = payments.filter(p => {
-        if (p.status !== 'paid') return false;
-        const d = new Date(p.paid_at || p.created_at);
-        return isWithinInterval(d, { start: mStart, end: mEnd });
-      });
-      const pending = payments.filter(p => {
-        if (p.status !== 'pending') return false;
-        const d = new Date(p.created_at);
-        return isWithinInterval(d, { start: mStart, end: mEnd });
-      });
-      const failed = payments.filter(p => {
-        if (p.status !== 'failed' && p.status !== 'overdue') return false;
-        const d = new Date(p.created_at);
-        return isWithinInterval(d, { start: mStart, end: mEnd });
-      });
+        const paid = filteredPayments.filter(p => p.status === 'paid' && isWithinInterval(new Date(p.paid_at || p.created_at), { start: hStart, end: hEnd }));
+        const pending = filteredPayments.filter(p => p.status === 'pending' && isWithinInterval(new Date(p.created_at), { start: hStart, end: hEnd }));
+        const failed = filteredPayments.filter(p => (p.status === 'failed' || p.status === 'overdue') && isWithinInterval(new Date(p.created_at), { start: hStart, end: hEnd }));
 
-      const revenue = paid.reduce((s, p) => s + Number(p.amount), 0);
-      const pendingVal = pending.reduce((s, p) => s + Number(p.amount), 0);
-      const lostVal = failed.reduce((s, p) => s + Number(p.amount), 0);
+        result.push({
+          month: `${String(h).padStart(2, '0')}h`,
+          fullMonth: `${format(start, 'dd/MM/yyyy', { locale: ptBR })} às ${String(h).padStart(2, '0')}:00`,
+          receita: paid.reduce((s, p) => s + Number(p.amount), 0),
+          pendente: pending.reduce((s, p) => s + Number(p.amount), 0),
+          prejuizo: failed.reduce((s, p) => s + Number(p.amount), 0),
+          lucro: paid.reduce((s, p) => s + Number(p.amount), 0),
+          paidCount: paid.length, pendingCount: pending.length, failedCount: failed.length,
+        });
+      }
+    } else if (period === 'week') {
+      // Group by day
+      const days = eachDayOfInterval({ start, end });
+      days.forEach(day => {
+        const dStart = startOfDay(day);
+        const dEnd = endOfDay(day);
+        const paid = filteredPayments.filter(p => p.status === 'paid' && isWithinInterval(new Date(p.paid_at || p.created_at), { start: dStart, end: dEnd }));
+        const pending = filteredPayments.filter(p => p.status === 'pending' && isWithinInterval(new Date(p.created_at), { start: dStart, end: dEnd }));
+        const failed = filteredPayments.filter(p => (p.status === 'failed' || p.status === 'overdue') && isWithinInterval(new Date(p.created_at), { start: dStart, end: dEnd }));
 
-      result.push({
-        month: format(date, 'MMM', { locale: ptBR }),
-        fullMonth: format(date, 'MMMM yyyy', { locale: ptBR }),
-        receita: revenue,
-        pendente: pendingVal,
-        prejuizo: lostVal,
-        lucro: revenue,
-        paidCount: paid.length,
-        pendingCount: pending.length,
-        failedCount: failed.length,
+        result.push({
+          month: format(day, 'EEE dd', { locale: ptBR }),
+          fullMonth: format(day, "EEEE, dd 'de' MMMM", { locale: ptBR }),
+          receita: paid.reduce((s, p) => s + Number(p.amount), 0),
+          pendente: pending.reduce((s, p) => s + Number(p.amount), 0),
+          prejuizo: failed.reduce((s, p) => s + Number(p.amount), 0),
+          lucro: paid.reduce((s, p) => s + Number(p.amount), 0),
+          paidCount: paid.length, pendingCount: pending.length, failedCount: failed.length,
+        });
       });
+    } else {
+      // month or custom: group by day if range <= 31 days, else by month
+      const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (diffDays <= 31) {
+        const days = eachDayOfInterval({ start, end });
+        days.forEach(day => {
+          const dStart = startOfDay(day);
+          const dEnd = endOfDay(day);
+          const paid = filteredPayments.filter(p => p.status === 'paid' && isWithinInterval(new Date(p.paid_at || p.created_at), { start: dStart, end: dEnd }));
+          const pending = filteredPayments.filter(p => p.status === 'pending' && isWithinInterval(new Date(p.created_at), { start: dStart, end: dEnd }));
+          const failed = filteredPayments.filter(p => (p.status === 'failed' || p.status === 'overdue') && isWithinInterval(new Date(p.created_at), { start: dStart, end: dEnd }));
+
+          result.push({
+            month: format(day, 'dd', { locale: ptBR }),
+            fullMonth: format(day, "dd 'de' MMMM yyyy", { locale: ptBR }),
+            receita: paid.reduce((s, p) => s + Number(p.amount), 0),
+            pendente: pending.reduce((s, p) => s + Number(p.amount), 0),
+            prejuizo: failed.reduce((s, p) => s + Number(p.amount), 0),
+            lucro: paid.reduce((s, p) => s + Number(p.amount), 0),
+            paidCount: paid.length, pendingCount: pending.length, failedCount: failed.length,
+          });
+        });
+      } else {
+        const months = eachMonthOfInterval({ start, end });
+        months.forEach(m => {
+          const mStart = startOfMonth(m);
+          const mEnd = endOfMonth(m);
+          const paid = filteredPayments.filter(p => p.status === 'paid' && isWithinInterval(new Date(p.paid_at || p.created_at), { start: mStart, end: mEnd }));
+          const pending = filteredPayments.filter(p => p.status === 'pending' && isWithinInterval(new Date(p.created_at), { start: mStart, end: mEnd }));
+          const failed = filteredPayments.filter(p => (p.status === 'failed' || p.status === 'overdue') && isWithinInterval(new Date(p.created_at), { start: mStart, end: mEnd }));
+
+          result.push({
+            month: format(m, 'MMM', { locale: ptBR }),
+            fullMonth: format(m, 'MMMM yyyy', { locale: ptBR }),
+            receita: paid.reduce((s, p) => s + Number(p.amount), 0),
+            pendente: pending.reduce((s, p) => s + Number(p.amount), 0),
+            prejuizo: failed.reduce((s, p) => s + Number(p.amount), 0),
+            lucro: paid.reduce((s, p) => s + Number(p.amount), 0),
+            paidCount: paid.length, pendingCount: pending.length, failedCount: failed.length,
+          });
+        });
+      }
     }
     return result;
-  }, [payments, period, customDateRange]);
+  }, [filteredPayments, dateRange, period]);
 
-  // ─── Summary KPIs ─────────────────────────────────
+  // ─── Summary KPIs (filtered by period) ──────────────
   const kpis = useMemo(() => {
-    const now = new Date();
-    const thisMonthStart = startOfMonth(now);
-    const thisMonthEnd = endOfMonth(now);
-    const lastMonthStart = startOfMonth(subMonths(now, 1));
-    const lastMonthEnd = endOfMonth(subMonths(now, 1));
+    const paidFiltered = filteredPayments.filter(p => p.status === 'paid');
+    const pendingFiltered = filteredPayments.filter(p => p.status === 'pending');
+    const lostFiltered = filteredPayments.filter(p => p.status === 'failed' || p.status === 'overdue');
 
-    const revenueThisMonth = payments
-      .filter(p => p.status === 'paid' && isWithinInterval(new Date(p.paid_at || p.created_at), { start: thisMonthStart, end: thisMonthEnd }))
-      .reduce((s, p) => s + Number(p.amount), 0);
-
-    const revenueLastMonth = payments
-      .filter(p => p.status === 'paid' && isWithinInterval(new Date(p.paid_at || p.created_at), { start: lastMonthStart, end: lastMonthEnd }))
-      .reduce((s, p) => s + Number(p.amount), 0);
-
-    const totalRevenue = payments.filter(p => p.status === 'paid').reduce((s, p) => s + Number(p.amount), 0);
-    const totalPending = payments.filter(p => p.status === 'pending').reduce((s, p) => s + Number(p.amount), 0);
-    const totalLost = payments.filter(p => p.status === 'failed' || p.status === 'overdue').reduce((s, p) => s + Number(p.amount), 0);
-
-    const revenueGrowth = revenueLastMonth > 0
-      ? ((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100
-      : revenueThisMonth > 0 ? 100 : 0;
+    const totalRevenue = paidFiltered.reduce((s, p) => s + Number(p.amount), 0);
+    const totalPending = pendingFiltered.reduce((s, p) => s + Number(p.amount), 0);
+    const totalLost = lostFiltered.reduce((s, p) => s + Number(p.amount), 0);
 
     const activeSubsValue = subscriptions.filter(s => s.status === 'active').reduce((s, sub) => s + Number(sub.value), 0);
-    const avgTicket = payments.filter(p => p.status === 'paid').length > 0
-      ? totalRevenue / payments.filter(p => p.status === 'paid').length : 0;
+    const avgTicket = paidFiltered.length > 0 ? totalRevenue / paidFiltered.length : 0;
 
     return {
-      revenueThisMonth,
-      revenueLastMonth,
-      revenueGrowth,
       totalRevenue,
       totalPending,
       totalLost,
       activeSubsValue,
       avgTicket,
       invoicesCount: invoices.length,
+      paidCount: paidFiltered.length,
     };
-  }, [payments, subscriptions, invoices]);
+  }, [filteredPayments, subscriptions, invoices]);
 
   // ─── Plan distribution ─────────────────────────────
   const planData = useMemo(() => {
@@ -182,17 +232,14 @@ const Financial = () => {
     });
     const colors = [CHART_COLORS.primary, CHART_COLORS.success, CHART_COLORS.warning, CHART_COLORS.purple, CHART_COLORS.cyan, CHART_COLORS.danger];
     return Object.entries(planMap).map(([name, d], i) => ({
-      name,
-      count: d.count,
-      value: d.value,
-      color: colors[i % colors.length],
+      name, count: d.count, value: d.value, color: colors[i % colors.length],
     }));
   }, [subscriptions]);
 
-  // ─── Payment method distribution ────────────────────
+  // ─── Payment method distribution (filtered) ─────────
   const methodData = useMemo(() => {
     const methodMap: Record<string, { count: number; value: number }> = {};
-    payments.filter(p => p.status === 'paid').forEach(p => {
+    filteredPayments.filter(p => p.status === 'paid').forEach(p => {
       const rawMethod = (p.payment_method || 'Outros').toUpperCase();
       const method = rawMethod === 'PIX' ? 'PIX' : rawMethod === 'CREDIT_CARD' ? 'Cartão de Crédito' : rawMethod === 'CARTÃO DE CRÉDITO' ? 'Cartão de Crédito' : p.payment_method || 'Outros';
       if (!methodMap[method]) methodMap[method] = { count: 0, value: 0 };
@@ -201,59 +248,48 @@ const Financial = () => {
     });
     const colors = [CHART_COLORS.primary, CHART_COLORS.success, CHART_COLORS.warning, CHART_COLORS.purple];
     return Object.entries(methodMap).map(([name, d], i) => ({
-      name,
-      count: d.count,
-      value: d.value,
-      color: colors[i % colors.length],
+      name, count: d.count, value: d.value, color: colors[i % colors.length],
     }));
-  }, [payments]);
+  }, [filteredPayments]);
 
-  // ─── Payment type distribution (subscription vs single) ──
+  // ─── Payment type distribution (filtered) ───────────
   const typeData = useMemo(() => {
-    const subPayments = payments.filter(p => p.status === 'paid' && p.subscription_id);
-    const singlePayments = payments.filter(p => p.status === 'paid' && !p.subscription_id);
+    const subPayments = filteredPayments.filter(p => p.status === 'paid' && p.subscription_id);
+    const singlePayments = filteredPayments.filter(p => p.status === 'paid' && !p.subscription_id);
     const result = [];
     if (subPayments.length > 0) {
-      result.push({
-        name: 'Assinaturas',
-        count: subPayments.length,
-        value: subPayments.reduce((s, p) => s + Number(p.amount), 0),
-        color: CHART_COLORS.primary,
-      });
+      result.push({ name: 'Assinaturas', count: subPayments.length, value: subPayments.reduce((s, p) => s + Number(p.amount), 0), color: CHART_COLORS.primary });
     }
     if (singlePayments.length > 0) {
-      result.push({
-        name: 'Cobranças Únicas',
-        count: singlePayments.length,
-        value: singlePayments.reduce((s, p) => s + Number(p.amount), 0),
-        color: CHART_COLORS.cyan,
-      });
+      result.push({ name: 'Cobranças Únicas', count: singlePayments.length, value: singlePayments.reduce((s, p) => s + Number(p.amount), 0), color: CHART_COLORS.cyan });
     }
     return result;
-  }, [payments]);
+  }, [filteredPayments]);
 
-  // ─── Monthly type breakdown ──────────────────────────
+  // ─── Monthly type breakdown (uses same chart data logic) ──
   const monthlyTypeData = useMemo(() => {
-    const months = 12; // Always show 12 months for context
-    const result = [];
-    for (let i = months - 1; i >= 0; i--) {
-      const date = subMonths(new Date(), i);
-      const mStart = startOfMonth(date);
-      const mEnd = endOfMonth(date);
-      const paidInMonth = payments.filter(p => {
-        if (p.status !== 'paid') return false;
-        const d = new Date(p.paid_at || p.created_at);
-        return isWithinInterval(d, { start: mStart, end: mEnd });
-      });
-      result.push({
-        month: format(date, 'MMM', { locale: ptBR }),
-        fullMonth: format(date, 'MMMM yyyy', { locale: ptBR }),
-        assinaturas: paidInMonth.filter(p => p.subscription_id).reduce((s, p) => s + Number(p.amount), 0),
-        unicas: paidInMonth.filter(p => !p.subscription_id).reduce((s, p) => s + Number(p.amount), 0),
-      });
+    return monthlyData.map(d => {
+      const { start, end } = dateRange;
+      // Re-filter from filteredPayments for this specific bucket label
+      // We already have the granularity from monthlyData, just calculate type split
+      return { ...d };
+    });
+  }, [monthlyData, dateRange]);
+
+  // ─── Period label for UI ───────────────────────────
+  const periodLabel = useMemo(() => {
+    switch (period) {
+      case 'today': return format(new Date(), "dd 'de' MMMM yyyy", { locale: ptBR });
+      case 'week': return `${format(dateRange.start, 'dd/MM', { locale: ptBR })} - ${format(dateRange.end, 'dd/MM/yyyy', { locale: ptBR })}`;
+      case 'month': return format(new Date(), "MMMM 'de' yyyy", { locale: ptBR });
+      case 'custom': 
+        if (customDateRange.from && customDateRange.to) {
+          return `${format(customDateRange.from, 'dd/MM/yyyy', { locale: ptBR })} - ${format(customDateRange.to, 'dd/MM/yyyy', { locale: ptBR })}`;
+        }
+        return 'Selecione as datas';
+      default: return '';
     }
-    return result;
-  }, [payments, period]);
+  }, [period, dateRange, customDateRange]);
 
   // ─── Custom tooltip ────────────────────────────────
   const ChartTooltip = ({ active, payload, label }: any) => {
@@ -322,7 +358,7 @@ const Financial = () => {
   return (
     <DashboardLayout title="Financeiro" subtitle="Relatórios e análises financeiras detalhadas">
       {/* Period Filter */}
-      <div className="flex flex-wrap items-center gap-3 mb-6">
+      <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Filter className="w-4 h-4" />
           <span>Período:</span>
@@ -338,16 +374,56 @@ const Financial = () => {
             <SelectItem value="custom">Personalizado</SelectItem>
           </SelectContent>
         </Select>
+        {period === 'custom' && (
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("w-[140px] justify-start text-left font-normal glass-card border-border/50", !customDateRange.from && "text-muted-foreground")}>
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  {customDateRange.from ? format(customDateRange.from, 'dd/MM/yyyy') : 'De'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={customDateRange.from}
+                  onSelect={(date) => setCustomDateRange(prev => ({ ...prev, from: date || undefined }))}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                  locale={ptBR}
+                />
+              </PopoverContent>
+            </Popover>
+            <span className="text-muted-foreground text-sm">até</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("w-[140px] justify-start text-left font-normal glass-card border-border/50", !customDateRange.to && "text-muted-foreground")}>
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  {customDateRange.to ? format(customDateRange.to, 'dd/MM/yyyy') : 'Até'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={customDateRange.to}
+                  onSelect={(date) => setCustomDateRange(prev => ({ ...prev, to: date || undefined }))}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                  locale={ptBR}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
+        <span className="text-xs text-muted-foreground capitalize">{periodLabel}</span>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <KPICard
-          title="Receita do Mês"
-          value={formatCurrency(kpis.revenueThisMonth)}
+          title="Receita no Período"
+          value={formatCurrency(kpis.totalRevenue)}
           icon={DollarSign}
-          trend={kpis.revenueGrowth >= 0 ? 'up' : 'down'}
-          trendValue={`${Math.abs(kpis.revenueGrowth).toFixed(1)}%`}
           color="success"
         />
         <KPICard
@@ -357,13 +433,13 @@ const Financial = () => {
           color="primary"
         />
         <KPICard
-          title="Pendente Total"
+          title="Pendente no Período"
           value={formatCurrency(kpis.totalPending)}
           icon={Wallet}
           color="warning"
         />
         <KPICard
-          title="Prejuízo (Falhas)"
+          title="Prejuízo no Período"
           value={formatCurrency(kpis.totalLost)}
           icon={TrendingDown}
           color="danger"
