@@ -14,7 +14,8 @@ import {
   UserPlus,
   Rocket,
   Ticket,
-  MessageSquare
+  MessageSquare,
+  BellRing
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminNotifications } from '@/hooks/useAdminNotifications';
@@ -30,6 +31,7 @@ const navItems = [
   { icon: FileSignature, label: 'Contratos', path: '/contracts' },
   { icon: FileText, label: 'Notas Fiscais', path: '/invoices' },
   { icon: MessageSquare, label: 'WhatsApp', path: '/whatsapp' },
+  { icon: BellRing, label: 'Lembretes', path: '/whatsapp/lembretes' },
   { icon: Rocket, label: 'Implantações', path: '/implementations' },
   { icon: Ticket, label: 'Cupons', path: '/coupons' },
   { icon: Gift, label: 'Indicações', path: '/referrals' },
