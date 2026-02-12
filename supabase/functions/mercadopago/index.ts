@@ -95,19 +95,65 @@ serve(async (req: Request) => {
       const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       const supabase = createClient(supabaseUrl, supabaseKey);
 
-      const { error: dbError } = await supabase.from("payments").insert({
-        client_id: body.clientId,
-        subscription_id: body.subscriptionId || null,
-        amount: body.amount,
-        status: "pending",
-        payment_method: "PIX",
-        description: body.description,
-        asaas_id: null, // Not using ASAAS
-        transaction_id: result.id?.toString(),
-      });
+      // Check if there's already a pending payment for this subscription/charge
+      let existingPayment = null;
+      if (body.subscriptionId) {
+        const { data } = await supabase
+          .from("payments")
+          .select("id")
+          .eq("client_id", body.clientId)
+          .eq("subscription_id", body.subscriptionId)
+          .eq("status", "pending")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+        existingPayment = data;
+      } else {
+        // For single charges, check by client_id + amount + description
+        const { data } = await supabase
+          .from("payments")
+          .select("id")
+          .eq("client_id", body.clientId)
+          .is("subscription_id", null)
+          .eq("status", "pending")
+          .eq("amount", body.amount)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+        existingPayment = data;
+      }
 
-      if (dbError) {
-        console.error("Error saving payment to DB:", dbError);
+      if (existingPayment) {
+        // Update existing payment with transaction_id
+        const { error: updateError } = await supabase
+          .from("payments")
+          .update({
+            transaction_id: result.id?.toString(),
+            payment_method: "PIX",
+          })
+          .eq("id", existingPayment.id);
+
+        if (updateError) {
+          console.error("Error updating existing payment:", updateError);
+        } else {
+          console.log("Updated existing payment:", existingPayment.id, "with transaction_id:", result.id);
+        }
+      } else {
+        // No existing payment found, create new one
+        const { error: dbError } = await supabase.from("payments").insert({
+          client_id: body.clientId,
+          subscription_id: body.subscriptionId || null,
+          amount: body.amount,
+          status: "pending",
+          payment_method: "PIX",
+          description: body.description,
+          asaas_id: null,
+          transaction_id: result.id?.toString(),
+        });
+
+        if (dbError) {
+          console.error("Error saving payment to DB:", dbError);
+        }
       }
 
       return new Response(
