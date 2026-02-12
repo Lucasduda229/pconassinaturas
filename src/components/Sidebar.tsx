@@ -13,7 +13,8 @@ import {
   Gift,
   UserPlus,
   Rocket,
-  Ticket
+  Ticket,
+  MessageSquare
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminNotifications } from '@/hooks/useAdminNotifications';
@@ -28,6 +29,7 @@ const navItems = [
   { icon: Receipt, label: 'Pagamentos', path: '/payments' },
   { icon: FileSignature, label: 'Contratos', path: '/contracts' },
   { icon: FileText, label: 'Notas Fiscais', path: '/invoices' },
+  { icon: MessageSquare, label: 'WhatsApp', path: '/whatsapp' },
   { icon: Rocket, label: 'Implantações', path: '/implementations' },
   { icon: Ticket, label: 'Cupons', path: '/coupons' },
   { icon: Gift, label: 'Indicações', path: '/referrals' },
