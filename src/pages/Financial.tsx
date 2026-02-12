@@ -110,8 +110,16 @@ const Financial = () => {
   // ─── Filtered expenses based on period ─────────────
   const filteredExpenses = useMemo(() => {
     return expenses.filter(e => {
-      const d = new Date(e.paid_at || e.due_date || e.created_at);
-      return isWithinInterval(d, { start: dateRange.start, end: dateRange.end });
+      // Show expense if ANY relevant date falls within range
+      const createdAt = new Date(e.created_at);
+      const dueDate = e.due_date ? new Date(e.due_date) : null;
+      const paidAt = e.paid_at ? new Date(e.paid_at) : null;
+      
+      const createdInRange = isWithinInterval(createdAt, { start: dateRange.start, end: dateRange.end });
+      const dueInRange = dueDate ? isWithinInterval(dueDate, { start: dateRange.start, end: dateRange.end }) : false;
+      const paidInRange = paidAt ? isWithinInterval(paidAt, { start: dateRange.start, end: dateRange.end }) : false;
+      
+      return createdInRange || dueInRange || paidInRange;
     });
   }, [expenses, dateRange]);
 
