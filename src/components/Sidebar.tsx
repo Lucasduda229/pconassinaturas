@@ -15,7 +15,8 @@ import {
   Rocket,
   Ticket,
   MessageSquare,
-  BellRing
+  BellRing,
+  BarChart3
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminNotifications } from '@/hooks/useAdminNotifications';
@@ -25,6 +26,7 @@ import logo from '@/assets/logo-pcon-grande.png';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+  { icon: BarChart3, label: 'Financeiro', path: '/financial' },
   { icon: Users, label: 'Clientes', path: '/clients' },
   { icon: CreditCard, label: 'Assinaturas', path: '/subscriptions' },
   { icon: Receipt, label: 'Pagamentos', path: '/payments' },

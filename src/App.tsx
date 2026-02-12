@@ -24,6 +24,7 @@ import ClientCoupons from "./pages/ClientCoupons";
 import ReferralLanding from "./pages/ReferralLanding";
 import WhatsAppMessages from "./pages/WhatsAppMessages";
 import WhatsAppReminders from "./pages/WhatsAppReminders";
+import Financial from "./pages/Financial";
 
 import ClientLogin from "./pages/ClientLogin";
 import ClientRegister from "./pages/ClientRegister";
@@ -67,6 +68,7 @@ const App = () => (
                    <Route path="/affiliates" element={<ProtectedRoute><Affiliates /></ProtectedRoute>} />
                    <Route path="/implementations" element={<ProtectedRoute><Implementations /></ProtectedRoute>} />
                    <Route path="/coupons" element={<ProtectedRoute><ClientCoupons /></ProtectedRoute>} />
+                   <Route path="/financial" element={<ProtectedRoute><Financial /></ProtectedRoute>} />
                   {/* Referral Landing Page (Public) - Clients */}
                   <Route path="/r/:slug" element={<ReferralLanding />} />
                   
