@@ -186,6 +186,53 @@ const Financial = () => {
     }));
   }, [payments]);
 
+  // ─── Payment type distribution (subscription vs single) ──
+  const typeData = useMemo(() => {
+    const subPayments = payments.filter(p => p.status === 'paid' && p.subscription_id);
+    const singlePayments = payments.filter(p => p.status === 'paid' && !p.subscription_id);
+    const result = [];
+    if (subPayments.length > 0) {
+      result.push({
+        name: 'Assinaturas',
+        count: subPayments.length,
+        value: subPayments.reduce((s, p) => s + Number(p.amount), 0),
+        color: CHART_COLORS.primary,
+      });
+    }
+    if (singlePayments.length > 0) {
+      result.push({
+        name: 'Cobranças Únicas',
+        count: singlePayments.length,
+        value: singlePayments.reduce((s, p) => s + Number(p.amount), 0),
+        color: CHART_COLORS.cyan,
+      });
+    }
+    return result;
+  }, [payments]);
+
+  // ─── Monthly type breakdown ──────────────────────────
+  const monthlyTypeData = useMemo(() => {
+    const months = parseInt(period);
+    const result = [];
+    for (let i = months - 1; i >= 0; i--) {
+      const date = subMonths(new Date(), i);
+      const mStart = startOfMonth(date);
+      const mEnd = endOfMonth(date);
+      const paidInMonth = payments.filter(p => {
+        if (p.status !== 'paid') return false;
+        const d = new Date(p.paid_at || p.created_at);
+        return isWithinInterval(d, { start: mStart, end: mEnd });
+      });
+      result.push({
+        month: format(date, 'MMM', { locale: ptBR }),
+        fullMonth: format(date, 'MMMM yyyy', { locale: ptBR }),
+        assinaturas: paidInMonth.filter(p => p.subscription_id).reduce((s, p) => s + Number(p.amount), 0),
+        unicas: paidInMonth.filter(p => !p.subscription_id).reduce((s, p) => s + Number(p.amount), 0),
+      });
+    }
+    return result;
+  }, [payments, period]);
+
   // ─── Custom tooltip ────────────────────────────────
   const ChartTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
@@ -338,6 +385,9 @@ const Financial = () => {
           <TabsTrigger value="plans" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
             Planos
           </TabsTrigger>
+          <TabsTrigger value="types" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
+            Tipos
+          </TabsTrigger>
           <TabsTrigger value="methods" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
             Métodos
           </TabsTrigger>
@@ -481,6 +531,81 @@ const Financial = () => {
                   <p className="text-muted-foreground text-sm text-center py-8">Sem dados</p>
                 )}
               </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Types Tab */}
+        <TabsContent value="types" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="glass-card p-4 sm:p-6">
+              <h3 className="font-heading text-lg font-semibold text-foreground mb-1">Assinaturas vs Cobranças Únicas</h3>
+              <p className="text-sm text-muted-foreground mb-4">Distribuição de receita por tipo de pagamento</p>
+              <div className="h-[300px]">
+                {typeData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={typeData} cx="50%" cy="45%" innerRadius={55} outerRadius={95} paddingAngle={3} dataKey="value">
+                        {typeData.map((entry, i) => (
+                          <Cell key={i} fill={entry.color} stroke="transparent" />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<PieTooltipContent />} />
+                      <Legend verticalAlign="bottom" height={36} formatter={(v: string) => <span className="text-xs text-muted-foreground">{v}</span>} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-muted-foreground text-sm">Sem dados</div>
+                )}
+              </div>
+            </div>
+
+            <div className="glass-card p-4 sm:p-6">
+              <h3 className="font-heading text-lg font-semibold text-foreground mb-4">Detalhamento por Tipo</h3>
+              <div className="space-y-4">
+                {typeData.length > 0 ? typeData.map((t, i) => {
+                  const total = typeData.reduce((s, x) => s + x.value, 0);
+                  const pct = total > 0 ? ((t.value / total) * 100).toFixed(1) : '0';
+                  return (
+                    <div key={i} className="p-3 rounded-xl bg-secondary/30 border border-border/30">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 rounded-full" style={{ background: t.color }} />
+                          <span className="font-medium text-foreground text-sm">{t.name}</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground">{pct}%</span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-secondary/50 overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: t.color }} />
+                      </div>
+                      <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+                        <span>{t.count} pagamento{t.count !== 1 ? 's' : ''}</span>
+                        <span className="font-semibold text-foreground">{formatCurrency(t.value)}</span>
+                      </div>
+                    </div>
+                  );
+                }) : (
+                  <p className="text-muted-foreground text-sm text-center py-8">Sem dados</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Monthly breakdown by type */}
+          <div className="glass-card p-4 sm:p-6">
+            <h3 className="font-heading text-lg font-semibold text-foreground mb-1">Evolução Mensal por Tipo</h3>
+            <p className="text-sm text-muted-foreground mb-4">Receita de assinaturas vs cobranças únicas ao longo do tempo</p>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={monthlyTypeData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                  <XAxis dataKey="month" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} />
+                  <YAxis tickFormatter={formatCurrencyShort} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} tickLine={false} axisLine={false} width={70} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Bar dataKey="assinaturas" name="Assinaturas" fill={CHART_COLORS.primary} radius={[4, 4, 0, 0]} maxBarSize={40} />
+                  <Bar dataKey="unicas" name="Cobranças Únicas" fill={CHART_COLORS.cyan} radius={[4, 4, 0, 0]} maxBarSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </TabsContent>
