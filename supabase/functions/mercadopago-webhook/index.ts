@@ -9,7 +9,6 @@ const corsHeaders = {
 const MERCADOPAGO_API_URL = "https://api.mercadopago.com";
 
 serve(async (req: Request) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -24,10 +23,8 @@ serve(async (req: Request) => {
     const body = await req.json();
     console.log("Webhook received:", JSON.stringify(body));
 
-    // Mercado Pago sends different notification types
     const { type, data, action } = body;
 
-    // We're interested in payment notifications
     if (type === "payment" || action === "payment.created" || action === "payment.updated") {
       const paymentId = data?.id;
       
@@ -38,11 +35,8 @@ serve(async (req: Request) => {
 
       console.log("Processing payment webhook for ID:", paymentId);
 
-      // Fetch payment details from Mercado Pago
       const response = await fetch(`${MERCADOPAGO_API_URL}/v1/payments/${paymentId}`, {
-        headers: {
-          "Authorization": `Bearer ${accessToken}`,
-        },
+        headers: { "Authorization": `Bearer ${accessToken}` },
       });
 
       if (!response.ok) {
@@ -57,7 +51,6 @@ serve(async (req: Request) => {
         status_detail: paymentData.status_detail,
       });
 
-      // Map Mercado Pago status to our status
       let dbStatus = "pending";
       let paidAt = null;
 
@@ -79,17 +72,14 @@ serve(async (req: Request) => {
           break;
       }
 
-      // Update payment in database
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       const supabase = createClient(supabaseUrl, supabaseKey);
 
+      // Update payment status
       const { error: updateError } = await supabase
         .from("payments")
-        .update({
-          status: dbStatus,
-          paid_at: paidAt,
-        })
+        .update({ status: dbStatus, paid_at: paidAt })
         .eq("transaction_id", paymentId.toString());
 
       if (updateError) {
@@ -98,32 +88,76 @@ serve(async (req: Request) => {
         console.log("Payment updated successfully:", { paymentId, status: dbStatus });
       }
 
-      // If payment was approved, handle subscription recurrence
+      // If payment was approved, handle subscription recurrence + invoice
       if (dbStatus === "paid") {
+        // Fetch the payment record
         const { data: paymentRecord } = await supabase
           .from("payments")
-          .select("subscription_id, client_id, amount, description")
+          .select("id, subscription_id, client_id, amount, description")
           .eq("transaction_id", paymentId.toString())
           .single();
 
-        if (paymentRecord?.subscription_id) {
-          // Get current subscription data
+        if (!paymentRecord) {
+          console.log("No payment record found for transaction_id:", paymentId);
+          return new Response("OK", { status: 200 });
+        }
+
+        let subscriptionId = paymentRecord.subscription_id;
+
+        // If payment has no subscription_id, try to find a matching active subscription
+        if (!subscriptionId && paymentRecord.client_id) {
+          console.log("Payment has no subscription_id, searching for matching subscription...");
+          
+          const { data: matchingSubscription } = await supabase
+            .from("subscriptions")
+            .select("id, plan_name, value, next_payment, client_id")
+            .eq("client_id", paymentRecord.client_id)
+            .eq("status", "active")
+            .eq("value", paymentRecord.amount)
+            .limit(1)
+            .single();
+
+          if (matchingSubscription) {
+            subscriptionId = matchingSubscription.id;
+            console.log("Found matching subscription:", subscriptionId);
+
+            // Link the payment to the subscription
+            await supabase
+              .from("payments")
+              .update({ subscription_id: subscriptionId })
+              .eq("id", paymentRecord.id);
+
+            console.log("Payment linked to subscription:", subscriptionId);
+          } else {
+            console.log("No matching subscription found for client:", paymentRecord.client_id);
+          }
+        }
+
+        // Handle subscription recurrence if we have a subscription_id
+        if (subscriptionId) {
           const { data: subscription } = await supabase
             .from("subscriptions")
             .select("*")
-            .eq("id", paymentRecord.subscription_id)
+            .eq("id", subscriptionId)
             .single();
 
           if (subscription) {
             // Calculate next payment date: same day next month
             const currentDueDate = new Date(subscription.next_payment);
-            const nextPaymentDate = new Date(currentDueDate);
-            nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);
-            
-            // Handle month overflow (e.g., Jan 31 -> Feb 28)
-            if (nextPaymentDate.getDate() !== currentDueDate.getDate()) {
-              nextPaymentDate.setDate(0); // Go to last day of previous month
+            const currentDay = currentDueDate.getDate();
+            const nextMonth = currentDueDate.getMonth() + 1;
+            const nextYear = currentDueDate.getFullYear();
+
+            let nextPaymentDate: Date;
+            if (nextMonth > 11) {
+              nextPaymentDate = new Date(nextYear + 1, 0, 1);
+            } else {
+              nextPaymentDate = new Date(nextYear, nextMonth, 1);
             }
+            // Clamp to last day of month
+            const lastDay = new Date(nextPaymentDate.getFullYear(), nextPaymentDate.getMonth() + 1, 0).getDate();
+            nextPaymentDate.setDate(Math.min(currentDay, lastDay));
+            nextPaymentDate.setHours(12, 0, 0, 0);
 
             console.log("Recurrence: Current due date:", currentDueDate.toISOString());
             console.log("Recurrence: Next payment date:", nextPaymentDate.toISOString());
@@ -135,7 +169,7 @@ serve(async (req: Request) => {
                 status: "active",
                 next_payment: nextPaymentDate.toISOString(),
               })
-              .eq("id", paymentRecord.subscription_id);
+              .eq("id", subscriptionId);
 
             // Create new pending payment for next month
             const { error: newPaymentError } = await supabase
@@ -146,7 +180,7 @@ serve(async (req: Request) => {
                 amount: subscription.value,
                 status: "pending",
                 payment_method: "PIX",
-                description: `Cobrança - ${subscription.plan_name}`,
+                description: subscription.plan_name,
                 due_date: nextPaymentDate.toISOString(),
               });
 
@@ -156,16 +190,16 @@ serve(async (req: Request) => {
               console.log("Created next month payment for:", nextPaymentDate.toISOString());
             }
 
-            // Create invoice for the paid payment with plan description
+            // Create invoice
             const year = new Date().getFullYear();
             const month = String(new Date().getMonth() + 1).padStart(2, "0");
-            const invoiceNumber = `NF-${year}${month}-${paymentId.toString().slice(-4)}`;
+            const invoiceNumber = `NF-${year}${month}-${paymentRecord.id.slice(-4).toUpperCase()}`;
             const invoiceDescription = `Valor pago referente ao plano ativo: ${subscription.plan_name}`;
 
             await supabase
               .from("invoices")
               .insert({
-                payment_id: paymentRecord.subscription_id ? undefined : paymentId.toString(),
+                payment_id: paymentRecord.id,
                 client_id: paymentRecord.client_id,
                 number: invoiceNumber,
                 amount: paymentRecord.amount,
@@ -173,13 +207,31 @@ serve(async (req: Request) => {
                 description: invoiceDescription,
               });
 
-            console.log("Invoice created:", invoiceNumber, "with description:", invoiceDescription);
+            console.log("Invoice created:", invoiceNumber);
             console.log("Subscription recurrence completed for payment:", paymentId);
           }
+        } else {
+          // Single charge - create invoice without subscription linkage
+          const year = new Date().getFullYear();
+          const month = String(new Date().getMonth() + 1).padStart(2, "0");
+          const invoiceNumber = `NF-${year}${month}-${paymentRecord.id.slice(-4).toUpperCase()}`;
+
+          await supabase
+            .from("invoices")
+            .insert({
+              payment_id: paymentRecord.id,
+              client_id: paymentRecord.client_id,
+              number: invoiceNumber,
+              amount: paymentRecord.amount,
+              status: "issued",
+              description: paymentRecord.description || "Pagamento avulso",
+            });
+
+          console.log("Single charge invoice created:", invoiceNumber);
         }
 
         // Send WhatsApp payment confirmation
-        if (paymentRecord?.client_id) {
+        if (paymentRecord.client_id) {
           try {
             const { data: client } = await supabase
               .from("clients")
@@ -192,7 +244,19 @@ serve(async (req: Request) => {
               if (!phone.startsWith("55")) phone = "55" + phone;
 
               const formattedAmount = `R$ ${paymentRecord.amount.toFixed(2).replace(".", ",")}`;
-              const planName = paymentRecord.description?.replace("Cobrança - ", "") || "Assinatura";
+              
+              // Get plan name from subscription or description
+              let planName = "Pagamento";
+              if (subscriptionId) {
+                const { data: sub } = await supabase
+                  .from("subscriptions")
+                  .select("plan_name")
+                  .eq("id", subscriptionId)
+                  .single();
+                planName = sub?.plan_name || planName;
+              } else {
+                planName = paymentRecord.description?.replace("Cobrança - ", "") || planName;
+              }
 
               // Fetch template from DB
               const { data: templateData } = await supabase
@@ -205,6 +269,9 @@ serve(async (req: Request) => {
               let confirmMessage: string;
               let sendImage = true;
               let sendButton = true;
+              let imageUrl: string | undefined;
+              let buttonText: string | undefined;
+              let buttonUrl: string | undefined;
 
               if (templateData) {
                 confirmMessage = templateData.message_template
@@ -212,6 +279,10 @@ serve(async (req: Request) => {
                   .replace(/\{\{plan_name\}\}/g, planName)
                   .replace(/\{\{amount\}\}/g, formattedAmount);
                 sendButton = templateData.button_enabled;
+                sendImage = !!templateData.image_url;
+                imageUrl = templateData.image_url || undefined;
+                buttonText = templateData.button_text || undefined;
+                buttonUrl = templateData.button_url || undefined;
               } else {
                 confirmMessage = `Ola ${client.name}! 💈\n\n` +
                   `✅ *Pagamento confirmado!*\n\n` +
@@ -222,7 +293,7 @@ serve(async (req: Request) => {
 
               const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
 
-              const whatsappResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
+              await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
@@ -234,12 +305,14 @@ serve(async (req: Request) => {
                   clientId: client.id,
                   type: "payment_confirmed_auto",
                   sendImage,
-                  imageUrl: templateData?.image_url || undefined,
+                  imageUrl,
                   sendButton,
+                  buttonText,
+                  buttonUrl,
                 }),
               });
 
-              console.log("WhatsApp payment confirmation sent:", whatsappResponse.status);
+              console.log("WhatsApp payment confirmation sent");
             }
           } catch (whatsappErr: any) {
             console.error("Error sending WhatsApp confirmation:", whatsappErr.message);
@@ -251,7 +324,6 @@ serve(async (req: Request) => {
     return new Response("OK", { status: 200 });
   } catch (error: any) {
     console.error("Webhook error:", error);
-    // Always return 200 to Mercado Pago to prevent retries
     return new Response("OK", { status: 200 });
   }
 });
