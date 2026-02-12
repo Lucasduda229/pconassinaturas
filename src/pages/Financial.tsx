@@ -102,8 +102,19 @@ const Financial = () => {
   // ─── Filtered payments based on period ─────────────
   const filteredPayments = useMemo(() => {
     return payments.filter(p => {
-      const d = new Date(p.paid_at || p.due_date || p.created_at);
-      return isWithinInterval(d, { start: dateRange.start, end: dateRange.end });
+      // For pending payments without due_date, always include them
+      if (p.status === 'pending' && !p.due_date) return true;
+      
+      // Check if ANY relevant date falls within range
+      const paidAt = p.paid_at ? new Date(p.paid_at) : null;
+      const dueDate = p.due_date ? new Date(p.due_date) : null;
+      const createdAt = new Date(p.created_at);
+      
+      const paidInRange = paidAt ? isWithinInterval(paidAt, { start: dateRange.start, end: dateRange.end }) : false;
+      const dueInRange = dueDate ? isWithinInterval(dueDate, { start: dateRange.start, end: dateRange.end }) : false;
+      const createdInRange = isWithinInterval(createdAt, { start: dateRange.start, end: dateRange.end });
+      
+      return paidInRange || dueInRange || createdInRange;
     });
   }, [payments, dateRange]);
 
