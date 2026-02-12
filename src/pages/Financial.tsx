@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   DollarSign,
   TrendingUp,
@@ -8,6 +8,8 @@ import {
   Calendar,
   Filter,
   Download,
+  FileSpreadsheet,
+  FileText,
   ArrowUpRight,
   ArrowDownRight,
   Wallet,
@@ -37,6 +39,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
+import { exportToCSV, formatCurrencyForExport, formatDateForExport } from '@/utils/exportUtils';
+import { toast } from 'sonner';
+import jsPDF from 'jspdf';
 
 const CHART_COLORS = {
   primary: 'hsl(216, 68%, 45%)',
@@ -250,8 +255,165 @@ const Financial = () => {
       default: return '';
     }
   }, [period, dateRange, customDateRange]);
+  // ─── Export functions ────────────────────────────────
+  const getClientName = useCallback((clientId: string | null) => {
+    if (!clientId) return 'N/A';
+    const client = clients.find(c => c.id === clientId);
+    return client?.name || 'N/A';
+  }, [clients]);
 
-  // ─── Custom tooltip ────────────────────────────────
+  const exportToSpreadsheet = useCallback(() => {
+    const headers = [
+      { key: 'date', label: 'Data' },
+      { key: 'client', label: 'Cliente' },
+      { key: 'description', label: 'Descrição' },
+      { key: 'amount', label: 'Valor' },
+      { key: 'status', label: 'Status' },
+      { key: 'method', label: 'Método' },
+      { key: 'type', label: 'Tipo' },
+    ];
+
+    const data = filteredPayments.map(p => ({
+      date: formatDateForExport(p.paid_at || p.due_date || p.created_at),
+      client: getClientName(p.client_id),
+      description: p.description || '-',
+      amount: formatCurrencyForExport(Number(p.amount)),
+      status: p.status === 'paid' ? 'Pago' : p.status === 'pending' ? 'Pendente' : p.status === 'overdue' ? 'Atrasado' : 'Falha',
+      method: p.payment_method || '-',
+      type: p.subscription_id ? 'Assinatura' : 'Cobrança Única',
+    }));
+
+    exportToCSV(data, `relatorio-financeiro-${periodLabel.replace(/\s/g, '_')}`, headers);
+    toast.success('Planilha exportada com sucesso!');
+  }, [filteredPayments, periodLabel, getClientName]);
+
+  const exportToPDF = useCallback(() => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    
+    // Header
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('P-CON CONSTRUNET', pageWidth / 2, 20, { align: 'center' });
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Relatório Financeiro', pageWidth / 2, 28, { align: 'center' });
+    doc.setFontSize(10);
+    doc.text(`Período: ${periodLabel}`, pageWidth / 2, 35, { align: 'center' });
+    doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, pageWidth / 2, 41, { align: 'center' });
+
+    // Separator
+    doc.setDrawColor(59, 130, 246);
+    doc.setLineWidth(0.5);
+    doc.line(15, 45, pageWidth - 15, 45);
+
+    // KPIs
+    let y = 55;
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Resumo do Período', 15, y);
+    y += 10;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const kpiItems = [
+      ['Receita no Período:', formatCurrencyForExport(kpis.totalRevenue)],
+      ['Pendente no Período:', formatCurrencyForExport(kpis.totalPending)],
+      ['Prejuízo no Período:', formatCurrencyForExport(kpis.totalLost)],
+      ['MRR (Receita Recorrente):', formatCurrencyForExport(kpis.activeSubsValue)],
+      ['Ticket Médio:', formatCurrencyForExport(kpis.avgTicket)],
+      ['Pagamentos Recebidos:', String(kpis.paidCount)],
+    ];
+    kpiItems.forEach(([label, value]) => {
+      doc.setFont('helvetica', 'bold');
+      doc.text(label, 15, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(value, 80, y);
+      y += 7;
+    });
+
+    y += 5;
+    doc.setDrawColor(200, 200, 200);
+    doc.line(15, y, pageWidth - 15, y);
+    y += 10;
+
+    // Payments table
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Detalhamento de Transações', 15, y);
+    y += 8;
+
+    // Table header
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setFillColor(240, 240, 240);
+    doc.rect(15, y - 4, pageWidth - 30, 7, 'F');
+    doc.text('Data', 17, y);
+    doc.text('Cliente', 42, y);
+    doc.text('Descrição', 85, y);
+    doc.text('Valor', 135, y);
+    doc.text('Status', 162, y);
+    doc.text('Tipo', 182, y);
+    y += 7;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+
+    const sortedPayments = [...filteredPayments].sort((a, b) => {
+      const dateA = new Date(a.paid_at || a.due_date || a.created_at).getTime();
+      const dateB = new Date(b.paid_at || b.due_date || b.created_at).getTime();
+      return dateB - dateA;
+    });
+
+    sortedPayments.forEach((p) => {
+      if (y > 275) {
+        doc.addPage();
+        y = 20;
+      }
+
+      const date = formatDateForExport(p.paid_at || p.due_date || p.created_at);
+      const clientName = getClientName(p.client_id);
+      const desc = (p.description || '-').substring(0, 25);
+      const amount = formatCurrencyForExport(Number(p.amount));
+      const status = p.status === 'paid' ? 'Pago' : p.status === 'pending' ? 'Pendente' : p.status === 'overdue' ? 'Atrasado' : 'Falha';
+      const type = p.subscription_id ? 'Assinatura' : 'Única';
+
+      // Alternate row background
+      if (sortedPayments.indexOf(p) % 2 === 0) {
+        doc.setFillColor(248, 248, 248);
+        doc.rect(15, y - 3.5, pageWidth - 30, 6, 'F');
+      }
+
+      doc.text(date, 17, y);
+      doc.text(clientName.substring(0, 20), 42, y);
+      doc.text(desc, 85, y);
+      doc.text(amount, 135, y);
+      
+      // Color-coded status
+      if (p.status === 'paid') doc.setTextColor(34, 197, 94);
+      else if (p.status === 'pending') doc.setTextColor(234, 179, 8);
+      else doc.setTextColor(239, 68, 68);
+      doc.text(status, 162, y);
+      doc.setTextColor(0, 0, 0);
+      
+      doc.text(type, 182, y);
+      y += 6;
+    });
+
+    // Footer
+    y += 5;
+    doc.setDrawColor(59, 130, 246);
+    doc.line(15, y, pageWidth - 15, y);
+    y += 8;
+    doc.setFontSize(8);
+    doc.setTextColor(128, 128, 128);
+    doc.text('Documento gerado automaticamente pelo sistema P-CON Assinaturas', pageWidth / 2, y, { align: 'center' });
+
+    doc.save(`relatorio-financeiro-${periodLabel.replace(/[\s\/]/g, '_')}.pdf`);
+    toast.success('PDF exportado com sucesso!');
+  }, [filteredPayments, kpis, periodLabel, getClientName]);
+
+
   const ChartTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
     return (
@@ -376,6 +538,16 @@ const Financial = () => {
           </div>
         )}
         <span className="text-xs text-muted-foreground capitalize">{periodLabel}</span>
+        <div className="flex items-center gap-2 ml-auto">
+          <Button variant="outline" size="sm" onClick={exportToSpreadsheet} className="glass-card border-border/50 gap-2">
+            <FileSpreadsheet className="w-4 h-4" />
+            <span className="hidden sm:inline">Planilha</span>
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportToPDF} className="glass-card border-border/50 gap-2">
+            <FileText className="w-4 h-4" />
+            <span className="hidden sm:inline">PDF</span>
+          </Button>
+        </div>
       </div>
 
       {/* KPI Cards */}
