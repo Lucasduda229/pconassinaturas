@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface CreatePixPaymentParams {
@@ -39,11 +38,6 @@ export function useMercadoPago() {
     try {
       console.log('Creating PIX payment via Mercado Pago:', params);
 
-      const { data, error } = await supabase.functions.invoke('mercadopago', {
-        body: params,
-      });
-
-      // Handle the query parameter for action
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mercadopago?action=create-pix`,
         {
