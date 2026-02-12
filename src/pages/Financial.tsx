@@ -484,20 +484,65 @@ const Financial = () => {
 
           {/* Monthly comparison bars */}
           <div className="glass-card p-4 sm:p-6">
-            <h3 className="font-heading text-lg font-semibold text-foreground mb-1">Comparativo Mensal</h3>
-            <p className="text-sm text-muted-foreground mb-4">Receita, pendências e prejuízos por mês</p>
-            <div className="h-[300px]">
+            <h3 className="font-heading text-lg font-semibold text-foreground mb-1">Comparativo por Período</h3>
+            <p className="text-sm text-muted-foreground mb-4">Receita, pendências e prejuízos detalhados</p>
+            <div className="h-[360px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                  <XAxis dataKey="month" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickLine={false} axisLine={false} />
+                <ComposedChart data={monthlyData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="barRevenue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={CHART_COLORS.success} stopOpacity={0.9} />
+                      <stop offset="100%" stopColor={CHART_COLORS.success} stopOpacity={0.5} />
+                    </linearGradient>
+                    <linearGradient id="barPending" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={CHART_COLORS.warning} stopOpacity={0.9} />
+                      <stop offset="100%" stopColor={CHART_COLORS.warning} stopOpacity={0.5} />
+                    </linearGradient>
+                    <linearGradient id="barLoss" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={CHART_COLORS.danger} stopOpacity={0.9} />
+                      <stop offset="100%" stopColor={CHART_COLORS.danger} stopOpacity={0.5} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} />
+                  <XAxis 
+                    dataKey="month" 
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} 
+                    tickLine={false} 
+                    axisLine={false} 
+                    interval={monthlyData.length > 15 ? Math.floor(monthlyData.length / 10) : 0}
+                    angle={monthlyData.length > 10 ? -45 : 0}
+                    textAnchor={monthlyData.length > 10 ? 'end' : 'middle'}
+                    height={monthlyData.length > 10 ? 60 : 30}
+                  />
                   <YAxis tickFormatter={formatCurrencyShort} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} tickLine={false} axisLine={false} width={70} />
                   <Tooltip content={<ChartTooltip />} />
-                  <Bar dataKey="receita" name="Receita" fill={CHART_COLORS.success} radius={[4, 4, 0, 0]} maxBarSize={40} />
-                  <Bar dataKey="pendente" name="Pendente" fill={CHART_COLORS.warning} radius={[4, 4, 0, 0]} maxBarSize={40} />
-                  <Bar dataKey="prejuizo" name="Prejuízo" fill={CHART_COLORS.danger} radius={[4, 4, 0, 0]} maxBarSize={40} />
-                </BarChart>
+                  <Legend 
+                    wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
+                    iconType="circle"
+                    iconSize={8}
+                  />
+                  <Bar dataKey="receita" name="Receita" fill="url(#barRevenue)" radius={[6, 6, 0, 0]} maxBarSize={28} />
+                  <Bar dataKey="pendente" name="Pendente" fill="url(#barPending)" radius={[6, 6, 0, 0]} maxBarSize={28} />
+                  <Bar dataKey="prejuizo" name="Prejuízo" fill="url(#barLoss)" radius={[6, 6, 0, 0]} maxBarSize={28} />
+                  <Line type="monotone" dataKey="receita" name="Tendência" stroke={CHART_COLORS.successLight} strokeWidth={2} dot={false} strokeDasharray="4 4" legendType="none" />
+                </ComposedChart>
               </ResponsiveContainer>
+            </div>
+            {/* Summary under chart */}
+            <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-border/30">
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground">Total Receita</p>
+                <p className="text-sm font-bold text-success">{formatCurrency(kpis.totalRevenue)}</p>
+                <p className="text-xs text-muted-foreground">{kpis.paidCount} pagamentos</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground">Total Pendente</p>
+                <p className="text-sm font-bold text-warning">{formatCurrency(kpis.totalPending)}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground">Total Prejuízo</p>
+                <p className="text-sm font-bold text-destructive">{formatCurrency(kpis.totalLost)}</p>
+              </div>
             </div>
           </div>
         </TabsContent>
