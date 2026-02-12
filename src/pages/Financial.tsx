@@ -95,105 +95,92 @@ const Financial = () => {
   // ─── Filtered payments based on period ─────────────
   const filteredPayments = useMemo(() => {
     return payments.filter(p => {
-      const d = new Date(p.paid_at || p.created_at);
+      // Use the most relevant date for each payment
+      const d = new Date(p.paid_at || p.due_date || p.created_at);
       return isWithinInterval(d, { start: dateRange.start, end: dateRange.end });
     });
   }, [payments, dateRange]);
 
+  // ─── Helper to bucket payments by interval ─────────
+  const bucketPayments = (bucketStart: Date, bucketEnd: Date) => {
+    const paid = filteredPayments.filter(p => {
+      if (p.status !== 'paid') return false;
+      const d = new Date(p.paid_at || p.created_at);
+      return isWithinInterval(d, { start: bucketStart, end: bucketEnd });
+    });
+    const pending = filteredPayments.filter(p => {
+      if (p.status !== 'pending') return false;
+      const d = new Date(p.due_date || p.created_at);
+      return isWithinInterval(d, { start: bucketStart, end: bucketEnd });
+    });
+    const failed = filteredPayments.filter(p => {
+      if (p.status !== 'failed' && p.status !== 'overdue') return false;
+      const d = new Date(p.due_date || p.created_at);
+      return isWithinInterval(d, { start: bucketStart, end: bucketEnd });
+    });
+    return {
+      receita: paid.reduce((s, p) => s + Number(p.amount), 0),
+      pendente: pending.reduce((s, p) => s + Number(p.amount), 0),
+      prejuizo: failed.reduce((s, p) => s + Number(p.amount), 0),
+      lucro: paid.reduce((s, p) => s + Number(p.amount), 0),
+      paidCount: paid.length, pendingCount: pending.length, failedCount: failed.length,
+    };
+  };
+
   // ─── Chart data: adapts granularity to period ──────
   const monthlyData = useMemo(() => {
-    // For "today", group by hour; for "week", group by day; for month/custom, group by day or month
     const { start, end } = dateRange;
-    const result: Array<{
-      month: string; fullMonth: string; receita: number; pendente: number; prejuizo: number;
-      lucro: number; paidCount: number; pendingCount: number; failedCount: number;
-    }> = [];
+    type ChartRow = { month: string; fullMonth: string; receita: number; pendente: number; prejuizo: number; lucro: number; paidCount: number; pendingCount: number; failedCount: number; };
+    const result: ChartRow[] = [];
+    const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
 
     if (period === 'today') {
-      // Group by hour
       for (let h = 0; h < 24; h++) {
-        const hStart = new Date(start);
-        hStart.setHours(h, 0, 0, 0);
-        const hEnd = new Date(start);
-        hEnd.setHours(h, 59, 59, 999);
-
-        const paid = filteredPayments.filter(p => p.status === 'paid' && isWithinInterval(new Date(p.paid_at || p.created_at), { start: hStart, end: hEnd }));
-        const pending = filteredPayments.filter(p => p.status === 'pending' && isWithinInterval(new Date(p.created_at), { start: hStart, end: hEnd }));
-        const failed = filteredPayments.filter(p => (p.status === 'failed' || p.status === 'overdue') && isWithinInterval(new Date(p.created_at), { start: hStart, end: hEnd }));
-
+        const hStart = new Date(start); hStart.setHours(h, 0, 0, 0);
+        const hEnd = new Date(start); hEnd.setHours(h, 59, 59, 999);
         result.push({
           month: `${String(h).padStart(2, '0')}h`,
           fullMonth: `${format(start, 'dd/MM/yyyy', { locale: ptBR })} às ${String(h).padStart(2, '0')}:00`,
-          receita: paid.reduce((s, p) => s + Number(p.amount), 0),
-          pendente: pending.reduce((s, p) => s + Number(p.amount), 0),
-          prejuizo: failed.reduce((s, p) => s + Number(p.amount), 0),
-          lucro: paid.reduce((s, p) => s + Number(p.amount), 0),
-          paidCount: paid.length, pendingCount: pending.length, failedCount: failed.length,
+          ...bucketPayments(hStart, hEnd),
         });
       }
-    } else if (period === 'week') {
+    } else if (period === 'week' || diffDays <= 14) {
       // Group by day
       const days = eachDayOfInterval({ start, end });
       days.forEach(day => {
-        const dStart = startOfDay(day);
-        const dEnd = endOfDay(day);
-        const paid = filteredPayments.filter(p => p.status === 'paid' && isWithinInterval(new Date(p.paid_at || p.created_at), { start: dStart, end: dEnd }));
-        const pending = filteredPayments.filter(p => p.status === 'pending' && isWithinInterval(new Date(p.created_at), { start: dStart, end: dEnd }));
-        const failed = filteredPayments.filter(p => (p.status === 'failed' || p.status === 'overdue') && isWithinInterval(new Date(p.created_at), { start: dStart, end: dEnd }));
-
         result.push({
-          month: format(day, 'EEE dd', { locale: ptBR }),
+          month: format(day, 'dd/MM', { locale: ptBR }),
           fullMonth: format(day, "EEEE, dd 'de' MMMM", { locale: ptBR }),
-          receita: paid.reduce((s, p) => s + Number(p.amount), 0),
-          pendente: pending.reduce((s, p) => s + Number(p.amount), 0),
-          prejuizo: failed.reduce((s, p) => s + Number(p.amount), 0),
-          lucro: paid.reduce((s, p) => s + Number(p.amount), 0),
-          paidCount: paid.length, pendingCount: pending.length, failedCount: failed.length,
+          ...bucketPayments(startOfDay(day), endOfDay(day)),
         });
       });
-    } else {
-      // month or custom: group by day if range <= 31 days, else by month
-      const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-      
-      if (diffDays <= 31) {
-        const days = eachDayOfInterval({ start, end });
-        days.forEach(day => {
-          const dStart = startOfDay(day);
-          const dEnd = endOfDay(day);
-          const paid = filteredPayments.filter(p => p.status === 'paid' && isWithinInterval(new Date(p.paid_at || p.created_at), { start: dStart, end: dEnd }));
-          const pending = filteredPayments.filter(p => p.status === 'pending' && isWithinInterval(new Date(p.created_at), { start: dStart, end: dEnd }));
-          const failed = filteredPayments.filter(p => (p.status === 'failed' || p.status === 'overdue') && isWithinInterval(new Date(p.created_at), { start: dStart, end: dEnd }));
-
-          result.push({
-            month: format(day, 'dd', { locale: ptBR }),
-            fullMonth: format(day, "dd 'de' MMMM yyyy", { locale: ptBR }),
-            receita: paid.reduce((s, p) => s + Number(p.amount), 0),
-            pendente: pending.reduce((s, p) => s + Number(p.amount), 0),
-            prejuizo: failed.reduce((s, p) => s + Number(p.amount), 0),
-            lucro: paid.reduce((s, p) => s + Number(p.amount), 0),
-            paidCount: paid.length, pendingCount: pending.length, failedCount: failed.length,
-          });
+    } else if (diffDays <= 90) {
+      // Group by week for ranges up to ~3 months
+      let weekStart = new Date(start);
+      while (weekStart <= end) {
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+        const actualEnd = weekEnd > end ? end : weekEnd;
+        
+        result.push({
+          month: `${format(weekStart, 'dd/MM', { locale: ptBR })}`,
+          fullMonth: `${format(weekStart, 'dd/MM', { locale: ptBR })} - ${format(actualEnd, 'dd/MM/yyyy', { locale: ptBR })}`,
+          ...bucketPayments(startOfDay(weekStart), endOfDay(actualEnd)),
         });
-      } else {
-        const months = eachMonthOfInterval({ start, end });
-        months.forEach(m => {
-          const mStart = startOfMonth(m);
-          const mEnd = endOfMonth(m);
-          const paid = filteredPayments.filter(p => p.status === 'paid' && isWithinInterval(new Date(p.paid_at || p.created_at), { start: mStart, end: mEnd }));
-          const pending = filteredPayments.filter(p => p.status === 'pending' && isWithinInterval(new Date(p.created_at), { start: mStart, end: mEnd }));
-          const failed = filteredPayments.filter(p => (p.status === 'failed' || p.status === 'overdue') && isWithinInterval(new Date(p.created_at), { start: mStart, end: mEnd }));
-
-          result.push({
-            month: format(m, 'MMM', { locale: ptBR }),
-            fullMonth: format(m, 'MMMM yyyy', { locale: ptBR }),
-            receita: paid.reduce((s, p) => s + Number(p.amount), 0),
-            pendente: pending.reduce((s, p) => s + Number(p.amount), 0),
-            prejuizo: failed.reduce((s, p) => s + Number(p.amount), 0),
-            lucro: paid.reduce((s, p) => s + Number(p.amount), 0),
-            paidCount: paid.length, pendingCount: pending.length, failedCount: failed.length,
-          });
-        });
+        
+        weekStart = new Date(weekStart);
+        weekStart.setDate(weekStart.getDate() + 7);
       }
+    } else {
+      // Group by month for very large ranges
+      const months = eachMonthOfInterval({ start, end });
+      months.forEach(m => {
+        result.push({
+          month: format(m, 'MMM yy', { locale: ptBR }),
+          fullMonth: format(m, 'MMMM yyyy', { locale: ptBR }),
+          ...bucketPayments(startOfMonth(m), endOfMonth(m)),
+        });
+      });
     }
     return result;
   }, [filteredPayments, dateRange, period]);
