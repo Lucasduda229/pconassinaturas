@@ -263,6 +263,11 @@ const Financial = () => {
   }, [clients]);
 
   const exportToSpreadsheet = useCallback(() => {
+    if (filteredPayments.length === 0) {
+      toast.error('Nenhum dado para exportar no período selecionado');
+      return;
+    }
+
     const headers = [
       { key: 'date', label: 'Data' },
       { key: 'client', label: 'Cliente' },
