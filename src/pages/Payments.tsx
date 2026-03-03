@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Search, MoreHorizontal, CreditCard, CheckCircle, XCircle, Clock, Trash2, Download, Eye, FileText, Loader2, Check, MessageCircle } from 'lucide-react';
+import WhatsAppSendModal, { WhatsAppSendParams } from '@/components/WhatsAppSendModal';
 import DashboardLayout from '@/components/DashboardLayout';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
@@ -31,6 +32,8 @@ const Payments = () => {
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
   const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
+  const [whatsappParams, setWhatsappParams] = useState<WhatsAppSendParams | null>(null);
   
   const { payments, loadingPayments: loading, deletePayment, markPaymentAsPaid, addInvoice, invoices } = useGlobalData();
   const { sendReminder, sendingReminderId } = useWhatsAppReminder();
@@ -238,15 +241,18 @@ const Payments = () => {
             </DropdownMenuItem>
             {item.status !== 'paid' && (
               <DropdownMenuItem 
-                onClick={() => sendReminder({
-                  clientId: item.client_id || '',
-                  clientName: getPaymentClientName(item),
-                  clientPhone: item.clients?.phone || null,
-                  type: item.status === 'overdue' ? 'overdue' : 'payment',
-                  amount: Number(item.amount),
-                  description: item.description || undefined,
-                  dueDate: item.due_date,
-                })}
+                onClick={() => {
+                  setWhatsappParams({
+                    clientId: item.client_id || '',
+                    clientName: getPaymentClientName(item),
+                    clientPhone: item.clients?.phone || null,
+                    type: item.status === 'overdue' ? 'overdue' : 'payment',
+                    amount: Number(item.amount),
+                    description: item.description || undefined,
+                    dueDate: item.due_date,
+                  });
+                  setWhatsappModalOpen(true);
+                }}
                 disabled={sendingReminderId === item.client_id || !item.clients?.phone}
               >
                 {sendingReminderId === item.client_id ? (
@@ -565,6 +571,14 @@ const Payments = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      <WhatsAppSendModal
+        open={whatsappModalOpen}
+        onOpenChange={setWhatsappModalOpen}
+        params={whatsappParams}
+        onSendViaApi={sendReminder}
+        sendingId={sendingReminderId}
+      />
     </DashboardLayout>
   );
 };
