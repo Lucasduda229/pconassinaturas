@@ -12,6 +12,7 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 import DashboardLayout from '@/components/DashboardLayout';
+import WhatsAppSendModal, { WhatsAppSendParams } from '@/components/WhatsAppSendModal';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
@@ -69,6 +70,8 @@ const Subscriptions = () => {
     billingType: 'PIX' as 'PIX' | 'CREDIT_CARD',
   });
   const [isCreatingCharge, setIsCreatingCharge] = useState(false);
+  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
+  const [whatsappParams, setWhatsappParams] = useState<WhatsAppSendParams | null>(null);
 
   const { subscriptions, clients, loadingSubscriptions: loading, addSubscription, updateSubscription, deleteSubscription } = useGlobalData();
   const { createPixPayment, loading: mpLoading } = useMercadoPago();
@@ -515,15 +518,18 @@ const Subscriptions = () => {
               {generatingChargeId === item.id ? 'Gerando...' : 'Gerar cobrança'}
             </DropdownMenuItem>
             <DropdownMenuItem 
-              onClick={() => sendReminder({
-                clientId: item.client_id,
-                clientName: item.clients?.name || 'Cliente',
-                clientPhone: item.clients?.phone || null,
-                type: 'subscription',
-                amount: Number(item.value),
-                description: item.plan_name,
-                dueDate: item.next_payment,
-              })}
+              onClick={() => {
+                setWhatsappParams({
+                  clientId: item.client_id,
+                  clientName: item.clients?.name || 'Cliente',
+                  clientPhone: item.clients?.phone || null,
+                  type: 'subscription',
+                  amount: Number(item.value),
+                  description: item.plan_name,
+                  dueDate: item.next_payment,
+                });
+                setWhatsappModalOpen(true);
+              }}
               disabled={sendingReminderId === item.client_id || !item.clients?.phone}
             >
               {sendingReminderId === item.client_id ? (
@@ -945,6 +951,14 @@ const Subscriptions = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      <WhatsAppSendModal
+        open={whatsappModalOpen}
+        onOpenChange={setWhatsappModalOpen}
+        params={whatsappParams}
+        onSendViaApi={sendReminder}
+        sendingId={sendingReminderId}
+      />
     </DashboardLayout>
   );
 };
