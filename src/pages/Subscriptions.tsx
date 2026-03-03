@@ -518,7 +518,8 @@ const Subscriptions = () => {
               {generatingChargeId === item.id ? 'Gerando...' : 'Gerar cobrança'}
             </DropdownMenuItem>
             <DropdownMenuItem 
-              onClick={() => {
+              onSelect={(e) => {
+                e.preventDefault();
                 setWhatsappParams({
                   clientId: item.client_id,
                   clientName: item.clients?.name || 'Cliente',
