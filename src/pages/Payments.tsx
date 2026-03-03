@@ -241,9 +241,8 @@ const Payments = () => {
             </DropdownMenuItem>
             {item.status !== 'paid' && (
               <DropdownMenuItem 
-                onSelect={(e) => {
-                  e.preventDefault();
-                  setWhatsappParams({
+                onSelect={() => {
+                  const p: WhatsAppSendParams = {
                     clientId: item.client_id || '',
                     clientName: getPaymentClientName(item),
                     clientPhone: item.clients?.phone || null,
@@ -251,8 +250,11 @@ const Payments = () => {
                     amount: Number(item.amount),
                     description: item.description || undefined,
                     dueDate: item.due_date,
-                  });
-                  setWhatsappModalOpen(true);
+                  };
+                  setTimeout(() => {
+                    setWhatsappParams(p);
+                    setWhatsappModalOpen(true);
+                  }, 100);
                 }}
                 disabled={sendingReminderId === item.client_id || !item.clients?.phone}
               >

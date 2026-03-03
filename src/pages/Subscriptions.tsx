@@ -518,9 +518,8 @@ const Subscriptions = () => {
               {generatingChargeId === item.id ? 'Gerando...' : 'Gerar cobrança'}
             </DropdownMenuItem>
             <DropdownMenuItem 
-              onSelect={(e) => {
-                e.preventDefault();
-                setWhatsappParams({
+              onSelect={() => {
+                const p: WhatsAppSendParams = {
                   clientId: item.client_id,
                   clientName: item.clients?.name || 'Cliente',
                   clientPhone: item.clients?.phone || null,
@@ -528,8 +527,11 @@ const Subscriptions = () => {
                   amount: Number(item.value),
                   description: item.plan_name,
                   dueDate: item.next_payment,
-                });
-                setWhatsappModalOpen(true);
+                };
+                setTimeout(() => {
+                  setWhatsappParams(p);
+                  setWhatsappModalOpen(true);
+                }, 100);
               }}
               disabled={sendingReminderId === item.client_id || !item.clients?.phone}
             >
