@@ -241,7 +241,8 @@ const Payments = () => {
             </DropdownMenuItem>
             {item.status !== 'paid' && (
               <DropdownMenuItem 
-                onClick={() => {
+                onSelect={(e) => {
+                  e.preventDefault();
                   setWhatsappParams({
                     clientId: item.client_id || '',
                     clientName: getPaymentClientName(item),
