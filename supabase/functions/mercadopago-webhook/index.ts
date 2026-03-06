@@ -234,9 +234,23 @@ serve(async (req: Request) => {
         console.log("Single charge invoice created:", invoiceNumber);
       }
 
-      // Send WhatsApp payment confirmation
+      // Send WhatsApp payment confirmation (with idempotency guard)
       if (paymentRecord.client_id) {
         try {
+          // Check if a confirmation was already sent for this payment (prevent duplicate webhooks)
+          const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+          const { data: existingMsg } = await supabase
+            .from("whatsapp_messages")
+            .select("id")
+            .eq("client_id", paymentRecord.client_id)
+            .eq("message_type", "payment_confirmed_auto")
+            .gte("created_at", fiveMinutesAgo)
+            .limit(1)
+            .maybeSingle();
+
+          if (existingMsg) {
+            console.log("WhatsApp confirmation already sent recently for this client, skipping duplicate");
+          } else {
           const { data: client } = await supabase
             .from("clients")
             .select("id, name, phone")
@@ -317,6 +331,7 @@ serve(async (req: Request) => {
             });
 
             console.log("WhatsApp payment confirmation sent");
+          }
           }
         } catch (whatsappErr: any) {
           console.error("Error sending WhatsApp confirmation:", whatsappErr.message);
