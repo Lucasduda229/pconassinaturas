@@ -332,6 +332,7 @@ serve(async (req: Request) => {
 
             console.log("WhatsApp payment confirmation sent");
           }
+          }
         } catch (whatsappErr: any) {
           console.error("Error sending WhatsApp confirmation:", whatsappErr.message);
         }
