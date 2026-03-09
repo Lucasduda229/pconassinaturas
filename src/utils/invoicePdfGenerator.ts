@@ -41,25 +41,46 @@ interface InvoicePdfData {
   subscriptionId: string;
 }
 
-const drawIcon = (doc: jsPDF, type: 'arrow' | 'clock' | 'calendar' | 'dollar', x: number, y: number, size: number, color: [number, number, number]) => {
+const drawCardIcon = (doc: jsPDF, type: 'arrow' | 'clock' | 'calendar' | 'dollar', cx: number, cy: number, r: number, color: [number, number, number]) => {
+  // Circle outline
+  doc.setDrawColor(...color);
+  doc.setFillColor(255, 255, 255);
+  doc.setLineWidth(0.5);
+  doc.circle(cx, cy, r, 'FD');
+
   doc.setDrawColor(...color);
   doc.setFillColor(...color);
-  const cx = x + size / 2;
-  const cy = y + size / 2;
-  const r = size / 2;
+  doc.setLineWidth(0.4);
 
-  // Draw circle outline
-  doc.setLineWidth(0.6);
-  doc.circle(cx, cy, r, 'S');
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(size * 0.7);
-  doc.setTextColor(...color);
-
-  if (type === 'arrow') doc.text('→', cx - size * 0.25, cy + size * 0.2);
-  if (type === 'clock') doc.text('⏱', cx - size * 0.3, cy + size * 0.25);
-  if (type === 'calendar') doc.text('📅', cx - size * 0.35, cy + size * 0.25);
-  if (type === 'dollar') doc.text('$', cx - size * 0.18, cy + size * 0.25);
+  if (type === 'arrow') {
+    // Right arrow: horizontal line + chevron
+    const lx = cx - r * 0.5;
+    const rx = cx + r * 0.5;
+    doc.line(lx, cy, rx, cy);
+    doc.line(rx - r * 0.3, cy - r * 0.3, rx, cy);
+    doc.line(rx - r * 0.3, cy + r * 0.3, rx, cy);
+  } else if (type === 'clock') {
+    // Clock: circle + two hands
+    doc.circle(cx, cy, r * 0.6, 'S');
+    doc.line(cx, cy, cx, cy - r * 0.4); // 12 o'clock hand
+    doc.line(cx, cy, cx + r * 0.3, cy + r * 0.1); // minute hand
+  } else if (type === 'calendar') {
+    // Calendar: small rectangle + top tabs
+    const bw = r * 0.9;
+    const bh = r * 0.8;
+    doc.rect(cx - bw / 2, cy - bh / 2 + r * 0.1, bw, bh, 'S');
+    // Top line
+    doc.line(cx - bw / 2, cy - bh / 2 + r * 0.1 + bh * 0.3, cx + bw / 2, cy - bh / 2 + r * 0.1 + bh * 0.3);
+    // Two small tabs
+    doc.line(cx - r * 0.25, cy - bh / 2 - r * 0.1, cx - r * 0.25, cy - bh / 2 + r * 0.2);
+    doc.line(cx + r * 0.25, cy - bh / 2 - r * 0.1, cx + r * 0.25, cy - bh / 2 + r * 0.2);
+  } else if (type === 'dollar') {
+    // Dollar sign drawn manually
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(r * 1.4);
+    doc.setTextColor(...color);
+    doc.text('R$', cx - r * 0.55, cy + r * 0.35);
+  }
 };
 
 export const generateInvoicePDF = async (data: InvoicePdfData) => {
