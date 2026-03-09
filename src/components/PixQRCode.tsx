@@ -125,6 +125,16 @@ const PixQRCode = ({
         )}
       </div>
 
+      {/* Valor em destaque */}
+      {amount != null && (
+        <div className="text-center">
+          <p className="text-xs text-muted-foreground">Valor a pagar</p>
+          <p className="text-2xl font-bold text-foreground">
+            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount)}
+          </p>
+        </div>
+      )}
+
       {/* Instruções */}
       <p className="text-sm text-muted-foreground text-center">
         Escaneie o QR Code acima ou copie o código abaixo:
