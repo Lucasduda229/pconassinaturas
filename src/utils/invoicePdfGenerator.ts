@@ -72,6 +72,11 @@ export const generateInvoicePDF = (data: InvoicePdfData) => {
 
   y += 48;
 
+  const formattedValue = new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(data.value);
+
   // ===== INVOICE DETAILS =====
   doc.setFillColor(...lightGray);
   doc.roundedRect(margin, y, contentWidth, 38, 3, 3, 'F');
