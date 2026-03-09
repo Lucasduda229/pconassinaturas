@@ -106,13 +106,32 @@ const PixQRCode = ({
         </div>
       </div>
 
-      {/* QR Code sem fundo branco */}
+      {/* QR Code sem fundo branco - usa canvas para remover fundo */}
       <div className="flex justify-center">
         {qrCodeBase64 ? (
-          <div className="relative p-3 rounded-2xl border border-primary/20 bg-primary/5">
-            <img
-              src={`data:image/png;base64,${qrCodeBase64}`}
-              alt="QR Code PIX"
+          <div className="relative p-3 rounded-2xl border border-primary/20 bg-transparent">
+            <canvas
+              ref={(canvas) => {
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) return;
+                const img = new Image();
+                img.onload = () => {
+                  canvas.width = img.width;
+                  canvas.height = img.height;
+                  ctx.drawImage(img, 0, 0);
+                  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                  const data = imageData.data;
+                  for (let i = 0; i < data.length; i += 4) {
+                    // Se o pixel é branco ou quase branco, torna transparente
+                    if (data[i] > 200 && data[i + 1] > 200 && data[i + 2] > 200) {
+                      data[i + 3] = 0;
+                    }
+                  }
+                  ctx.putImageData(imageData, 0, 0);
+                };
+                img.src = `data:image/png;base64,${qrCodeBase64}`;
+              }}
               className="w-52 h-52 rounded-xl"
             />
           </div>
