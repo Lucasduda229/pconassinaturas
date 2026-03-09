@@ -90,6 +90,7 @@ const Checkout = () => {
   const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
   const [expandedSubscription, setExpandedSubscription] = useState<string | null>(null);
   const [generatingInvoice, setGeneratingInvoice] = useState<string | null>(null);
+  const [invoiceModalSub, setInvoiceModalSub] = useState<Subscription | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
