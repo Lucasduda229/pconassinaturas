@@ -185,7 +185,8 @@ export const generateInvoicePDF = async (data: InvoicePdfData) => {
 
   // Pix icon + title
   try {
-    doc.addImage(PIX_SVG_DATA, 'SVG', margin + 5, y + 4, 7, 7);
+    const pixPng = await svgToPngDataUrl(PIX_SVG_STRING, 128);
+    doc.addImage(pixPng, 'PNG', margin + 5, y + 3, 8, 8);
   } catch (e) {
     // fallback: no icon
   }
