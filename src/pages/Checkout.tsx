@@ -749,7 +749,7 @@ const Checkout = () => {
       <AnimatePresence>
         {isPaymentDialogOpen && (
           <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-            <DialogContent className="glass-card border-border/30 sm:max-w-sm p-0 overflow-hidden rounded-2xl">
+            <DialogContent className="glass-card border-border/30 max-w-[320px] p-0 overflow-hidden rounded-2xl mx-auto">
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
