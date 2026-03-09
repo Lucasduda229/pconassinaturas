@@ -11,6 +11,7 @@ interface PixQRCodeProps {
   ticketUrl?: string;
   expirationDate?: string;
   paymentId: string;
+  amount?: number;
   onCheckStatus?: () => Promise<{ status?: string } | null>;
   onPaymentConfirmed?: () => void;
 }
@@ -21,6 +22,7 @@ const PixQRCode = ({
   ticketUrl,
   expirationDate,
   paymentId,
+  amount,
   onCheckStatus,
   onPaymentConfirmed,
 }: PixQRCodeProps) => {
