@@ -1043,6 +1043,7 @@ const ClientProfile = () => {
               ticketUrl={pixData.ticketUrl}
               expirationDate={pixData.expirationDate}
               paymentId={pixData.paymentId}
+              amount={pixData.amount}
               onCheckStatus={handleCheckPixStatus}
               onPaymentConfirmed={handlePixPaymentConfirmed}
             />
