@@ -79,6 +79,7 @@ const App = () => (
                   <Route path="/cliente/cadastro" element={<ClientRegister />} />
                   <Route path="/cliente/implantacoes" element={<ClientImplementations />} />
                   <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/area-cliente" element={<Checkout />} />
                   
                   {/* Affiliate Routes */}
                   <Route path="/afiliados" element={<AffiliateLogin />} />
