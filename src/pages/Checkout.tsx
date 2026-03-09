@@ -30,7 +30,10 @@ import {
   Download,
   MapPin,
   FileCheck,
-  Rocket
+  Rocket,
+  Eye,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import logo from '@/assets/logo-pcon-grande.png';
 import BlueBackground from '@/components/BlueBackground';
