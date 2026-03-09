@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { QrCode, Copy, CheckCircle, Clock, RefreshCw, ExternalLink } from 'lucide-react';
+import { Copy, CheckCircle, Clock, RefreshCw, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
+import pixIcon from '@/assets/pix-icon.svg';
 
 interface PixQRCodeProps {
   qrCode: string;
@@ -55,7 +55,6 @@ const PixQRCode = ({
     }
   };
 
-  // Auto-check status every 10 seconds
   useEffect(() => {
     if (status !== 'pending' || !onCheckStatus) return;
 
@@ -74,110 +73,123 @@ const PixQRCode = ({
 
   if (status === 'approved') {
     return (
-      <Card className="glass-card border-success/30 bg-success/5">
-        <CardContent className="p-6 text-center">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="w-16 h-16 rounded-full bg-success/20 flex items-center justify-center mx-auto mb-4"
-          >
-            <CheckCircle className="w-8 h-8 text-success" />
-          </motion.div>
-          <h3 className="text-lg font-semibold text-success mb-2">
-            Pagamento Confirmado!
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Seu pagamento foi processado com sucesso.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="p-6 text-center">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4"
+        >
+          <CheckCircle className="w-10 h-10 text-green-400" />
+        </motion.div>
+        <h3 className="text-xl font-bold text-green-400 mb-2">
+          Pagamento Confirmado!
+        </h3>
+        <p className="text-sm text-slate-400">
+          Seu pagamento foi processado com sucesso.
+        </p>
+      </div>
     );
   }
 
   return (
-    <Card className="glass-card">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
-          <QrCode className="h-5 w-5 text-primary" />
-          Pague com PIX
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* QR Code Image */}
-        <div className="flex justify-center">
-          {qrCodeBase64 ? (
+    <div className="space-y-5">
+      {/* Header com logo */}
+      <div className="flex flex-col items-center gap-3">
+        <img
+          src="/images/logo-pcon-white.png"
+          alt="P-CON CONSTRUNET"
+          className="h-10 object-contain"
+        />
+        <div className="flex items-center gap-2">
+          <img src={pixIcon} alt="PIX" className="h-5 w-5" />
+          <h2 className="text-lg font-bold text-foreground">Pague com PIX</h2>
+        </div>
+      </div>
+
+      {/* QR Code sem fundo branco */}
+      <div className="flex justify-center">
+        {qrCodeBase64 ? (
+          <div className="relative p-3 rounded-2xl border border-primary/20 bg-primary/5">
             <img
               src={`data:image/png;base64,${qrCodeBase64}`}
               alt="QR Code PIX"
-              className="w-48 h-48 rounded-lg"
+              className="w-52 h-52 rounded-xl"
             />
-          ) : (
-            <div className="w-48 h-48 bg-muted rounded-lg flex items-center justify-center">
-              <QrCode className="w-16 h-16 text-muted-foreground" />
-            </div>
-          )}
-        </div>
-
-        {/* PIX Code (Copia e Cola) */}
-        <div className="space-y-2">
-          <p className="text-sm text-muted-foreground text-center">
-            Ou copie o código PIX:
-          </p>
-          <div className="relative">
-            <div className="bg-secondary/30 rounded-lg p-3 pr-12 border border-border/30 overflow-hidden">
-              <code className="text-xs text-foreground break-all line-clamp-2">
-                {qrCode}
-              </code>
-            </div>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="absolute right-1 top-1/2 -translate-y-1/2"
-              onClick={handleCopyCode}
-            >
-              {copied ? (
-                <CheckCircle className="h-4 w-4 text-success" />
-              ) : (
-                <Copy className="h-4 w-4" />
-              )}
-            </Button>
           </div>
-        </div>
+        ) : (
+          <div className="w-52 h-52 rounded-2xl border border-primary/20 bg-primary/5 flex items-center justify-center">
+            <img src={pixIcon} alt="PIX" className="w-16 h-16 opacity-30" />
+          </div>
+        )}
+      </div>
 
-        {/* Status and Actions */}
-        <div className="flex items-center justify-center gap-2 text-sm">
-          <Clock className="h-4 w-4 text-warning" />
+      {/* Instruções */}
+      <p className="text-sm text-muted-foreground text-center">
+        Escaneie o QR Code acima ou copie o código abaixo:
+      </p>
+
+      {/* Código PIX Copia e Cola */}
+      <div className="relative">
+        <div className="bg-secondary/20 rounded-xl p-3 pr-12 border border-border/20 overflow-hidden">
+          <code className="text-xs text-foreground/80 break-all line-clamp-2">
+            {qrCode}
+          </code>
+        </div>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="absolute right-1 top-1/2 -translate-y-1/2 hover:bg-primary/10"
+          onClick={handleCopyCode}
+        >
+          {copied ? (
+            <CheckCircle className="h-4 w-4 text-green-400" />
+          ) : (
+            <Copy className="h-4 w-4 text-muted-foreground" />
+          )}
+        </Button>
+      </div>
+
+      {/* Status */}
+      <div className="flex items-center justify-center gap-2 text-sm py-2">
+        <motion.div
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="flex items-center gap-2"
+        >
+          <Clock className="h-4 w-4 text-amber-400" />
           <span className="text-muted-foreground">Aguardando pagamento...</span>
-        </div>
+        </motion.div>
+      </div>
 
-        <div className="flex gap-2">
+      {/* Ações */}
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          className="flex-1 border-primary/20 hover:bg-primary/10"
+          onClick={handleCheckStatus}
+          disabled={checking}
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${checking ? 'animate-spin' : ''}`} />
+          Verificar Status
+        </Button>
+        {ticketUrl && (
           <Button
             variant="outline"
-            className="flex-1"
-            onClick={handleCheckStatus}
-            disabled={checking}
+            className="border-primary/20 hover:bg-primary/10"
+            onClick={() => window.open(ticketUrl, '_blank')}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${checking ? 'animate-spin' : ''}`} />
-            Verificar Status
+            <ExternalLink className="h-4 w-4" />
           </Button>
-          {ticketUrl && (
-            <Button
-              variant="outline"
-              onClick={() => window.open(ticketUrl, '_blank')}
-            >
-              <ExternalLink className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-
-        {expirationDate && (
-          <p className="text-xs text-muted-foreground text-center">
-            O QR Code expira em{' '}
-            {new Date(expirationDate).toLocaleString('pt-BR')}
-          </p>
         )}
-      </CardContent>
-    </Card>
+      </div>
+
+      {expirationDate && (
+        <p className="text-xs text-muted-foreground text-center">
+          O QR Code expira em{' '}
+          {new Date(expirationDate).toLocaleString('pt-BR')}
+        </p>
+      )}
+    </div>
   );
 };
 
