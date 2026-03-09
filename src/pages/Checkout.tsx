@@ -36,6 +36,7 @@ import {
   ChevronUp
 } from 'lucide-react';
 import logo from '@/assets/logo-pcon-grande.png';
+import pixIcon from '@/assets/pix-icon.svg';
 import BlueBackground from '@/components/BlueBackground';
 import ClientReferrals from '@/components/ClientReferrals';
 import { generateInvoicePDF } from '@/utils/invoicePdfGenerator';
