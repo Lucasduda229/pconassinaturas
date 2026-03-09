@@ -72,40 +72,63 @@ export const generateInvoicePDF = (data: InvoicePdfData) => {
 
   y += 48;
 
+  const formattedValue = new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(data.value);
+
   // ===== INVOICE DETAILS =====
   doc.setFillColor(...lightGray);
-  doc.roundedRect(margin, y, contentWidth, 30, 3, 3, 'F');
+  doc.roundedRect(margin, y, contentWidth, 38, 3, 3, 'F');
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(...primaryColor);
   doc.text('DETALHES DA FATURA', margin + 5, y + 8);
 
-  // Table header
+  // Table header with 4 columns: Referência | Código de cobrança | Vencimento | Valor
   const tableY = y + 14;
   doc.setFillColor(...primaryColor);
   doc.rect(margin + 5, tableY, contentWidth - 10, 7, 'F');
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.text('Descrição', margin + 8, tableY + 5);
-  doc.text('Vencimento', margin + 95, tableY + 5);
-  doc.text('Valor', margin + 140, tableY + 5);
+
+  const col1 = margin + 8;
+  const col2 = margin + 48;
+  const col3 = margin + 100;
+  const col4 = margin + 140;
+
+  doc.text('Referência', col1, tableY + 5);
+  doc.text('Código de cobrança', col2, tableY + 5);
+  doc.text('Vencimento', col3, tableY + 5);
+  doc.text('Valor', col4, tableY + 5);
 
   // Table row
   doc.setTextColor(...textColor);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   const rowY = tableY + 13;
-  doc.text(`Plano: ${data.planName}`, margin + 8, rowY);
-  doc.text(data.dueDate, margin + 95, rowY);
 
-  const formattedValue = new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(data.value);
+  // Referência = month name from dueDate
+  const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const dueParts = data.dueDate.split('/');
+  const monthRef = dueParts.length >= 2 ? months[parseInt(dueParts[1], 10) - 1] || data.dueDate : data.dueDate;
+  doc.text(monthRef, col1, rowY);
+
+  // Código de cobrança = first segment of subscriptionId
+  const cobrancaCode = data.subscriptionId.split('-')[0].toUpperCase();
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text(cobrancaCode, col2, rowY);
+
+  // Vencimento
+  doc.setFontSize(9);
+  doc.text(data.dueDate, col3, rowY);
+
+  // Valor
   doc.setFont('helvetica', 'bold');
-  doc.text(formattedValue, margin + 140, rowY);
+  doc.text(formattedValue, col4, rowY);
 
   y += 40;
 
