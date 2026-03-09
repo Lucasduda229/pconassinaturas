@@ -237,9 +237,18 @@ div[style*="Edit with Lovable"],
 
   /* Loading spinner */
   .spinner-blue {
-    @apply animate-spin;
-    border: 3px solid hsl(216 68% 38% / 0.2);
-    border-top-color: hsl(216 68% 50%);
+    width: 56px;
+    height: 56px;
+    border: 11px hsl(var(--primary)) double;
+    border-left-style: solid;
+    border-radius: 50%;
+    animation: spinner-rotate 0.75s infinite linear;
+  }
+
+  @keyframes spinner-rotate {
+    to {
+      transform: rotate(360deg);
+    }
   }
 }
 
