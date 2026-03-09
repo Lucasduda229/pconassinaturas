@@ -430,22 +430,21 @@ const Checkout = () => {
                   Minhas Assinaturas
                 </h2>
               </div>
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {subscriptions.map((subscription, index) => (
                   <motion.div
                     key={subscription.id}
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.25 + index * 0.1, duration: 0.5 }}
-                    className="glass-card p-5 sm:p-6 flex flex-col"
+                    transition={{ delay: 0.2 + index * 0.08, duration: 0.4 }}
+                    className="glass-card p-4 flex flex-col rounded-2xl"
                   >
-                    {/* Plan Header */}
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1 min-w-0">
-                        <h2 className="text-lg font-heading font-semibold text-foreground truncate">
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-heading font-semibold text-foreground truncate">
                           {subscription.plan_name}
-                        </h2>
-                        <p className="text-gray-neutral text-xs mt-0.5">Plano ativo</p>
+                        </h3>
                       </div>
                       <Badge 
                         className={`${getStatusConfig(subscription.status).className} flex items-center gap-1 px-2 py-0.5 border rounded-full text-[10px] flex-shrink-0`}
@@ -455,70 +454,41 @@ const Checkout = () => {
                       </Badge>
                     </div>
 
-                    {/* Info Cards */}
-                    <div className="space-y-3 mb-4 flex-1">
-                      <div className="p-3 rounded-xl bg-secondary/30 border border-border/30">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(30, 79, 163, 0.2)' }}>
-                            <DollarSign className="h-4 w-4" style={{ color: '#1E4FA3' }} />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-[10px] text-gray-neutral">Valor</p>
-                            <p className="text-base font-semibold text-foreground">
-                              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(subscription.value))}
-                            </p>
-                          </div>
-                        </div>
+                    {/* Valor + Vencimento inline */}
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="flex-1 p-2.5 rounded-xl bg-secondary/30 border border-border/30">
+                        <p className="text-[10px] text-gray-neutral mb-0.5">Valor</p>
+                        <p className="text-sm font-semibold text-foreground">
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(subscription.value))}
+                        </p>
                       </div>
-
-                      <div className="p-3 rounded-xl bg-secondary/30 border border-border/30">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(42, 63, 134, 0.2)' }}>
-                            <Calendar className="h-4 w-4" style={{ color: '#2A3F86' }} />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-[10px] text-gray-neutral">Vencimento</p>
-                            <p className="text-base font-semibold text-foreground">
-                              {formatBrazilDate(subscription.next_payment)}
-                            </p>
-                          </div>
-                        </div>
+                      <div className="flex-1 p-2.5 rounded-xl bg-secondary/30 border border-border/30">
+                        <p className="text-[10px] text-gray-neutral mb-0.5">Vencimento</p>
+                        <p className="text-sm font-semibold text-foreground">
+                          {formatBrazilDate(subscription.next_payment)}
+                        </p>
                       </div>
                     </div>
-
-                    {/* Divider */}
-                    <div className="h-px bg-border/30 mb-4" />
 
                     {/* Pay Button */}
-                    <motion.div
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
+                    <Button
+                      size="sm"
+                      className="w-full btn-blue text-xs h-9"
+                      onClick={() => openPaymentModal(subscription)}
+                      disabled={isProcessing || mpLoading}
                     >
-                      <Button
-                        size="default"
-                        className="w-full h-11 btn-blue text-sm"
-                        onClick={() => openPaymentModal(subscription)}
-                        disabled={isProcessing || mpLoading}
-                      >
-                        {isProcessing ? (
-                          <span className="flex items-center justify-center gap-2">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Processando...
-                          </span>
-                        ) : (
-                          <span className="flex items-center justify-center gap-2">
-                            Pagar Agora
-                            <ArrowRight className="h-4 w-4" />
-                          </span>
-                        )}
-                      </Button>
-                    </motion.div>
-
-                    {/* Security Badge */}
-                    <div className="mt-4 flex items-center justify-center gap-1.5 text-gray-neutral">
-                      <Shield className="h-3 w-3" />
-                      <span className="text-[10px]">Pagamento seguro</span>
-                    </div>
+                      {isProcessing ? (
+                        <span className="flex items-center gap-2">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Processando...
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          Pagar Agora
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        </span>
+                      )}
+                    </Button>
                   </motion.div>
                 ))}
               </div>
