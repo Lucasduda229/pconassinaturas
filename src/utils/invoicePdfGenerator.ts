@@ -159,10 +159,15 @@ export const generateInvoicePDF = (data: InvoicePdfData) => {
   doc.roundedRect(margin, y, contentWidth, 85, 2, 2, 'S');
 
   // Pix icon + title
+  try {
+    doc.addImage(PIX_SVG_DATA, 'SVG', margin + 5, y + 4, 7, 7);
+  } catch (e) {
+    // fallback: no icon
+  }
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.setTextColor(...primaryColor);
-  doc.text('◆  Pague com Pix', margin + 5, y + 10);
+  doc.text('Pague com Pix', margin + 15, y + 10);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
