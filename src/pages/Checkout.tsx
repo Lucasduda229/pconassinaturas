@@ -781,21 +781,20 @@ const Checkout = () => {
 
                     <div className="space-y-3">
                       <motion.button
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.99 }}
+                        whileHover={{ scale: 1.02, y: -2 }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => handlePayment('PIX')}
-                        className="w-full p-5 rounded-xl bg-secondary/30 border border-border/30 hover:border-primary/40 transition-all duration-200 flex items-center gap-4 group"
+                        className="w-full py-3 px-5 rounded-xl flex items-center justify-center gap-2.5 font-bold text-base text-white border-none cursor-pointer animate-pulse-pix"
+                        style={{ 
+                          backgroundColor: '#32BCAD',
+                          boxShadow: '0 4px 6px rgba(50, 188, 173, 0.3)',
+                        }}
                       >
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(30, 79, 163, 0.15)' }}>
-                          <QrCode className="h-6 w-6" style={{ color: '#1E4FA3' }} />
-                        </div>
-                        <div className="text-left flex-1">
-                          <p className="font-medium text-foreground">PIX</p>
-                          <p className="text-xs text-gray-neutral">Aprovação instantânea</p>
-                        </div>
-                        <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <svg className="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+                          <path fill="currentColor" d="M119.3 226.5l88-88c16.4-16.4 43-16.4 59.4 0l88 88c16.4 16.4 16.4 43 0 59.4l-88 88c-16.4 16.4-43 16.4-59.4 0l-88-88c-16.4-16.4-16.4-42.9 0-59.4zm285 59.4l51.5-51.5c16.4-16.4 16.4-43 0-59.4l-51.5-51.5c-16.4-16.4-43-16.4-59.4 0l-51.5 51.5 88 88 22.9-22.9V285.9zM56.2 285.9l51.5 51.5c16.4 16.4 43 16.4 59.4 0l51.5-51.5-88-88-22.9 22.9v-5.2L56.2 226.5c-16.4 16.4-16.4 43 0 59.4z"/>
+                        </svg>
+                        Pagar com Pix
                       </motion.button>
-
                     </div>
                   </motion.div>
                 )}
