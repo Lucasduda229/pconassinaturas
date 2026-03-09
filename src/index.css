@@ -352,3 +352,24 @@ div[style*="Edit with Lovable"],
 .stagger-3 { animation-delay: 0.3s; }
 .stagger-4 { animation-delay: 0.4s; }
 .stagger-5 { animation-delay: 0.5s; }
+
+/* Pix pulse animation */
+@keyframes pulse-pix {
+  0% { box-shadow: 0 0 0 0 rgba(50, 188, 173, 0.7); }
+  70% { box-shadow: 0 0 0 12px rgba(50, 188, 173, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(50, 188, 173, 0); }
+}
+
+.animate-pulse-pix {
+  animation: pulse-pix 2s infinite;
+}
+
+.animate-pulse-pix:hover {
+  animation: none;
+  background-color: #28998d !important;
+  box-shadow: 0 6px 12px rgba(50, 188, 173, 0.4) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-pix { animation: none; }
+}
