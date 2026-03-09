@@ -185,6 +185,7 @@ const ClientProfile = () => {
           qrCodeBase64: result.qrCodeBase64,
           ticketUrl: result.ticketUrl,
           expirationDate: result.expirationDate,
+          amount: parseFloat(newCharge.value),
         });
         setShowPixModal(true);
         setIsChargeDialogOpen(false);
