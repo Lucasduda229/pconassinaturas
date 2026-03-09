@@ -430,41 +430,41 @@ const Checkout = () => {
                   Minhas Assinaturas
                 </h2>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
                 {subscriptions.map((subscription, index) => (
                   <motion.div
                     key={subscription.id}
-                    initial={{ opacity: 0, y: 15 }}
+                    initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 + index * 0.08, duration: 0.4 }}
-                    className="glass-card p-4 flex flex-col rounded-2xl"
+                    transition={{ delay: 0.2 + index * 0.06, duration: 0.4 }}
+                    className="glass-card p-3 flex flex-col rounded-2xl aspect-square justify-between"
                   >
                     {/* Header */}
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="min-w-0">
-                        <h3 className="text-sm font-heading font-semibold text-foreground truncate">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-xs font-heading font-semibold text-foreground truncate">
                           {subscription.plan_name}
                         </h3>
+                        <Badge 
+                          className={`${getStatusConfig(subscription.status).className} flex items-center gap-0.5 px-1.5 py-0 border rounded-full text-[9px] flex-shrink-0`}
+                        >
+                          {getStatusConfig(subscription.status).icon}
+                          {getStatusConfig(subscription.status).label}
+                        </Badge>
                       </div>
-                      <Badge 
-                        className={`${getStatusConfig(subscription.status).className} flex items-center gap-1 px-2 py-0.5 border rounded-full text-[10px] flex-shrink-0`}
-                      >
-                        {getStatusConfig(subscription.status).icon}
-                        {getStatusConfig(subscription.status).label}
-                      </Badge>
-                    </div>
 
-                    {/* Valor + Vencimento inline */}
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="flex-1 p-2.5 rounded-xl bg-secondary/30 border border-border/30">
-                        <p className="text-[10px] text-gray-neutral mb-0.5">Valor</p>
-                        <p className="text-sm font-semibold text-foreground">
+                      {/* Valor */}
+                      <div className="p-2 rounded-lg bg-secondary/30 border border-border/30 mb-1.5">
+                        <p className="text-[9px] text-gray-neutral">Valor</p>
+                        <p className="text-sm font-bold text-foreground">
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(subscription.value))}
                         </p>
                       </div>
-                      <div className="flex-1 p-2.5 rounded-xl bg-secondary/30 border border-border/30">
-                        <p className="text-[10px] text-gray-neutral mb-0.5">Vencimento</p>
-                        <p className="text-sm font-semibold text-foreground">
+
+                      {/* Vencimento */}
+                      <div className="p-2 rounded-lg bg-secondary/30 border border-border/30">
+                        <p className="text-[9px] text-gray-neutral">Vencimento</p>
+                        <p className="text-xs font-semibold text-foreground">
                           {formatBrazilDate(subscription.next_payment)}
                         </p>
                       </div>
@@ -473,19 +473,15 @@ const Checkout = () => {
                     {/* Pay Button */}
                     <Button
                       size="sm"
-                      className="w-full btn-blue text-xs h-9"
+                      className="w-full btn-blue text-[10px] h-7 mt-2"
                       onClick={() => openPaymentModal(subscription)}
                       disabled={isProcessing || mpLoading}
                     >
                       {isProcessing ? (
-                        <span className="flex items-center gap-2">
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          Processando...
-                        </span>
+                        <Loader2 className="h-3 w-3 animate-spin" />
                       ) : (
-                        <span className="flex items-center gap-2">
-                          Pagar Agora
-                          <ArrowRight className="h-3.5 w-3.5" />
+                        <span className="flex items-center gap-1">
+                          Pagar <ArrowRight className="h-3 w-3" />
                         </span>
                       )}
                     </Button>
