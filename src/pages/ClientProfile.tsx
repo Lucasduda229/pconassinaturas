@@ -89,6 +89,7 @@ const ClientProfile = () => {
     qrCodeBase64?: string;
     ticketUrl?: string;
     expirationDate?: string;
+    amount?: number;
   } | null>(null);
   const [showPixModal, setShowPixModal] = useState(false);
   
