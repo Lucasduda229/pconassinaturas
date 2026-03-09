@@ -38,6 +38,8 @@ import {
 import logo from '@/assets/logo-pcon-grande.png';
 import BlueBackground from '@/components/BlueBackground';
 import ClientReferrals from '@/components/ClientReferrals';
+import { generateInvoicePDF } from '@/utils/invoicePdfGenerator';
+import { formatBrazilDate as formatDateBR } from '@/utils/dateUtils';
 
 interface Subscription {
   id: string;
@@ -86,6 +88,7 @@ const Checkout = () => {
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
   const [expandedSubscription, setExpandedSubscription] = useState<string | null>(null);
+  const [generatingInvoice, setGeneratingInvoice] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -506,12 +509,57 @@ const Checkout = () => {
                                   <span className="text-sm font-bold text-foreground">{formattedValue}</span>
                                 </div>
 
-                                {/* Ver fatura */}
+                                {/* Ver fatura (gera PIX + PDF) */}
                                 <button
-                                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/30 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (!client || generatingInvoice === subscription.id) return;
+                                    setGeneratingInvoice(subscription.id);
+                                    toast.info('Gerando fatura em PDF...');
+                                    try {
+                                      const pixResult = await createPixPayment({
+                                        amount: Number(subscription.value),
+                                        description: `Pagamento - ${subscription.plan_name}`,
+                                        clientId: client.id,
+                                        clientEmail: client.email,
+                                        clientName: client.name,
+                                        clientDocument: client.document || undefined,
+                                        subscriptionId: subscription.id,
+                                      });
+
+                                      if (pixResult?.success && pixResult.qrCode) {
+                                        generateInvoicePDF({
+                                          clientName: client.name,
+                                          clientDocument: client.document,
+                                          clientEmail: client.email,
+                                          clientPhone: client.phone,
+                                          planName: subscription.plan_name,
+                                          value: Number(subscription.value),
+                                          dueDate: formatBrazilDate(subscription.next_payment),
+                                          qrCodeBase64: pixResult.qrCodeBase64 || '',
+                                          pixCopyPaste: pixResult.qrCode,
+                                          subscriptionId: subscription.id,
+                                        });
+                                        toast.success('Fatura PDF gerada com sucesso!');
+                                      } else {
+                                        toast.error('Erro ao gerar QR Code para a fatura');
+                                      }
+                                    } catch (err) {
+                                      console.error('Error generating invoice PDF:', err);
+                                      toast.error('Erro ao gerar fatura PDF');
+                                    } finally {
+                                      setGeneratingInvoice(null);
+                                    }
+                                  }}
+                                  disabled={generatingInvoice === subscription.id}
+                                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/30 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
                                 >
-                                  <Eye className="h-4 w-4" />
-                                  Ver fatura
+                                  {generatingInvoice === subscription.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Download className="h-4 w-4" />
+                                  )}
+                                  {generatingInvoice === subscription.id ? 'Gerando...' : 'Ver fatura (PDF)'}
                                 </button>
 
                                 {/* Pagar com Pix */}
