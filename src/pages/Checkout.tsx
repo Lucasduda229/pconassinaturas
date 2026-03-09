@@ -472,8 +472,8 @@ const Checkout = () => {
 
                     {/* Pay Button */}
                     <Button
-                      size="sm"
-                      className="w-full btn-blue text-xs h-9 mt-2"
+                      size="default"
+                      className="w-full btn-blue text-sm h-10 mt-2 rounded-xl font-semibold"
                       onClick={() => openPaymentModal(subscription)}
                       disabled={isProcessing || mpLoading}
                     >
