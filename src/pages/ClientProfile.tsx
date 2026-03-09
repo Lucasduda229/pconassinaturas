@@ -89,6 +89,7 @@ const ClientProfile = () => {
     qrCodeBase64?: string;
     ticketUrl?: string;
     expirationDate?: string;
+    amount?: number;
   } | null>(null);
   const [showPixModal, setShowPixModal] = useState(false);
   
@@ -184,6 +185,7 @@ const ClientProfile = () => {
           qrCodeBase64: result.qrCodeBase64,
           ticketUrl: result.ticketUrl,
           expirationDate: result.expirationDate,
+          amount: parseFloat(newCharge.value),
         });
         setShowPixModal(true);
         setIsChargeDialogOpen(false);
@@ -1041,6 +1043,7 @@ const ClientProfile = () => {
               ticketUrl={pixData.ticketUrl}
               expirationDate={pixData.expirationDate}
               paymentId={pixData.paymentId}
+              amount={pixData.amount}
               onCheckStatus={handleCheckPixStatus}
               onPaymentConfirmed={handlePixPaymentConfirmed}
             />

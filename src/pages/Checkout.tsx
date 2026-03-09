@@ -943,6 +943,16 @@ const Checkout = () => {
                       </div>
                     </div>
 
+                    {/* Valor em destaque */}
+                    {selectedCharge && (
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">Valor a pagar</p>
+                        <p className="text-2xl font-bold text-foreground">
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedCharge.amount)}
+                        </p>
+                      </div>
+                    )}
+
                     {/* QR Code com fundo branco para escaneabilidade */}
                     <div className="flex justify-center">
                       <div className="bg-white p-2.5 rounded-xl">

@@ -11,6 +11,7 @@ interface PixQRCodeProps {
   ticketUrl?: string;
   expirationDate?: string;
   paymentId: string;
+  amount?: number;
   onCheckStatus?: () => Promise<{ status?: string } | null>;
   onPaymentConfirmed?: () => void;
 }
@@ -21,6 +22,7 @@ const PixQRCode = ({
   ticketUrl,
   expirationDate,
   paymentId,
+  amount,
   onCheckStatus,
   onPaymentConfirmed,
 }: PixQRCodeProps) => {
@@ -122,6 +124,16 @@ const PixQRCode = ({
           </div>
         )}
       </div>
+
+      {/* Valor em destaque */}
+      {amount != null && (
+        <div className="text-center">
+          <p className="text-xs text-muted-foreground">Valor a pagar</p>
+          <p className="text-2xl font-bold text-foreground">
+            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount)}
+          </p>
+        </div>
+      )}
 
       {/* Instruções */}
       <p className="text-sm text-muted-foreground text-center">
