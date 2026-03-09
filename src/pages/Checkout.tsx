@@ -569,11 +569,7 @@ const Checkout = () => {
                                   whileTap={{ scale: 0.98 }}
                                   onClick={() => openPaymentModal(subscription)}
                                   disabled={isProcessing || mpLoading}
-                                  className="w-full py-3 px-5 rounded-xl flex items-center justify-center gap-2.5 font-bold text-sm text-white border-none cursor-pointer animate-pulse-pix disabled:opacity-50 disabled:cursor-not-allowed"
-                                  style={{ 
-                                    backgroundColor: '#32BCAD',
-                                    boxShadow: '0 4px 6px rgba(50, 188, 173, 0.3)',
-                                  }}
+                                  className="w-full py-3 px-5 rounded-xl flex items-center justify-center gap-2.5 font-bold text-sm text-white border-none cursor-pointer btn-pix disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   <img src={pixIcon} alt="Pix" className="w-5 h-5" />
                                   Pagar com Pix
