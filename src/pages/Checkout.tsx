@@ -749,21 +749,14 @@ const Checkout = () => {
       <AnimatePresence>
         {isPaymentDialogOpen && (
           <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-            <DialogContent className="glass-card border-border/30 sm:max-w-md p-0 overflow-hidden">
+            <DialogContent className="glass-card border-border/30 sm:max-w-sm p-0 overflow-hidden rounded-2xl">
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.2 }}
-                className="p-6 sm:p-8"
+                className="p-5 sm:p-6"
               >
-                {/* Close button */}
-                <button
-                  onClick={() => setIsPaymentDialogOpen(false)}
-                  className="absolute top-4 right-4 p-2 rounded-lg hover:bg-secondary/50 transition-colors"
-                >
-                  <X className="h-5 w-5 text-muted-foreground" />
-                </button>
 
                 {/* Select Payment Method */}
                 {paymentStep === 'select' && (
