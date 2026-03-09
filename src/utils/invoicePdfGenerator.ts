@@ -62,7 +62,7 @@ const drawIcon = (doc: jsPDF, type: 'arrow' | 'clock' | 'calendar' | 'dollar', x
   if (type === 'dollar') doc.text('$', cx - size * 0.18, cy + size * 0.25);
 };
 
-export const generateInvoicePDF = (data: InvoicePdfData) => {
+export const generateInvoicePDF = async (data: InvoicePdfData) => {
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 15;
