@@ -928,19 +928,45 @@ const Checkout = () => {
                     animate={{ opacity: 1, y: 0 }}
                     className="space-y-6"
                   >
-                    <div className="text-center">
-                      <h2 className="text-xl font-heading font-semibold text-foreground mb-2">
-                        Pagamento PIX
-                      </h2>
+                    <div className="flex flex-col items-center gap-3">
+                      <img
+                        src="/images/logo-pcon-white.png"
+                        alt="P-CON CONSTRUNET"
+                        className="h-10 object-contain"
+                      />
+                      <div className="flex items-center gap-2">
+                        <img src={pixIcon} alt="PIX" className="h-5 w-5" />
+                        <h2 className="text-xl font-heading font-semibold text-foreground">
+                          Pague com PIX
+                        </h2>
+                      </div>
                       <p className="text-gray-neutral text-sm">
-                        Escaneie o QR Code para pagar
+                        Escaneie o QR Code ou copie o código abaixo
                       </p>
                     </div>
 
-                    <div className="flex justify-center p-4 bg-white rounded-xl">
-                      <img 
-                        src={`data:image/png;base64,${pixData.qrCode}`} 
-                        alt="QR Code PIX" 
+                    <div className="flex justify-center p-4 rounded-xl border border-primary/20 bg-transparent">
+                      <canvas
+                        ref={(canvas) => {
+                          if (!canvas) return;
+                          const ctx = canvas.getContext('2d');
+                          if (!ctx) return;
+                          const img = new Image();
+                          img.onload = () => {
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                            ctx.drawImage(img, 0, 0);
+                            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                            const d = imageData.data;
+                            for (let i = 0; i < d.length; i += 4) {
+                              if (d[i] > 200 && d[i + 1] > 200 && d[i + 2] > 200) {
+                                d[i + 3] = 0;
+                              }
+                            }
+                            ctx.putImageData(imageData, 0, 0);
+                          };
+                          img.src = `data:image/png;base64,${pixData.qrCode}`;
+                        }}
                         className="w-44 h-44"
                       />
                     </div>
