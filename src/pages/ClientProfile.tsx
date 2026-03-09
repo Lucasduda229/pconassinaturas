@@ -1029,15 +1029,10 @@ const ClientProfile = () => {
 
       {/* PIX QR Code Modal */}
       <Dialog open={showPixModal} onOpenChange={setShowPixModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <QrCode className="h-5 w-5" />
-              Pagamento PIX
-            </DialogTitle>
-            <DialogDescription>
-              Escaneie o QR Code ou copie o código para pagar
-            </DialogDescription>
+        <DialogContent className="sm:max-w-md border-primary/20 bg-background/95 backdrop-blur-xl">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Pagamento PIX</DialogTitle>
+            <DialogDescription>Escaneie o QR Code ou copie o código para pagar</DialogDescription>
           </DialogHeader>
           {pixData && (
             <PixQRCode
