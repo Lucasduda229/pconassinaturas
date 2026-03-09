@@ -36,6 +36,7 @@ import {
   ChevronUp
 } from 'lucide-react';
 import logo from '@/assets/logo-pcon-grande.png';
+import pixIcon from '@/assets/pix-icon.svg';
 import BlueBackground from '@/components/BlueBackground';
 import ClientReferrals from '@/components/ClientReferrals';
 import { generateInvoicePDF } from '@/utils/invoicePdfGenerator';
@@ -574,9 +575,7 @@ const Checkout = () => {
                                     boxShadow: '0 4px 6px rgba(50, 188, 173, 0.3)',
                                   }}
                                 >
-                                  <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-                                    <path fill="currentColor" d="M119.3 226.5l88-88c16.4-16.4 43-16.4 59.4 0l88 88c16.4 16.4 16.4 43 0 59.4l-88 88c-16.4 16.4-43 16.4-59.4 0l-88-88c-16.4-16.4-16.4-42.9 0-59.4zm285 59.4l51.5-51.5c16.4-16.4 16.4-43 0-59.4l-51.5-51.5c-16.4-16.4-43-16.4-59.4 0l-51.5 51.5 88 88 22.9-22.9V285.9zM56.2 285.9l51.5 51.5c16.4 16.4 43 16.4 59.4 0l51.5-51.5-88-88-22.9 22.9v-5.2L56.2 226.5c-16.4 16.4-16.4 43 0 59.4z"/>
-                                  </svg>
+                                  <img src={pixIcon} alt="Pix" className="w-5 h-5 invert" />
                                   Pagar com Pix
                                 </motion.button>
                               </div>
@@ -902,9 +901,7 @@ const Checkout = () => {
                           boxShadow: '0 4px 6px rgba(50, 188, 173, 0.3)',
                         }}
                       >
-                        <svg className="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-                          <path fill="currentColor" d="M119.3 226.5l88-88c16.4-16.4 43-16.4 59.4 0l88 88c16.4 16.4 16.4 43 0 59.4l-88 88c-16.4 16.4-43 16.4-59.4 0l-88-88c-16.4-16.4-16.4-42.9 0-59.4zm285 59.4l51.5-51.5c16.4-16.4 16.4-43 0-59.4l-51.5-51.5c-16.4-16.4-43-16.4-59.4 0l-51.5 51.5 88 88 22.9-22.9V285.9zM56.2 285.9l51.5 51.5c16.4 16.4 43 16.4 59.4 0l51.5-51.5-88-88-22.9 22.9v-5.2L56.2 226.5c-16.4 16.4-16.4 43 0 59.4z"/>
-                        </svg>
+                        <img src={pixIcon} alt="Pix" className="w-6 h-6 invert" />
                         Pagar com Pix
                       </motion.button>
                     </div>
