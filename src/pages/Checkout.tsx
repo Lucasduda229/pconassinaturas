@@ -901,7 +901,7 @@ const Checkout = () => {
                           boxShadow: '0 4px 6px rgba(50, 188, 173, 0.3)',
                         }}
                       >
-                        <img src={pixIcon} alt="Pix" className="w-6 h-6 invert" />
+                        <img src={pixIcon} alt="Pix" className="w-6 h-6" />
                         Pagar com Pix
                       </motion.button>
                     </div>
