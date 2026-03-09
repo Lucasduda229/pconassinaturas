@@ -152,11 +152,11 @@ export const generateInvoicePDF = async (data: InvoicePdfData) => {
   doc.roundedRect(margin, y, contentWidth, 28, 2, 2, 'S');
 
   const cardW = contentWidth / 4;
-  const cardData = [
-    { label: 'Código de cobrança', value: clientCode, icon: '→' },
-    { label: `Referência: ${monthRef}`, value: data.dueDate, icon: '◷' },
-    { label: 'Vencimento', value: data.dueDate, icon: '▣' },
-    { label: 'Valor', value: formattedValue, icon: '$' },
+  const cardData: { label: string; value: string; iconType: 'arrow' | 'clock' | 'calendar' | 'dollar' }[] = [
+    { label: 'Código de cobrança', value: clientCode, iconType: 'arrow' },
+    { label: `Referência: ${monthRef}`, value: data.dueDate, iconType: 'clock' },
+    { label: 'Vencimento', value: data.dueDate, iconType: 'calendar' },
+    { label: 'Valor', value: formattedValue, iconType: 'dollar' },
   ];
 
   cardData.forEach((card, i) => {
@@ -169,20 +169,13 @@ export const generateInvoicePDF = async (data: InvoicePdfData) => {
       doc.line(cx, y + 4, cx, y + 24);
     }
 
-    // Icon circle
-    const iconX = cx + 6;
-    const iconY = y + 8;
-    doc.setDrawColor(...primaryColor);
-    doc.setFillColor(...white);
-    doc.setLineWidth(0.5);
-    doc.circle(iconX, iconY + 3, 4, 'FD');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(6);
-    doc.setTextColor(...primaryColor);
-    doc.text(card.icon, iconX - 1.5, iconY + 4.5);
+    // Icon
+    const iconCx = cx + 10;
+    const iconCy = y + 14;
+    drawCardIcon(doc, card.iconType, iconCx, iconCy, 4, primaryColor);
 
     // Label
-    const textX = iconX + 7;
+    const textX = iconCx + 7;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(6.5);
     doc.setTextColor(...grayColor);
