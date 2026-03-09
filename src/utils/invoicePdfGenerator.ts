@@ -83,6 +83,25 @@ const drawCardIcon = (doc: jsPDF, type: 'arrow' | 'clock' | 'calendar' | 'dollar
   }
 };
 
+// Load image as base64 data URL
+const loadImageAsBase64 = (url: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return reject('No canvas context');
+      ctx.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => reject('Failed to load image');
+    img.src = url;
+  });
+};
+
 export const generateInvoicePDF = async (data: InvoicePdfData) => {
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -101,14 +120,20 @@ export const generateInvoicePDF = async (data: InvoicePdfData) => {
   doc.setFillColor(...primaryColor);
   doc.rect(0, 0, pageWidth, headerH, 'F');
 
-  // Company name
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
-  doc.setTextColor(...white);
-  doc.text('P-CON', margin + 2, 20);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text('CONSTRUNET', margin + 2, 28);
+  // Company logo
+  try {
+    const logoBase64 = await loadImageAsBase64('/images/logo-pcon-pdf.png');
+    doc.addImage(logoBase64, 'PNG', margin + 2, 8, 35, 35);
+  } catch (e) {
+    // Fallback text if logo fails
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(22);
+    doc.setTextColor(255, 255, 255);
+    doc.text('P-CON', margin + 2, 20);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('CONSTRUNET', margin + 2, 28);
+  }
 
   // Client info on the right side of header
   const infoX = 85;
