@@ -506,6 +506,14 @@ const Checkout = () => {
                                   <span className="text-sm font-bold text-foreground">{formattedValue}</span>
                                 </div>
 
+                                {/* Ver fatura */}
+                                <button
+                                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary/30 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                  Ver fatura
+                                </button>
+
                                 {/* Pagar com Pix */}
                                 <motion.button
                                   whileHover={{ scale: 1.02, y: -2 }}
