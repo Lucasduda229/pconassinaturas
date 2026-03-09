@@ -92,52 +92,33 @@ const PixQRCode = ({
   }
 
   return (
-    <div className="space-y-5">
-      {/* Header com logo */}
-      <div className="flex flex-col items-center gap-3">
+    <div className="space-y-4">
+      {/* Header com logo maior */}
+      <div className="flex flex-col items-center gap-2">
         <img
           src="/images/logo-pcon-white.png"
           alt="P-CON CONSTRUNET"
-          className="h-10 object-contain"
+          className="h-14 object-contain"
         />
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 mt-1">
           <img src={pixIcon} alt="PIX" className="h-5 w-5" />
           <h2 className="text-lg font-bold text-foreground">Pague com PIX</h2>
         </div>
       </div>
 
-      {/* QR Code sem fundo branco - usa canvas para remover fundo */}
+      {/* QR Code com fundo branco para escaneabilidade */}
       <div className="flex justify-center">
         {qrCodeBase64 ? (
-          <div className="relative p-3 rounded-2xl border border-primary/20 bg-transparent">
-            <canvas
-              ref={(canvas) => {
-                if (!canvas) return;
-                const ctx = canvas.getContext('2d');
-                if (!ctx) return;
-                const img = new Image();
-                img.onload = () => {
-                  canvas.width = img.width;
-                  canvas.height = img.height;
-                  ctx.drawImage(img, 0, 0);
-                  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                  const data = imageData.data;
-                  for (let i = 0; i < data.length; i += 4) {
-                    // Se o pixel é branco ou quase branco, torna transparente
-                    if (data[i] > 200 && data[i + 1] > 200 && data[i + 2] > 200) {
-                      data[i + 3] = 0;
-                    }
-                  }
-                  ctx.putImageData(imageData, 0, 0);
-                };
-                img.src = `data:image/png;base64,${qrCodeBase64}`;
-              }}
-              className="w-52 h-52 rounded-xl"
+          <div className="bg-white p-2.5 rounded-xl">
+            <img
+              src={`data:image/png;base64,${qrCodeBase64}`}
+              alt="QR Code PIX"
+              className="w-36 h-36"
             />
           </div>
         ) : (
-          <div className="w-52 h-52 rounded-2xl border border-primary/20 bg-primary/5 flex items-center justify-center">
-            <img src={pixIcon} alt="PIX" className="w-16 h-16 opacity-30" />
+          <div className="w-36 h-36 rounded-xl border border-primary/20 bg-primary/5 flex items-center justify-center">
+            <img src={pixIcon} alt="PIX" className="w-12 h-12 opacity-30" />
           </div>
         )}
       </div>
