@@ -784,7 +784,7 @@ const Checkout = () => {
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.99 }}
                         onClick={() => handlePayment('PIX')}
-                        className="w-full p-4 rounded-xl bg-secondary/30 border border-border/30 hover:border-primary/40 transition-all duration-200 flex items-center gap-4 group"
+                        className="w-full p-5 rounded-xl bg-secondary/30 border border-border/30 hover:border-primary/40 transition-all duration-200 flex items-center gap-4 group"
                       >
                         <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(30, 79, 163, 0.15)' }}>
                           <QrCode className="h-6 w-6" style={{ color: '#1E4FA3' }} />
