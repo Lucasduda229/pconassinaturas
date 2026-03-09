@@ -30,7 +30,10 @@ import {
   Download,
   MapPin,
   FileCheck,
-  Rocket
+  Rocket,
+  Eye,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import logo from '@/assets/logo-pcon-grande.png';
 import BlueBackground from '@/components/BlueBackground';
@@ -82,6 +85,7 @@ const Checkout = () => {
   const [paymentStep, setPaymentStep] = useState<'select' | 'processing' | 'pix' | 'success' | 'error'>('select');
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
+  const [expandedSubscription, setExpandedSubscription] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -427,66 +431,118 @@ const Checkout = () => {
               <div className="flex items-center gap-2 mb-4">
                 <Calendar className="h-5 w-5 text-primary" />
                 <h2 className="text-lg font-heading font-semibold text-foreground">
-                  Minhas Assinaturas
+                  Detalhes da fatura
                 </h2>
               </div>
-              <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-                {subscriptions.map((subscription, index) => (
-                  <motion.div
-                    key={subscription.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 + index * 0.06, duration: 0.4 }}
-                    className="glass-card p-3 flex flex-col rounded-2xl aspect-square justify-between"
-                  >
-                    {/* Header */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-xs font-heading font-semibold text-foreground truncate">
-                          {subscription.plan_name}
-                        </h3>
-                        <Badge 
-                          className={`${getStatusConfig(subscription.status).className} flex items-center gap-0.5 px-1.5 py-0 border rounded-full text-[9px] flex-shrink-0`}
-                        >
-                          {getStatusConfig(subscription.status).icon}
-                          {getStatusConfig(subscription.status).label}
-                        </Badge>
-                      </div>
-
-                      {/* Valor */}
-                      <div className="p-2 rounded-lg bg-secondary/30 border border-border/30 mb-1.5">
-                        <p className="text-[9px] text-gray-neutral">Valor</p>
-                        <p className="text-sm font-bold text-foreground">
-                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(subscription.value))}
-                        </p>
-                      </div>
-
-                      {/* Vencimento */}
-                      <div className="p-2 rounded-lg bg-secondary/30 border border-border/30">
-                        <p className="text-[9px] text-gray-neutral">Vencimento</p>
-                        <p className="text-xs font-semibold text-foreground">
-                          {formatBrazilDate(subscription.next_payment)}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Pay Button */}
-                    <Button
-                      size="default"
-                      className="w-full btn-blue text-sm h-11 mt-2 rounded-xl font-semibold"
-                      onClick={() => openPaymentModal(subscription)}
-                      disabled={isProcessing || mpLoading}
+              <div className="space-y-4">
+                {subscriptions.map((subscription, index) => {
+                  const isExpanded = expandedSubscription === subscription.id;
+                  const formattedValue = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(subscription.value));
+                  
+                  return (
+                    <motion.div
+                      key={subscription.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 + index * 0.06, duration: 0.4 }}
+                      className="glass-card rounded-2xl overflow-hidden"
                     >
-                      {isProcessing ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <span className="flex items-center gap-1">
-                          Pagar <ArrowRight className="h-3 w-3" />
-                        </span>
-                      )}
-                    </Button>
-                  </motion.div>
-                ))}
+                      {/* Header bar */}
+                      <div className="bg-primary px-4 py-3 flex items-center justify-between">
+                        <h3 className="text-sm font-heading font-semibold text-primary-foreground">
+                          Detalhes da fatura - {subscription.plan_name}
+                        </h3>
+                      </div>
+
+                      {/* Content */}
+                      <div className="p-4">
+                        {/* Info row: Vencimento | Valor | Status */}
+                        <div className="rounded-xl border border-border/30 bg-secondary/20 p-3 mb-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex-1">
+                              <p className="text-[10px] text-gray-neutral mb-0.5">Vencimento</p>
+                              <p className="text-sm font-bold text-foreground">
+                                {formatBrazilDate(subscription.next_payment)}
+                              </p>
+                            </div>
+                            <div className="w-px h-8 bg-border/30" />
+                            <div className="flex-1 text-center">
+                              <p className="text-[10px] text-gray-neutral mb-0.5">Valor</p>
+                              <p className="text-sm font-bold text-foreground">
+                                {formattedValue}
+                              </p>
+                            </div>
+                            <div className="w-px h-8 bg-border/30" />
+                            <div className="flex-1 text-right">
+                              <p className="text-[10px] text-gray-neutral mb-0.5">Status</p>
+                              <Badge 
+                                className={`${getStatusConfig(subscription.status).className} inline-flex items-center gap-0.5 px-2 py-0.5 border rounded-full text-[10px]`}
+                              >
+                                {getStatusConfig(subscription.status).icon}
+                                {getStatusConfig(subscription.status).label}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Expandable section */}
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.25 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="pt-2 pb-3 space-y-3">
+                                <h4 className="text-sm font-heading font-semibold text-foreground">Lançamentos</h4>
+                                <div className="flex items-center justify-between py-1.5 border-b border-border/20">
+                                  <span className="text-xs text-gray-neutral">Valor original</span>
+                                  <span className="text-xs text-foreground">{formattedValue}</span>
+                                </div>
+                                <div className="flex items-center justify-between py-1.5">
+                                  <span className="text-sm font-bold text-foreground">Total</span>
+                                  <span className="text-sm font-bold text-foreground">{formattedValue}</span>
+                                </div>
+
+                                {/* Pagar com Pix */}
+                                <motion.button
+                                  whileHover={{ scale: 1.02, y: -2 }}
+                                  whileTap={{ scale: 0.98 }}
+                                  onClick={() => openPaymentModal(subscription)}
+                                  disabled={isProcessing || mpLoading}
+                                  className="w-full py-3 px-5 rounded-xl flex items-center justify-center gap-2.5 font-bold text-sm text-white border-none cursor-pointer animate-pulse-pix disabled:opacity-50 disabled:cursor-not-allowed"
+                                  style={{ 
+                                    backgroundColor: '#32BCAD',
+                                    boxShadow: '0 4px 6px rgba(50, 188, 173, 0.3)',
+                                  }}
+                                >
+                                  <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+                                    <path fill="currentColor" d="M119.3 226.5l88-88c16.4-16.4 43-16.4 59.4 0l88 88c16.4 16.4 16.4 43 0 59.4l-88 88c-16.4 16.4-43 16.4-59.4 0l-88-88c-16.4-16.4-16.4-42.9 0-59.4zm285 59.4l51.5-51.5c16.4-16.4 16.4-43 0-59.4l-51.5-51.5c-16.4-16.4-43-16.4-59.4 0l-51.5 51.5 88 88 22.9-22.9V285.9zM56.2 285.9l51.5 51.5c16.4 16.4 43 16.4 59.4 0l51.5-51.5-88-88-22.9 22.9v-5.2L56.2 226.5c-16.4 16.4-16.4 43 0 59.4z"/>
+                                  </svg>
+                                  Pagar com Pix
+                                </motion.button>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+
+                        {/* Toggle button */}
+                        <button
+                          onClick={() => setExpandedSubscription(isExpanded ? null : subscription.id)}
+                          className="w-full mt-1 py-2 rounded-lg border border-border/30 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-border/50 transition-colors flex items-center justify-center gap-1"
+                        >
+                          {isExpanded ? (
+                            <>Ver menos <ChevronUp className="h-3.5 w-3.5" /></>
+                          ) : (
+                            <>Ver mais <ChevronDown className="h-3.5 w-3.5" /></>
+                          )}
+                        </button>
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </div>
             </motion.div>
           )}
