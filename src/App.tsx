@@ -72,6 +72,7 @@ const App = () => (
                    <Route path="/coupons" element={<ProtectedRoute><ClientCoupons /></ProtectedRoute>} />
                    <Route path="/financial" element={<ProtectedRoute><Financial /></ProtectedRoute>} />
                    <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
+                   <Route path="/email" element={<ProtectedRoute><EmailSettings /></ProtectedRoute>} />
                   {/* Referral Landing Page (Public) - Clients */}
                   <Route path="/r/:slug" element={<ReferralLanding />} />
                   
