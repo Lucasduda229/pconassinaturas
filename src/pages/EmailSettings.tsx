@@ -43,7 +43,7 @@ const EmailSettings = () => {
   };
 
   return (
-    <DashboardLayout>
+    <DashboardLayout title="Email">
       <div className="space-y-6">
         {/* Header */}
         <div>
