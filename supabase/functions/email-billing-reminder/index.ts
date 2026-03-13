@@ -20,7 +20,7 @@ const generateEmailHTML = (
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cobrança - P-CON CONSTRUNET</title>
+  <title>Lembrete de Assinatura - P-CON CONSTRUNET</title>
 </head>
 <body style="margin:0;padding:0;background-color:#f4f6f9;font-family:'Segoe UI',Arial,Helvetica,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f9;padding:32px 0;">
