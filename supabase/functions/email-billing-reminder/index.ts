@@ -220,17 +220,13 @@ const handler = async (req: Request): Promise<Response> => {
     if (body.clientId) {
       console.log(`Manual email send for client ${body.clientId}`);
 
-      // Get client's pending payments
-      const { data: payments, error: queryError } = await supabase
-        .from("payments")
-        .select(`
-          id, amount, due_date, status, description, subscription_id,
-          client:clients(id, name, phone, email),
-          subscription:subscriptions(plan_name)
-        `)
+      // Get client's active subscriptions
+      const { data: subs, error: queryError } = await supabase
+        .from("subscriptions")
+        .select(`id, plan_name, value, next_payment, client:clients(id, name, phone, email)`)
         .eq("client_id", body.clientId)
-        .eq("status", "pending")
-        .order("due_date", { ascending: true })
+        .eq("status", "active")
+        .order("next_payment", { ascending: true })
         .limit(1);
 
       if (queryError) {
@@ -240,15 +236,15 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
-      if (!payments || payments.length === 0) {
+      if (!subs || subs.length === 0) {
         return new Response(
-          JSON.stringify({ success: false, error: "Nenhum pagamento pendente encontrado para este cliente" }),
+          JSON.stringify({ success: false, error: "Nenhuma assinatura ativa encontrada para este cliente" }),
           { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
 
-      const payment = payments[0];
-      const client = payment.client as any;
+      const sub = subs[0];
+      const client = sub.client as any;
 
       if (!client?.email) {
         return new Response(
@@ -258,7 +254,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       try {
-        const result = await sendEmailForPayment(payment, resendApiKey);
+        const result = await sendEmailForSubscription(sub, client, resendApiKey);
         if (result.sent) {
           return new Response(
             JSON.stringify({ success: true, results: { emails_sent: 1, skipped_no_email: 0, errors: [], client_name: client.name, client_email: client.email } }),
