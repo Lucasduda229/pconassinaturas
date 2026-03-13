@@ -221,7 +221,7 @@ const EmailSettings = () => {
               </div>
               <div style={{ background: '#0d1b3e' }} className="p-4 text-center">
                 <p className="text-white text-sm font-semibold">P-CON CONSTRUNET</p>
-                <p className="text-gray-400 text-xs">Soluções em Tecnologia e Gestão</p>
+                <p className="text-gray-400 text-xs">Criação de Sistemas</p>
               </div>
             </div>
           </CardContent>

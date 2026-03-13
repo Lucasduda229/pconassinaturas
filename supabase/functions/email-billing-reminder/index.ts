@@ -118,7 +118,7 @@ const generateEmailHTML = (
                 <tr>
                   <td align="center" style="padding-bottom:12px;">
                     <p style="margin:0;font-size:15px;color:#ffffff;font-weight:600;">P-CON CONSTRUNET</p>
-                    <p style="margin:4px 0 0;font-size:12px;color:#94a3b8;">Soluções em Tecnologia e Gestão</p>
+                    <p style="margin:4px 0 0;font-size:12px;color:#94a3b8;">Criação de Sistemas</p>
                   </td>
                 </tr>
                 <tr>
