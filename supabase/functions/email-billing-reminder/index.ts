@@ -159,14 +159,12 @@ const generateEmailHTML = (
 </html>
 `;
 
-const sendEmailForPayment = async (payment: any, resendApiKey: string) => {
-  const client = payment.client as any;
+const sendEmailForSubscription = async (sub: any, client: any, resendApiKey: string) => {
   if (!client?.email) return { skipped: true };
 
-  const planName = (payment.subscription as any)?.plan_name ||
-    payment.description?.replace("Cobrança - ", "") || "Assinatura";
-  const formattedAmount = `R$ ${payment.amount.toFixed(2).replace(".", ",")}`;
-  const dueDate = new Date(payment.due_date!);
+  const planName = sub.plan_name || "Assinatura";
+  const formattedAmount = `R$ ${sub.value.toFixed(2).replace(".", ",")}`;
+  const dueDate = new Date(sub.next_payment);
   const formattedDueDate = dueDate.toLocaleDateString("pt-BR", {
     day: "2-digit", month: "2-digit", year: "numeric", timeZone: "America/Sao_Paulo",
   });
@@ -182,7 +180,7 @@ const sendEmailForPayment = async (payment: any, resendApiKey: string) => {
     body: JSON.stringify({
       from: "P-CON CONSTRUNET <cobranca@assinaturaspcon.sbs>",
       to: [client.email],
-      subject: `⚠️ Fatura vencida - ${planName} | P-CON CONSTRUNET`,
+      subject: `📋 Lembrete: ${planName} vence amanhã | P-CON CONSTRUNET`,
       html: emailHTML,
     }),
   });
