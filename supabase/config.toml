@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.whatsapp-auto-reminders]
 verify_jwt = false
+
+[functions.email-billing-reminder]
+verify_jwt = false
