@@ -72,7 +72,9 @@ const EmailSettings = () => {
   const handleTestBillingEmail = async () => {
     setIsTesting(true);
     try {
-      const { data, error } = await supabase.functions.invoke('email-billing-reminder');
+      const { data, error } = await supabase.functions.invoke('email-billing-reminder', {
+        body: { forceRun: true },
+      });
       if (error) { toast.error('Erro ao executar função de email'); return; }
       setLastResult(data);
       if (data?.success) {
