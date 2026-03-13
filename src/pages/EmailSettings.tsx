@@ -333,7 +333,7 @@ const EmailSettings = () => {
                   </div>
                   <div className="flex justify-between py-2">
                     <span className="text-xs text-gray-500 uppercase">Vencimento</span>
-                    <span className="text-sm font-semibold text-red-600">12/03/2026</span>
+                    <span className="text-sm font-semibold text-yellow-600">14/03/2026</span>
                   </div>
                 </div>
                 <div className="text-center">
