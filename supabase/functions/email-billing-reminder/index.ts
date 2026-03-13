@@ -86,7 +86,7 @@ const generateEmailHTML = (
                           <span style="font-size:13px;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;">Vencimento</span>
                         </td>
                         <td style="padding:8px 0;text-align:right;">
-                          <span style="font-size:15px;color:#DC2626;font-weight:600;">${dueDate}</span>
+                          <span style="font-size:15px;color:#F59E0B;font-weight:600;">${dueDate}</span>
                         </td>
                       </tr>
                     </table>
