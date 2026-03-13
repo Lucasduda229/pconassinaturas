@@ -142,15 +142,18 @@ const EmailSettings = () => {
                     if (!e.target.value) setSelectedClient(null);
                   }}
                   onFocus={() => setShowDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
                   className="pl-10"
                 />
               </div>
 
-              {showDropdown && searchTerm && filteredClients.length > 0 && (
+              {showDropdown && searchTerm.length >= 1 && !selectedClient && filteredClients.length > 0 && (
                 <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
                   {filteredClients.slice(0, 8).map((client) => (
                     <button
                       key={client.id}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
                       onClick={() => handleSelectClient(client)}
                       className="w-full px-4 py-3 text-left hover:bg-secondary/50 transition-colors flex items-center gap-3 border-b border-border/30 last:border-0"
                     >
@@ -164,7 +167,7 @@ const EmailSettings = () => {
                 </div>
               )}
 
-              {showDropdown && searchTerm && filteredClients.length === 0 && (
+              {showDropdown && searchTerm.length >= 1 && !selectedClient && filteredClients.length === 0 && (
                 <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg p-4">
                   <p className="text-sm text-muted-foreground text-center">Nenhum cliente encontrado</p>
                 </div>
