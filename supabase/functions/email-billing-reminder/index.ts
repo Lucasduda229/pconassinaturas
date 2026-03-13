@@ -20,7 +20,7 @@ const generateEmailHTML = (
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cobrança - P-CON CONSTRUNET</title>
+  <title>Lembrete de Assinatura - P-CON CONSTRUNET</title>
 </head>
 <body style="margin:0;padding:0;background-color:#f4f6f9;font-family:'Segoe UI',Arial,Helvetica,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f9;padding:32px 0;">
@@ -40,9 +40,9 @@ const generateEmailHTML = (
             <td style="padding:24px 40px 0;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="background-color:#FEF3C7;border-left:4px solid #F59E0B;padding:12px 16px;border-radius:6px;">
-                    <p style="margin:0;font-size:14px;color:#92400E;font-weight:600;">
-                      ⚠️ Fatura vencida — regularize para manter sua assinatura ativa
+                  <td style="background-color:#DBEAFE;border-left:4px solid #3B82F6;padding:12px 16px;border-radius:6px;">
+                    <p style="margin:0;font-size:14px;color:#1E40AF;font-weight:600;">
+                      📋 Sua assinatura vence amanhã — efetue o pagamento para manter tudo em dia
                     </p>
                   </td>
                 </tr>
@@ -57,7 +57,7 @@ const generateEmailHTML = (
                 Olá <strong>${clientName}</strong>,
               </p>
               <p style="font-size:15px;color:#4a4a5a;line-height:1.6;margin:0 0 24px;">
-                Identificamos que a fatura referente à sua assinatura está <strong style="color:#DC2626;">vencida</strong>. Confira os detalhes abaixo e regularize o pagamento para evitar a suspensão dos serviços.
+                Passando para lembrar que a fatura referente à sua assinatura <strong>vence amanhã</strong>. Confira os detalhes abaixo e efetue o pagamento para manter sua assinatura em dia.
               </p>
 
               <!-- Detalhes da fatura -->
@@ -86,7 +86,7 @@ const generateEmailHTML = (
                           <span style="font-size:13px;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;">Vencimento</span>
                         </td>
                         <td style="padding:8px 0;text-align:right;">
-                          <span style="font-size:15px;color:#DC2626;font-weight:600;">${dueDate}</span>
+                          <span style="font-size:15px;color:#F59E0B;font-weight:600;">${dueDate}</span>
                         </td>
                       </tr>
                     </table>
@@ -159,14 +159,12 @@ const generateEmailHTML = (
 </html>
 `;
 
-const sendEmailForPayment = async (payment: any, resendApiKey: string) => {
-  const client = payment.client as any;
+const sendEmailForSubscription = async (sub: any, client: any, resendApiKey: string) => {
   if (!client?.email) return { skipped: true };
 
-  const planName = (payment.subscription as any)?.plan_name ||
-    payment.description?.replace("Cobrança - ", "") || "Assinatura";
-  const formattedAmount = `R$ ${payment.amount.toFixed(2).replace(".", ",")}`;
-  const dueDate = new Date(payment.due_date!);
+  const planName = sub.plan_name || "Assinatura";
+  const formattedAmount = `R$ ${sub.value.toFixed(2).replace(".", ",")}`;
+  const dueDate = new Date(sub.next_payment);
   const formattedDueDate = dueDate.toLocaleDateString("pt-BR", {
     day: "2-digit", month: "2-digit", year: "numeric", timeZone: "America/Sao_Paulo",
   });
@@ -182,7 +180,7 @@ const sendEmailForPayment = async (payment: any, resendApiKey: string) => {
     body: JSON.stringify({
       from: "P-CON CONSTRUNET <cobranca@assinaturaspcon.sbs>",
       to: [client.email],
-      subject: `⚠️ Fatura vencida - ${planName} | P-CON CONSTRUNET`,
+      subject: `📋 Lembrete: ${planName} vence amanhã | P-CON CONSTRUNET`,
       html: emailHTML,
     }),
   });
@@ -222,17 +220,13 @@ const handler = async (req: Request): Promise<Response> => {
     if (body.clientId) {
       console.log(`Manual email send for client ${body.clientId}`);
 
-      // Get client's pending payments
-      const { data: payments, error: queryError } = await supabase
-        .from("payments")
-        .select(`
-          id, amount, due_date, status, description, subscription_id,
-          client:clients(id, name, phone, email),
-          subscription:subscriptions(plan_name)
-        `)
+      // Get client's active subscriptions
+      const { data: subs, error: queryError } = await supabase
+        .from("subscriptions")
+        .select(`id, plan_name, value, next_payment, client:clients(id, name, phone, email)`)
         .eq("client_id", body.clientId)
-        .eq("status", "pending")
-        .order("due_date", { ascending: true })
+        .eq("status", "active")
+        .order("next_payment", { ascending: true })
         .limit(1);
 
       if (queryError) {
@@ -242,15 +236,15 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
-      if (!payments || payments.length === 0) {
+      if (!subs || subs.length === 0) {
         return new Response(
-          JSON.stringify({ success: false, error: "Nenhum pagamento pendente encontrado para este cliente" }),
+          JSON.stringify({ success: false, error: "Nenhuma assinatura ativa encontrada para este cliente" }),
           { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
 
-      const payment = payments[0];
-      const client = payment.client as any;
+      const sub = subs[0];
+      const client = sub.client as any;
 
       if (!client?.email) {
         return new Response(
@@ -260,7 +254,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       try {
-        const result = await sendEmailForPayment(payment, resendApiKey);
+        const result = await sendEmailForSubscription(sub, client, resendApiKey);
         if (result.sent) {
           return new Response(
             JSON.stringify({ success: true, results: { emails_sent: 1, skipped_no_email: 0, errors: [], client_name: client.name, client_email: client.email } }),
@@ -280,30 +274,27 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // ====== AUTOMATIC MODE: D+1 overdue ======
+    // ====== AUTOMATIC MODE: D-1 subscription reminder ======
     const toYMDInSaoPaulo = (d: Date) =>
       new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(d);
 
     const now = new Date();
     const todayBrt = toYMDInSaoPaulo(now);
-    const yesterday = new Date(new Date(`${todayBrt}T12:00:00-03:00`).getTime() - 86400000);
-    const yesterdayStr = toYMDInSaoPaulo(yesterday);
+    // Tomorrow = subscription due date (D-1 means we send 1 day before)
+    const tomorrow = new Date(new Date(`${todayBrt}T12:00:00-03:00`).getTime() + 86400000);
+    const tomorrowStr = toYMDInSaoPaulo(tomorrow);
 
-    const startOfYesterdayUtc = new Date(`${yesterdayStr}T00:00:00-03:00`).toISOString();
-    const endOfYesterdayUtc = new Date(`${yesterdayStr}T23:59:59-03:00`).toISOString();
+    const startOfTomorrowUtc = new Date(`${tomorrowStr}T00:00:00-03:00`).toISOString();
+    const endOfTomorrowUtc = new Date(`${tomorrowStr}T23:59:59-03:00`).toISOString();
 
-    console.log(`Checking payments due yesterday (D+1 overdue) in BRT: ${yesterdayStr}`);
+    console.log(`Checking subscriptions due tomorrow (D-1 reminder) in BRT: ${tomorrowStr}`);
 
-    const { data: overduePayments, error: queryError } = await supabase
-      .from("payments")
-      .select(`
-        id, amount, due_date, status, description, subscription_id,
-        client:clients(id, name, phone, email),
-        subscription:subscriptions(plan_name)
-      `)
-      .eq("status", "pending")
-      .gte("due_date", startOfYesterdayUtc)
-      .lte("due_date", endOfYesterdayUtc);
+    const { data: dueSubs, error: queryError } = await supabase
+      .from("subscriptions")
+      .select(`id, plan_name, value, next_payment, client:clients(id, name, phone, email)`)
+      .eq("status", "active")
+      .gte("next_payment", startOfTomorrowUtc)
+      .lte("next_payment", endOfTomorrowUtc);
 
     if (queryError) {
       return new Response(
@@ -312,15 +303,15 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`Found ${overduePayments?.length || 0} overdue payments (D+1)`);
+    console.log(`Found ${dueSubs?.length || 0} subscriptions due tomorrow (D-1)`);
 
     const results = { emails_sent: 0, skipped_no_email: 0, errors: [] as string[] };
 
-    if (overduePayments && overduePayments.length > 0) {
-      for (const payment of overduePayments) {
-        const client = payment.client as any;
+    if (dueSubs && dueSubs.length > 0) {
+      for (const sub of dueSubs) {
+        const client = sub.client as any;
         try {
-          const result = await sendEmailForPayment(payment, resendApiKey);
+          const result = await sendEmailForSubscription(sub, client, resendApiKey);
           if (result.skipped) { results.skipped_no_email++; }
           else if (result.sent) { results.emails_sent++; }
           else { results.errors.push(`${client?.name || 'Desconhecido'}: ${result.error}`); }
@@ -330,7 +321,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    console.log("D+1 billing email results:", results);
+    console.log("D-1 subscription email results:", results);
 
     return new Response(
       JSON.stringify({ success: true, results }),

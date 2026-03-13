@@ -220,14 +220,14 @@ const EmailSettings = () => {
           </CardContent>
         </Card>
 
-        {/* Email de Cobrança D+1 */}
+        {/* Lembrete D-1 */}
         <Card className="glass-card border-border/50">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-yellow-500" />
-              Cobrança D+1 (Automática)
+              <Clock className="w-5 h-5 text-primary" />
+              Lembrete D-1 (Automático)
             </CardTitle>
-            <CardDescription>Email enviado automaticamente todo dia às 08:00 para pagamentos vencidos no dia anterior</CardDescription>
+            <CardDescription>Email enviado automaticamente todo dia às 08:00 para assinaturas que vencem no dia seguinte</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -250,7 +250,7 @@ const EmailSettings = () => {
                   <Info className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm font-medium text-muted-foreground">Gatilho</span>
                 </div>
-                <p className="text-foreground font-semibold">Pagamento vencido D+1</p>
+                <p className="text-foreground font-semibold">Assinatura vence amanhã (D-1)</p>
               </div>
             </div>
 
@@ -259,7 +259,7 @@ const EmailSettings = () => {
                 {isTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 {isTesting ? 'Processando...' : 'Executar Agora (Manual)'}
               </Button>
-              <p className="text-xs text-muted-foreground">Dispara manualmente a verificação de todos os pagamentos vencidos</p>
+              <p className="text-xs text-muted-foreground">Dispara manualmente a verificação de assinaturas que vencem amanhã</p>
             </div>
 
             {lastResult?.success && (
@@ -301,7 +301,7 @@ const EmailSettings = () => {
               <Mail className="w-5 h-5 text-primary" />
               Preview do Template
             </CardTitle>
-            <CardDescription>Pré-visualização do email de cobrança enviado aos clientes</CardDescription>
+            <CardDescription>Pré-visualização do email de lembrete enviado aos clientes</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="bg-white rounded-lg overflow-hidden border">
@@ -313,14 +313,14 @@ const EmailSettings = () => {
                 />
               </div>
               <div className="p-6">
-                <div className="bg-yellow-50 border-l-4 border-yellow-500 p-3 rounded mb-4">
-                  <p className="text-sm text-yellow-800 font-semibold">
-                    ⚠️ Fatura vencida — regularize para manter sua assinatura ativa
+                <div className="bg-blue-50 border-l-4 border-blue-500 p-3 rounded mb-4">
+                  <p className="text-sm text-blue-800 font-semibold">
+                    📋 Sua assinatura vence amanhã — efetue o pagamento para manter tudo em dia
                   </p>
                 </div>
                 <p className="text-gray-800 mb-2">Olá <strong>Nome do Cliente</strong>,</p>
                 <p className="text-gray-600 text-sm mb-4">
-                  Identificamos que a fatura referente à sua assinatura está <strong className="text-red-600">vencida</strong>.
+                  Passando para lembrar que a fatura referente à sua assinatura <strong>vence amanhã</strong>.
                 </p>
                 <div className="bg-gray-50 rounded-lg border p-4 mb-4">
                   <div className="flex justify-between py-2 border-b">
@@ -333,7 +333,7 @@ const EmailSettings = () => {
                   </div>
                   <div className="flex justify-between py-2">
                     <span className="text-xs text-gray-500 uppercase">Vencimento</span>
-                    <span className="text-sm font-semibold text-red-600">12/03/2026</span>
+                    <span className="text-sm font-semibold text-yellow-600">14/03/2026</span>
                   </div>
                 </div>
                 <div className="text-center">
