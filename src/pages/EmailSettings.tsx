@@ -259,7 +259,7 @@ const EmailSettings = () => {
                 {isTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 {isTesting ? 'Processando...' : 'Executar Agora (Manual)'}
               </Button>
-              <p className="text-xs text-muted-foreground">Dispara manualmente a verificação de todos os pagamentos vencidos</p>
+              <p className="text-xs text-muted-foreground">Dispara manualmente a verificação de assinaturas que vencem amanhã</p>
             </div>
 
             {lastResult?.success && (
