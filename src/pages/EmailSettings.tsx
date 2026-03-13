@@ -332,7 +332,7 @@ const EmailSettings = () => {
                 Horário de Envio
               </h4>
               <p className="text-xs text-muted-foreground mb-3">
-                O email será enviado automaticamente quando o next_payment for alterado para D-1. Se o horário configurado já passou, o envio é imediato.
+                O sistema verifica automaticamente a cada minuto e dispara no horário configurado (BRT). Se a assinatura for marcada como D-1 após o horário, o envio acontece imediatamente.
               </p>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
