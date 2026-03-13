@@ -18,6 +18,7 @@ import {
   BellRing,
   BarChart3,
   Wallet2,
+  Mail,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminNotifications } from '@/hooks/useAdminNotifications';
@@ -37,6 +38,7 @@ const navItems = [
   { icon: FileText, label: 'Notas Fiscais', path: '/invoices' },
   { icon: WhatsAppIcon, label: 'WhatsApp', path: '/whatsapp' },
   { icon: BellRing, label: 'Lembretes', path: '/whatsapp/lembretes' },
+  { icon: Mail, label: 'Email', path: '/email' },
   { icon: Rocket, label: 'Implantações', path: '/implementations' },
   { icon: Ticket, label: 'Cupons', path: '/coupons' },
   { icon: Gift, label: 'Indicações', path: '/referrals' },
