@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Mail, Send, Loader2, Clock, CheckCircle2, AlertTriangle, Info, User, Search } from 'lucide-react';
+import { Mail, Send, Loader2, Clock, CheckCircle2, AlertTriangle, Info, User, Search, Save, Power } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -27,6 +29,13 @@ const EmailSettings = () => {
   const [manualResult, setManualResult] = useState<any>(null);
   const [showDropdown, setShowDropdown] = useState(false);
 
+  // Schedule settings
+  const [reminderHour, setReminderHour] = useState('8');
+  const [reminderMinute, setReminderMinute] = useState('0');
+  const [autoSendEnabled, setAutoSendEnabled] = useState(true);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+
   useEffect(() => {
     const fetchClients = async () => {
       const { data } = await supabase
@@ -36,7 +45,23 @@ const EmailSettings = () => {
         .order('name');
       if (data) setClients(data);
     };
+
+    const fetchSettings = async () => {
+      const { data } = await supabase
+        .from('email_settings')
+        .select('setting_key, setting_value');
+      if (data) {
+        data.forEach((s: any) => {
+          if (s.setting_key === 'reminder_hour') setReminderHour(s.setting_value);
+          if (s.setting_key === 'reminder_minute') setReminderMinute(s.setting_value);
+          if (s.setting_key === 'auto_send_enabled') setAutoSendEnabled(s.setting_value === 'true');
+        });
+        setSettingsLoaded(true);
+      }
+    };
+
     fetchClients();
+    fetchSettings();
   }, []);
 
   const filteredClients = clients.filter(c =>
@@ -54,7 +79,7 @@ const EmailSettings = () => {
         const r = data.results;
         r.emails_sent > 0
           ? toast.success(`${r.emails_sent} email(s) de cobrança enviado(s)!`)
-          : toast.info('Nenhum pagamento vencido (D+1) encontrado.');
+          : toast.info('Nenhuma assinatura vencendo amanhã (D-1) encontrada.');
       } else {
         toast.error(data?.error || 'Erro ao processar emails');
       }
@@ -87,6 +112,34 @@ const EmailSettings = () => {
     setShowDropdown(false);
     setManualResult(null);
   };
+
+  const handleSaveSettings = async () => {
+    setIsSavingSettings(true);
+    try {
+      const updates = [
+        { setting_key: 'reminder_hour', setting_value: reminderHour },
+        { setting_key: 'reminder_minute', setting_value: reminderMinute },
+        { setting_key: 'auto_send_enabled', setting_value: autoSendEnabled ? 'true' : 'false' },
+      ];
+
+      for (const update of updates) {
+        const { error } = await supabase
+          .from('email_settings')
+          .update({ setting_value: update.setting_value, updated_at: new Date().toISOString() })
+          .eq('setting_key', update.setting_key);
+        if (error) throw error;
+      }
+
+      toast.success('Configurações salvas com sucesso!');
+    } catch {
+      toast.error('Erro ao salvar configurações');
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  const hours = Array.from({ length: 24 }, (_, i) => i.toString());
+  const minutes = Array.from({ length: 12 }, (_, i) => (i * 5).toString());
 
   return (
     <DashboardLayout title="Email">
@@ -220,23 +273,39 @@ const EmailSettings = () => {
           </CardContent>
         </Card>
 
-        {/* Lembrete D-1 */}
+        {/* Lembrete D-1 Automático */}
         <Card className="glass-card border-border/50">
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Clock className="w-5 h-5 text-primary" />
-              Lembrete D-1 (Automático)
-            </CardTitle>
-            <CardDescription>Email enviado automaticamente todo dia às 08:00 para assinaturas que vencem no dia seguinte</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-primary" />
+                  Lembrete D-1 (Automático)
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  Email enviado automaticamente quando a assinatura é marcada como D-1 (faltando 1 dia para vencer)
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">{autoSendEnabled ? 'Ativo' : 'Desativado'}</span>
+                <Switch
+                  checked={autoSendEnabled}
+                  onCheckedChange={setAutoSendEnabled}
+                />
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-secondary/30 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-1">
-                  <Clock className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm font-medium text-muted-foreground">Agendamento</span>
+                  <Power className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-muted-foreground">Status</span>
                 </div>
-                <p className="text-foreground font-semibold">Diário às 08:00</p>
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${autoSendEnabled ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <p className="text-foreground font-semibold">{autoSendEnabled ? 'Ativo' : 'Desativado'}</p>
+                </div>
               </div>
               <div className="bg-secondary/30 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-1">
@@ -250,7 +319,58 @@ const EmailSettings = () => {
                   <Info className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm font-medium text-muted-foreground">Gatilho</span>
                 </div>
-                <p className="text-foreground font-semibold">Assinatura vence amanhã (D-1)</p>
+                <p className="text-foreground font-semibold text-sm">Assinatura marcada como D-1</p>
+              </div>
+            </div>
+
+            {/* Configuração de horário */}
+            <div className="bg-secondary/20 rounded-lg p-4 border border-border/30">
+              <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-primary" />
+                Horário de Envio
+              </h4>
+              <p className="text-xs text-muted-foreground mb-3">
+                O email será enviado automaticamente quando o next_payment for alterado para D-1. Se o horário configurado já passou, o envio é imediato.
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-muted-foreground">Hora:</label>
+                  <Select value={reminderHour} onValueChange={setReminderHour}>
+                    <SelectTrigger className="w-20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {hours.map(h => (
+                        <SelectItem key={h} value={h}>{h.padStart(2, '0')}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <span className="text-foreground font-bold text-lg">:</span>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-muted-foreground">Min:</label>
+                  <Select value={reminderMinute} onValueChange={setReminderMinute}>
+                    <SelectTrigger className="w-20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {minutes.map(m => (
+                        <SelectItem key={m} value={m}>{m.padStart(2, '0')}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <span className="text-sm text-muted-foreground ml-1">(BRT)</span>
+                <Button
+                  onClick={handleSaveSettings}
+                  disabled={isSavingSettings}
+                  size="sm"
+                  variant="secondary"
+                  className="gap-2 ml-auto"
+                >
+                  {isSavingSettings ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Salvar
+                </Button>
               </div>
             </div>
 
