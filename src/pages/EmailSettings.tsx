@@ -1,45 +1,91 @@
-import { useState } from 'react';
-import { Mail, Send, Loader2, Clock, CheckCircle2, AlertTriangle, Info } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Mail, Send, Loader2, Clock, CheckCircle2, AlertTriangle, Info, User, Search } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+interface ClientOption {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+}
+
 const EmailSettings = () => {
   const [isTesting, setIsTesting] = useState(false);
   const [lastResult, setLastResult] = useState<any>(null);
+
+  // Manual send state
+  const [clients, setClients] = useState<ClientOption[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedClient, setSelectedClient] = useState<ClientOption | null>(null);
+  const [isSendingManual, setIsSendingManual] = useState(false);
+  const [manualResult, setManualResult] = useState<any>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  useEffect(() => {
+    const fetchClients = async () => {
+      const { data } = await supabase
+        .from('clients')
+        .select('id, name, email, phone')
+        .eq('status', 'active')
+        .order('name');
+      if (data) setClients(data);
+    };
+    fetchClients();
+  }, []);
+
+  const filteredClients = clients.filter(c =>
+    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleTestBillingEmail = async () => {
     setIsTesting(true);
     try {
       const { data, error } = await supabase.functions.invoke('email-billing-reminder');
-      
-      if (error) {
-        toast.error('Erro ao executar função de email');
-        console.error('Error:', error);
-        return;
-      }
-
+      if (error) { toast.error('Erro ao executar função de email'); return; }
       setLastResult(data);
-
       if (data?.success) {
         const r = data.results;
-        if (r.emails_sent > 0) {
-          toast.success(`${r.emails_sent} email(s) de cobrança enviado(s)!`);
-        } else {
-          toast.info('Nenhum pagamento vencido (D+1) encontrado para enviar email.');
-        }
+        r.emails_sent > 0
+          ? toast.success(`${r.emails_sent} email(s) de cobrança enviado(s)!`)
+          : toast.info('Nenhum pagamento vencido (D+1) encontrado.');
       } else {
         toast.error(data?.error || 'Erro ao processar emails');
       }
-    } catch (err) {
-      console.error('Error testing billing email:', err);
-      toast.error('Erro ao testar envio de email');
-    } finally {
-      setIsTesting(false);
-    }
+    } catch { toast.error('Erro ao testar envio de email'); }
+    finally { setIsTesting(false); }
+  };
+
+  const handleManualSend = async () => {
+    if (!selectedClient) { toast.error('Selecione um cliente'); return; }
+    setIsSendingManual(true);
+    setManualResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('email-billing-reminder', {
+        body: { clientId: selectedClient.id },
+      });
+      if (error) { toast.error('Erro ao enviar email'); return; }
+      setManualResult(data);
+      if (data?.success) {
+        toast.success(`Email enviado para ${data.results?.client_name || selectedClient.name}!`);
+      } else {
+        toast.error(data?.error || 'Erro ao enviar email');
+      }
+    } catch { toast.error('Erro ao enviar email manual'); }
+    finally { setIsSendingManual(false); }
+  };
+
+  const handleSelectClient = (client: ClientOption) => {
+    setSelectedClient(client);
+    setSearchTerm(client.name);
+    setShowDropdown(false);
+    setManualResult(null);
   };
 
   return (
@@ -63,22 +109,111 @@ const EmailSettings = () => {
               <CheckCircle2 className="w-5 h-5 text-green-500" />
               Domínio de Envio
             </CardTitle>
-            <CardDescription>
-              Domínio verificado para envio de emails
-            </CardDescription>
+            <CardDescription>Domínio verificado para envio de emails</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-3">
-              <Badge variant="outline" className="text-sm px-3 py-1">
-                cobranca@assinaturaspcon.sbs
-              </Badge>
-              <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
-                Verificado
-              </Badge>
+              <Badge variant="outline" className="text-sm px-3 py-1">cobranca@assinaturaspcon.sbs</Badge>
+              <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Verificado</Badge>
             </div>
-            <p className="text-sm text-muted-foreground mt-3">
-              DKIM, SPF e MX configurados via Resend + Vercel DNS.
-            </p>
+            <p className="text-sm text-muted-foreground mt-3">DKIM, SPF e MX configurados via Resend + Vercel DNS.</p>
+          </CardContent>
+        </Card>
+
+        {/* Envio Manual */}
+        <Card className="glass-card border-border/50">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Send className="w-5 h-5 text-primary" />
+              Envio Manual
+            </CardTitle>
+            <CardDescription>Envie o email de cobrança para um cliente específico</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="relative">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar cliente por nome ou email..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setShowDropdown(true);
+                    if (!e.target.value) setSelectedClient(null);
+                  }}
+                  onFocus={() => setShowDropdown(true)}
+                  className="pl-10"
+                />
+              </div>
+
+              {showDropdown && searchTerm && filteredClients.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {filteredClients.slice(0, 8).map((client) => (
+                    <button
+                      key={client.id}
+                      onClick={() => handleSelectClient(client)}
+                      className="w-full px-4 py-3 text-left hover:bg-secondary/50 transition-colors flex items-center gap-3 border-b border-border/30 last:border-0"
+                    >
+                      <User className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{client.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{client.email}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {showDropdown && searchTerm && filteredClients.length === 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg p-4">
+                  <p className="text-sm text-muted-foreground text-center">Nenhum cliente encontrado</p>
+                </div>
+              )}
+            </div>
+
+            {selectedClient && (
+              <div className="bg-secondary/30 rounded-lg p-4 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                    <User className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-medium text-foreground truncate">{selectedClient.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{selectedClient.email}</p>
+                  </div>
+                </div>
+                <Button
+                  onClick={handleManualSend}
+                  disabled={isSendingManual}
+                  size="sm"
+                  className="gap-2 flex-shrink-0"
+                >
+                  {isSendingManual ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                  {isSendingManual ? 'Enviando...' : 'Enviar'}
+                </Button>
+              </div>
+            )}
+
+            {manualResult && (
+              <div className={`rounded-lg p-4 ${manualResult.success ? 'bg-green-500/10 border border-green-500/20' : 'bg-destructive/10 border border-destructive/20'}`}>
+                <div className="flex items-center gap-2">
+                  {manualResult.success ? (
+                    <CheckCircle2 className="w-5 h-5 text-green-500" />
+                  ) : (
+                    <AlertTriangle className="w-5 h-5 text-destructive" />
+                  )}
+                  <p className="text-sm font-medium text-foreground">
+                    {manualResult.success
+                      ? `Email enviado com sucesso para ${manualResult.results?.client_email || selectedClient?.email}`
+                      : manualResult.error || 'Erro ao enviar'}
+                  </p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -89,9 +224,7 @@ const EmailSettings = () => {
               <AlertTriangle className="w-5 h-5 text-yellow-500" />
               Cobrança D+1 (Automática)
             </CardTitle>
-            <CardDescription>
-              Email enviado automaticamente todo dia às 12h para pagamentos vencidos no dia anterior
-            </CardDescription>
+            <CardDescription>Email enviado automaticamente todo dia às 08:00 para pagamentos vencidos no dia anterior</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -100,7 +233,7 @@ const EmailSettings = () => {
                   <Clock className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm font-medium text-muted-foreground">Agendamento</span>
                 </div>
-                <p className="text-foreground font-semibold">Diário às 12:00</p>
+                <p className="text-foreground font-semibold">Diário às 08:00</p>
               </div>
               <div className="bg-secondary/30 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-1">
@@ -119,24 +252,13 @@ const EmailSettings = () => {
             </div>
 
             <div className="border-t border-border/50 pt-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-              <Button
-                onClick={handleTestBillingEmail}
-                disabled={isTesting}
-                className="gap-2"
-              >
-                {isTesting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
+              <Button onClick={handleTestBillingEmail} disabled={isTesting} className="gap-2">
+                {isTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 {isTesting ? 'Processando...' : 'Executar Agora (Manual)'}
               </Button>
-              <p className="text-xs text-muted-foreground">
-                Dispara manualmente a verificação e envio de emails para pagamentos vencidos
-              </p>
+              <p className="text-xs text-muted-foreground">Dispara manualmente a verificação de todos os pagamentos vencidos</p>
             </div>
 
-            {/* Resultado do último teste */}
             {lastResult?.success && (
               <div className="bg-secondary/20 rounded-lg p-4 mt-2">
                 <p className="text-sm font-medium text-foreground mb-2">Resultado:</p>
@@ -176,17 +298,15 @@ const EmailSettings = () => {
               <Mail className="w-5 h-5 text-primary" />
               Preview do Template
             </CardTitle>
-            <CardDescription>
-              Pré-visualização do email de cobrança enviado aos clientes
-            </CardDescription>
+            <CardDescription>Pré-visualização do email de cobrança enviado aos clientes</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="bg-white rounded-lg overflow-hidden border">
               <div style={{ background: 'linear-gradient(135deg, #0d1b3e 0%, #1E4FA3 100%)' }} className="p-6 text-center">
-                <img 
-                  src="https://lcnaptefceboratxhzox.supabase.co/storage/v1/object/public/contracts/assets%2Flogo-pcon-white.png" 
-                  alt="P-CON" 
-                  className="h-10 mx-auto" 
+                <img
+                  src="https://lcnaptefceboratxhzox.supabase.co/storage/v1/object/public/contracts/assets%2Flogo-pcon-white.png"
+                  alt="P-CON"
+                  className="h-10 mx-auto"
                 />
               </div>
               <div className="p-6">
