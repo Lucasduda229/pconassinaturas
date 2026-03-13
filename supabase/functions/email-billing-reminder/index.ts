@@ -159,6 +159,42 @@ const generateEmailHTML = (
 </html>
 `;
 
+const sendEmailForPayment = async (payment: any, resendApiKey: string) => {
+  const client = payment.client as any;
+  if (!client?.email) return { skipped: true };
+
+  const planName = (payment.subscription as any)?.plan_name ||
+    payment.description?.replace("Cobrança - ", "") || "Assinatura";
+  const formattedAmount = `R$ ${payment.amount.toFixed(2).replace(".", ",")}`;
+  const dueDate = new Date(payment.due_date!);
+  const formattedDueDate = dueDate.toLocaleDateString("pt-BR", {
+    day: "2-digit", month: "2-digit", year: "numeric", timeZone: "America/Sao_Paulo",
+  });
+
+  const emailHTML = generateEmailHTML(client.name, planName, formattedAmount, formattedDueDate);
+
+  const resendResponse = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${resendApiKey}`,
+    },
+    body: JSON.stringify({
+      from: "P-CON CONSTRUNET <cobranca@assinaturaspcon.sbs>",
+      to: [client.email],
+      subject: `⚠️ Fatura vencida - ${planName} | P-CON CONSTRUNET`,
+      html: emailHTML,
+    }),
+  });
+
+  const resendResult = await resendResponse.json();
+  if (resendResponse.ok) {
+    return { sent: true, id: resendResult.id };
+  } else {
+    return { error: resendResult.message || "Erro Resend" };
+  }
+};
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -170,7 +206,6 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     if (!resendApiKey) {
-      console.error("RESEND_API_KEY not configured");
       return new Response(
         JSON.stringify({ success: false, error: "Resend API key não configurada" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -179,14 +214,78 @@ const handler = async (req: Request): Promise<Response> => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Compute yesterday in BRT (D+1 = payment due yesterday = overdue by 1 day)
+    // Parse body for manual mode
+    let body: any = {};
+    try { body = await req.json(); } catch { /* no body = automatic mode */ }
+
+    // ====== MANUAL MODE: send to specific client ======
+    if (body.clientId) {
+      console.log(`Manual email send for client ${body.clientId}`);
+
+      // Get client's pending payments
+      const { data: payments, error: queryError } = await supabase
+        .from("payments")
+        .select(`
+          id, amount, due_date, status, description, subscription_id,
+          client:clients(id, name, phone, email),
+          subscription:subscriptions(plan_name)
+        `)
+        .eq("client_id", body.clientId)
+        .eq("status", "pending")
+        .order("due_date", { ascending: true })
+        .limit(1);
+
+      if (queryError) {
+        return new Response(
+          JSON.stringify({ success: false, error: queryError.message }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      if (!payments || payments.length === 0) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Nenhum pagamento pendente encontrado para este cliente" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      const payment = payments[0];
+      const client = payment.client as any;
+
+      if (!client?.email) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Cliente não possui email cadastrado" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      try {
+        const result = await sendEmailForPayment(payment, resendApiKey);
+        if (result.sent) {
+          return new Response(
+            JSON.stringify({ success: true, results: { emails_sent: 1, skipped_no_email: 0, errors: [], client_name: client.name, client_email: client.email } }),
+            { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        } else {
+          return new Response(
+            JSON.stringify({ success: false, error: result.error || "Erro ao enviar email" }),
+            { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        }
+      } catch (err: any) {
+        return new Response(
+          JSON.stringify({ success: false, error: err.message }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+    }
+
+    // ====== AUTOMATIC MODE: D+1 overdue ======
     const toYMDInSaoPaulo = (d: Date) =>
       new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(d);
 
     const now = new Date();
     const todayBrt = toYMDInSaoPaulo(now);
-    
-    // Yesterday = due date that is now D+1
     const yesterday = new Date(new Date(`${todayBrt}T12:00:00-03:00`).getTime() - 86400000);
     const yesterdayStr = toYMDInSaoPaulo(yesterday);
 
@@ -207,7 +306,6 @@ const handler = async (req: Request): Promise<Response> => {
       .lte("due_date", endOfYesterdayUtc);
 
     if (queryError) {
-      console.error("Error fetching overdue payments:", queryError);
       return new Response(
         JSON.stringify({ success: false, error: queryError.message }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -216,73 +314,18 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Found ${overduePayments?.length || 0} overdue payments (D+1)`);
 
-    const results = {
-      emails_sent: 0,
-      skipped_no_email: 0,
-      errors: [] as string[],
-    };
+    const results = { emails_sent: 0, skipped_no_email: 0, errors: [] as string[] };
 
     if (overduePayments && overduePayments.length > 0) {
       for (const payment of overduePayments) {
         const client = payment.client as any;
-
-        if (!client?.email) {
-          results.skipped_no_email++;
-          console.log(`Skipped payment ${payment.id} - no client email`);
-          continue;
-        }
-
-        const planName = (payment.subscription as any)?.plan_name ||
-          payment.description?.replace("Cobrança - ", "") ||
-          "Assinatura";
-
-        const formattedAmount = `R$ ${payment.amount.toFixed(2).replace(".", ",")}`;
-
-        // Format due date
-        const dueDate = new Date(payment.due_date!);
-        const formattedDueDate = dueDate.toLocaleDateString("pt-BR", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-          timeZone: "America/Sao_Paulo",
-        });
-
-        const emailHTML = generateEmailHTML(
-          client.name,
-          planName,
-          formattedAmount,
-          formattedDueDate,
-        );
-
         try {
-          console.log(`Sending billing email to ${client.name} (${client.email})`);
-
-          const resendResponse = await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${resendApiKey}`,
-            },
-            body: JSON.stringify({
-              from: "P-CON CONSTRUNET <cobranca@assinaturaspcon.sbs>",
-              to: [client.email],
-              subject: `⚠️ Fatura vencida - ${planName} | P-CON CONSTRUNET`,
-              html: emailHTML,
-            }),
-          });
-
-          const resendResult = await resendResponse.json();
-
-          if (resendResponse.ok) {
-            results.emails_sent++;
-            console.log(`Email sent to ${client.email}: ${resendResult.id}`);
-          } else {
-            console.error(`Resend error for ${client.email}:`, resendResult);
-            results.errors.push(`${client.name}: ${resendResult.message || "Erro Resend"}`);
-          }
+          const result = await sendEmailForPayment(payment, resendApiKey);
+          if (result.skipped) { results.skipped_no_email++; }
+          else if (result.sent) { results.emails_sent++; }
+          else { results.errors.push(`${client?.name || 'Desconhecido'}: ${result.error}`); }
         } catch (err: any) {
-          console.error(`Error sending email to ${client.name}:`, err.message);
-          results.errors.push(`${client.name}: ${err.message}`);
+          results.errors.push(`${client?.name || 'Desconhecido'}: ${err.message}`);
         }
       }
     }
