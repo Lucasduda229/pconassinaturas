@@ -121,7 +121,7 @@ const EmailSettings = () => {
         </Card>
 
         {/* Envio Manual */}
-        <Card className="glass-card border-border/50 overflow-visible">
+        <Card className="glass-card border-border/50 overflow-visible relative z-20">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Send className="w-5 h-5 text-primary" />
