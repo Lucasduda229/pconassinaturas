@@ -220,14 +220,14 @@ const EmailSettings = () => {
           </CardContent>
         </Card>
 
-        {/* Email de Cobrança D+1 */}
+        {/* Lembrete D-1 */}
         <Card className="glass-card border-border/50">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-yellow-500" />
-              Cobrança D+1 (Automática)
+              <Clock className="w-5 h-5 text-primary" />
+              Lembrete D-1 (Automático)
             </CardTitle>
-            <CardDescription>Email enviado automaticamente todo dia às 08:00 para pagamentos vencidos no dia anterior</CardDescription>
+            <CardDescription>Email enviado automaticamente todo dia às 08:00 para assinaturas que vencem no dia seguinte</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -250,7 +250,7 @@ const EmailSettings = () => {
                   <Info className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm font-medium text-muted-foreground">Gatilho</span>
                 </div>
-                <p className="text-foreground font-semibold">Pagamento vencido D+1</p>
+                <p className="text-foreground font-semibold">Assinatura vence amanhã (D-1)</p>
               </div>
             </div>
 
