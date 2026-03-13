@@ -57,7 +57,7 @@ const generateEmailHTML = (
                 Olá <strong>${clientName}</strong>,
               </p>
               <p style="font-size:15px;color:#4a4a5a;line-height:1.6;margin:0 0 24px;">
-                Identificamos que a fatura referente à sua assinatura está <strong style="color:#DC2626;">vencida</strong>. Confira os detalhes abaixo e regularize o pagamento para evitar a suspensão dos serviços.
+                Passando para lembrar que a fatura referente à sua assinatura <strong>vence amanhã</strong>. Confira os detalhes abaixo e efetue o pagamento para manter sua assinatura em dia.
               </p>
 
               <!-- Detalhes da fatura -->
