@@ -301,7 +301,7 @@ const EmailSettings = () => {
               <Mail className="w-5 h-5 text-primary" />
               Preview do Template
             </CardTitle>
-            <CardDescription>Pré-visualização do email de cobrança enviado aos clientes</CardDescription>
+            <CardDescription>Pré-visualização do email de lembrete enviado aos clientes</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="bg-white rounded-lg overflow-hidden border">
