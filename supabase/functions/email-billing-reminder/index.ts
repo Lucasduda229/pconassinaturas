@@ -274,30 +274,27 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // ====== AUTOMATIC MODE: D+1 overdue ======
+    // ====== AUTOMATIC MODE: D-1 subscription reminder ======
     const toYMDInSaoPaulo = (d: Date) =>
       new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(d);
 
     const now = new Date();
     const todayBrt = toYMDInSaoPaulo(now);
-    const yesterday = new Date(new Date(`${todayBrt}T12:00:00-03:00`).getTime() - 86400000);
-    const yesterdayStr = toYMDInSaoPaulo(yesterday);
+    // Tomorrow = subscription due date (D-1 means we send 1 day before)
+    const tomorrow = new Date(new Date(`${todayBrt}T12:00:00-03:00`).getTime() + 86400000);
+    const tomorrowStr = toYMDInSaoPaulo(tomorrow);
 
-    const startOfYesterdayUtc = new Date(`${yesterdayStr}T00:00:00-03:00`).toISOString();
-    const endOfYesterdayUtc = new Date(`${yesterdayStr}T23:59:59-03:00`).toISOString();
+    const startOfTomorrowUtc = new Date(`${tomorrowStr}T00:00:00-03:00`).toISOString();
+    const endOfTomorrowUtc = new Date(`${tomorrowStr}T23:59:59-03:00`).toISOString();
 
-    console.log(`Checking payments due yesterday (D+1 overdue) in BRT: ${yesterdayStr}`);
+    console.log(`Checking subscriptions due tomorrow (D-1 reminder) in BRT: ${tomorrowStr}`);
 
-    const { data: overduePayments, error: queryError } = await supabase
-      .from("payments")
-      .select(`
-        id, amount, due_date, status, description, subscription_id,
-        client:clients(id, name, phone, email),
-        subscription:subscriptions(plan_name)
-      `)
-      .eq("status", "pending")
-      .gte("due_date", startOfYesterdayUtc)
-      .lte("due_date", endOfYesterdayUtc);
+    const { data: dueSubs, error: queryError } = await supabase
+      .from("subscriptions")
+      .select(`id, plan_name, value, next_payment, client:clients(id, name, phone, email)`)
+      .eq("status", "active")
+      .gte("next_payment", startOfTomorrowUtc)
+      .lte("next_payment", endOfTomorrowUtc);
 
     if (queryError) {
       return new Response(
@@ -306,15 +303,15 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`Found ${overduePayments?.length || 0} overdue payments (D+1)`);
+    console.log(`Found ${dueSubs?.length || 0} subscriptions due tomorrow (D-1)`);
 
     const results = { emails_sent: 0, skipped_no_email: 0, errors: [] as string[] };
 
-    if (overduePayments && overduePayments.length > 0) {
-      for (const payment of overduePayments) {
-        const client = payment.client as any;
+    if (dueSubs && dueSubs.length > 0) {
+      for (const sub of dueSubs) {
+        const client = sub.client as any;
         try {
-          const result = await sendEmailForPayment(payment, resendApiKey);
+          const result = await sendEmailForSubscription(sub, client, resendApiKey);
           if (result.skipped) { results.skipped_no_email++; }
           else if (result.sent) { results.emails_sent++; }
           else { results.errors.push(`${client?.name || 'Desconhecido'}: ${result.error}`); }
@@ -324,7 +321,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    console.log("D+1 billing email results:", results);
+    console.log("D-1 subscription email results:", results);
 
     return new Response(
       JSON.stringify({ success: true, results }),
