@@ -31,7 +31,7 @@ const generateEmailHTML = (
           <!-- Header com logo -->
           <tr>
             <td style="background: linear-gradient(135deg, #0d1b3e 0%, #1E4FA3 100%);padding:32px 40px;text-align:center;">
-              <img src="https://lcnaptefceboratxhzox.supabase.co/storage/v1/object/public/contracts/assets/logo-pcon-white.png" alt="P-CON CONSTRUNET" width="180" style="display:block;margin:0 auto;" />
+              <img src="https://lcnaptefceboratxhzox.supabase.co/storage/v1/object/public/contracts/assets%2Flogo-pcon-white.png" alt="P-CON CONSTRUNET" width="180" style="display:block;margin:0 auto;" />
             </td>
           </tr>
 
