@@ -212,9 +212,15 @@ const handler = async (req: Request): Promise<Response> => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Parse body for manual mode
+    // Parse body
     let body: any = {};
-    try { body = await req.json(); } catch { /* no body = automatic mode */ }
+    try {
+      body = await req.json();
+    } catch {
+      // no body = scheduled automatic mode
+    }
+
+    const forceRun = body?.forceRun === true;
 
     // ====== MANUAL MODE: send to specific client ======
     if (body.clientId) {
@@ -275,10 +281,67 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // ====== AUTOMATIC MODE: D-1 subscription reminder ======
+    const { data: rawSettings, error: settingsError } = await supabase
+      .from("email_settings")
+      .select("setting_key, setting_value")
+      .in("setting_key", ["auto_send_enabled", "reminder_hour", "reminder_minute"]);
+
+    if (settingsError) {
+      return new Response(
+        JSON.stringify({ success: false, error: settingsError.message }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const settings = new Map((rawSettings ?? []).map((row) => [row.setting_key, row.setting_value]));
+    const autoSendEnabled = settings.get("auto_send_enabled") === "true";
+
+    const parsedHour = Number.parseInt(settings.get("reminder_hour") ?? "8", 10);
+    const parsedMinute = Number.parseInt(settings.get("reminder_minute") ?? "0", 10);
+    const configuredHour = Number.isFinite(parsedHour) && parsedHour >= 0 && parsedHour <= 23 ? parsedHour : 8;
+    const configuredMinute = Number.isFinite(parsedMinute) && parsedMinute >= 0 && parsedMinute <= 59 ? parsedMinute : 0;
+
+    const now = new Date();
+    const timeParts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "America/Sao_Paulo",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(now).split(":");
+
+    const currentHour = Number.parseInt(timeParts[0] ?? "0", 10);
+    const currentMinute = Number.parseInt(timeParts[1] ?? "0", 10);
+
+    if (!forceRun) {
+      if (!autoSendEnabled) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            results: { emails_sent: 0, skipped_no_email: 0, errors: [] },
+            skipped_reason: "auto_send_disabled",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      const isScheduledMinute = currentHour === configuredHour && currentMinute === configuredMinute;
+      if (!isScheduledMinute) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            results: { emails_sent: 0, skipped_no_email: 0, errors: [] },
+            skipped_reason: "outside_scheduled_minute",
+            schedule: { hour: configuredHour, minute: configuredMinute },
+            now: { hour: currentHour, minute: currentMinute },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+    }
+
     const toYMDInSaoPaulo = (d: Date) =>
       new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(d);
 
-    const now = new Date();
     const todayBrt = toYMDInSaoPaulo(now);
     // Tomorrow = subscription due date (D-1 means we send 1 day before)
     const tomorrow = new Date(new Date(`${todayBrt}T12:00:00-03:00`).getTime() + 86400000);
@@ -287,7 +350,7 @@ const handler = async (req: Request): Promise<Response> => {
     const startOfTomorrowUtc = new Date(`${tomorrowStr}T00:00:00-03:00`).toISOString();
     const endOfTomorrowUtc = new Date(`${tomorrowStr}T23:59:59-03:00`).toISOString();
 
-    console.log(`Checking subscriptions due tomorrow (D-1 reminder) in BRT: ${tomorrowStr}`);
+    console.log(`Checking subscriptions due tomorrow (D-1 reminder) in BRT: ${tomorrowStr} | forceRun=${forceRun}`);
 
     const { data: dueSubs, error: queryError } = await supabase
       .from("subscriptions")
@@ -324,7 +387,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("D-1 subscription email results:", results);
 
     return new Response(
-      JSON.stringify({ success: true, results }),
+      JSON.stringify({ success: true, results, forceRun }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (error: any) {
