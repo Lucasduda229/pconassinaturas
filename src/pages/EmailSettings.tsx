@@ -313,14 +313,14 @@ const EmailSettings = () => {
                 />
               </div>
               <div className="p-6">
-                <div className="bg-yellow-50 border-l-4 border-yellow-500 p-3 rounded mb-4">
-                  <p className="text-sm text-yellow-800 font-semibold">
-                    ⚠️ Fatura vencida — regularize para manter sua assinatura ativa
+                <div className="bg-blue-50 border-l-4 border-blue-500 p-3 rounded mb-4">
+                  <p className="text-sm text-blue-800 font-semibold">
+                    📋 Sua assinatura vence amanhã — efetue o pagamento para manter tudo em dia
                   </p>
                 </div>
                 <p className="text-gray-800 mb-2">Olá <strong>Nome do Cliente</strong>,</p>
                 <p className="text-gray-600 text-sm mb-4">
-                  Identificamos que a fatura referente à sua assinatura está <strong className="text-red-600">vencida</strong>.
+                  Passando para lembrar que a fatura referente à sua assinatura <strong>vence amanhã</strong>.
                 </p>
                 <div className="bg-gray-50 rounded-lg border p-4 mb-4">
                   <div className="flex justify-between py-2 border-b">
