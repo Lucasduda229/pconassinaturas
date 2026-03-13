@@ -129,8 +129,8 @@ const EmailSettings = () => {
             </CardTitle>
             <CardDescription>Envie o email de cobrança para um cliente específico</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="relative">
+          <CardContent className="space-y-4 overflow-visible">
+            <div className="relative" style={{ zIndex: 60 }}>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
