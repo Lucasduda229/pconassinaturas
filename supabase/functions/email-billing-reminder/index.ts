@@ -264,7 +264,7 @@ const handler = async (req: Request): Promise<Response> => {
               Authorization: `Bearer ${resendApiKey}`,
             },
             body: JSON.stringify({
-              from: "P-CON CONSTRUNET <cobranca@pcon.com.br>",
+              from: "P-CON CONSTRUNET <cobranca@assinaturaspcon.sbs>",
               to: [client.email],
               subject: `⚠️ Fatura vencida - ${planName} | P-CON CONSTRUNET`,
               html: emailHTML,
