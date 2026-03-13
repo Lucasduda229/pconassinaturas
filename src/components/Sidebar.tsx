@@ -18,6 +18,7 @@ import {
   BellRing,
   BarChart3,
   Wallet2,
+  Mail,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminNotifications } from '@/hooks/useAdminNotifications';
