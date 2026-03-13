@@ -130,7 +130,7 @@ const generateEmailHTML = (
                         </td>
                         <td style="color:#475569;">|</td>
                         <td style="padding:0 8px;">
-                          <a href="mailto:contato@pcon.com.br" style="font-size:13px;color:#60a5fa;text-decoration:none;">✉️ contato@pcon.com.br</a>
+                          <a href="mailto:contato@assinaturaspcon.sbs" style="font-size:13px;color:#60a5fa;text-decoration:none;">✉️ contato@assinaturaspcon.sbs</a>
                         </td>
                       </tr>
                     </table>
