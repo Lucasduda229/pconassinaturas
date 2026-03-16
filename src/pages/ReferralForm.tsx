@@ -62,6 +62,22 @@ const ReferralForm = () => {
       });
 
       if (error) throw error;
+
+      // Send confirmation email if email was provided
+      if (formData.referrerEmail.trim()) {
+        try {
+          await supabase.functions.invoke('referral-confirmation-email', {
+            body: {
+              referrerName: formData.referrerName.trim(),
+              referrerEmail: formData.referrerEmail.trim(),
+              referredName: formData.referredName.trim(),
+            },
+          });
+        } catch (emailErr) {
+          console.error('Email sending failed (non-blocking):', emailErr);
+        }
+      }
+
       setSubmitted(true);
       toast.success('Indicação enviada com sucesso!');
     } catch (err) {
