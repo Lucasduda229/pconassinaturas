@@ -306,10 +306,6 @@ const Notifications = () => {
           <p className="text-xs sm:text-sm text-muted-foreground">Indicações</p>
         </div>
         <div className="glass-card p-3 sm:p-4 text-center">
-          <p className="text-xl sm:text-2xl font-bold text-purple-500">{stats.affiliates}</p>
-          <p className="text-xs sm:text-sm text-muted-foreground">Afiliados</p>
-        </div>
-        <div className="glass-card p-3 sm:p-4 text-center">
           <p className="text-xl sm:text-2xl font-bold text-emerald-500">{stats.payments}</p>
           <p className="text-xs sm:text-sm text-muted-foreground">Pagamentos</p>
         </div>
