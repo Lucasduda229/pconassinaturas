@@ -8,7 +8,6 @@ import {
   Phone,
   Mail,
   FileText,
-  FileText,
   Clock,
   CheckCircle,
   XCircle,
@@ -18,6 +17,7 @@ import {
   User,
   UserPlus,
 } from 'lucide-react';
+import WhatsAppIcon from '@/components/WhatsAppIcon';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
