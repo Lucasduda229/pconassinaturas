@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import logo from '@/assets/logo-pcon-grande.png';
 import pixIcon from '@/assets/pix-icon.svg';
+import mercadoPagoIcon from '@/assets/mercado-pago-icon.png';
 import BlueBackground from '@/components/BlueBackground';
 
 import { generateInvoicePDF } from '@/utils/invoicePdfGenerator';
