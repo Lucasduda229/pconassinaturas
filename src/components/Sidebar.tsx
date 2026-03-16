@@ -11,7 +11,7 @@ import {
   X,
   FileSignature,
   Gift,
-  UserPlus,
+  
   Rocket,
   Ticket,
   MessageSquare,

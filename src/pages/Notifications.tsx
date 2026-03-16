@@ -11,7 +11,7 @@ import {
   X,
   Rocket,
   Gift,
-  UserPlus,
+  
   CreditCard,
   CheckCheck,
   Trash,
