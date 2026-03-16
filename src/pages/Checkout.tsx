@@ -38,7 +38,7 @@ import {
 import logo from '@/assets/logo-pcon-grande.png';
 import pixIcon from '@/assets/pix-icon.svg';
 import BlueBackground from '@/components/BlueBackground';
-import ClientReferrals from '@/components/ClientReferrals';
+
 import { generateInvoicePDF } from '@/utils/invoicePdfGenerator';
 import { formatBrazilDate as formatDateBR } from '@/utils/dateUtils';
 
@@ -820,17 +820,6 @@ const Checkout = () => {
           )}
         </motion.div>
 
-        {/* Referrals Section */}
-        {client?.id && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35, duration: 0.5 }}
-            className="mt-10"
-          >
-            <ClientReferrals clientId={client.id} />
-          </motion.div>
-        )}
 
         {/* Footer with Payment Methods */}
         <motion.footer

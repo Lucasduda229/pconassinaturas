@@ -21,7 +21,7 @@ import Referrals from "./pages/Referrals";
 import Affiliates from "./pages/Affiliates";
 import Implementations from "./pages/Implementations";
 import ClientCoupons from "./pages/ClientCoupons";
-import ReferralLanding from "./pages/ReferralLanding";
+import ReferralForm from "./pages/ReferralForm";
 import WhatsAppMessages from "./pages/WhatsAppMessages";
 import WhatsAppReminders from "./pages/WhatsAppReminders";
 import Financial from "./pages/Financial";
@@ -73,8 +73,10 @@ const App = () => (
                    <Route path="/financial" element={<ProtectedRoute><Financial /></ProtectedRoute>} />
                    <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
                    <Route path="/email" element={<ProtectedRoute><EmailSettings /></ProtectedRoute>} />
-                  {/* Referral Landing Page (Public) - Clients */}
-                  <Route path="/r/:slug" element={<ReferralLanding />} />
+                  {/* Referral Form (Public) */}
+                  <Route path="/indicar" element={<ReferralForm />} />
+                  {/* Legacy referral links redirect */}
+                  <Route path="/r/:slug" element={<ReferralForm />} />
                   
                   {/* Client Routes */}
                   <Route path="/cliente" element={<ClientLogin />} />
