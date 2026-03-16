@@ -11,7 +11,7 @@ import {
   X,
   Rocket,
   Gift,
-  UserPlus,
+  
   CreditCard,
   CheckCheck,
   Trash,
@@ -57,12 +57,6 @@ const categoryConfig: Record<string, { icon: typeof Rocket; label: string; bgCla
     bgClass: 'bg-amber-500/10',
     iconClass: 'text-amber-500',
   },
-  affiliates: {
-    icon: UserPlus,
-    label: 'Afiliados',
-    bgClass: 'bg-purple-500/10',
-    iconClass: 'text-purple-500',
-  },
   payments: {
     icon: CreditCard,
     label: 'Pagamentos',
@@ -81,11 +75,6 @@ const typeConfig: Record<string, { color: string; bgColor: string; label: string
     color: 'text-amber-500',
     bgColor: 'bg-amber-500/10 border-amber-500/30',
     label: 'Novo Lead',
-  },
-  new_affiliate: {
-    color: 'text-purple-500',
-    bgColor: 'bg-purple-500/10 border-purple-500/30',
-    label: 'Novo Afiliado',
   },
   payment_received: {
     color: 'text-emerald-500',
@@ -157,9 +146,6 @@ const Notifications = () => {
       case 'referrals':
         navigate('/referrals');
         break;
-      case 'affiliates':
-        navigate('/affiliates');
-        break;
       case 'payments':
         if (metadata.payment_id) {
           navigate('/payments');
@@ -173,7 +159,6 @@ const Notifications = () => {
     unread: unreadCount,
     implementations: notifications.filter(n => n.category === 'implementations').length,
     referrals: notifications.filter(n => n.category === 'referrals').length,
-    affiliates: notifications.filter(n => n.category === 'affiliates').length,
     payments: notifications.filter(n => n.category === 'payments').length,
   };
 
@@ -245,13 +230,6 @@ const Notifications = () => {
               >
                 <Gift className="w-4 h-4 mr-2 text-amber-500" />
                 Indicações
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={categoryFilter.includes('affiliates')}
-                onCheckedChange={() => toggleCategoryFilter('affiliates')}
-              >
-                <UserPlus className="w-4 h-4 mr-2 text-purple-500" />
-                Afiliados
               </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
                 checked={categoryFilter.includes('payments')}
@@ -326,10 +304,6 @@ const Notifications = () => {
         <div className="glass-card p-3 sm:p-4 text-center">
           <p className="text-xl sm:text-2xl font-bold text-amber-500">{stats.referrals}</p>
           <p className="text-xs sm:text-sm text-muted-foreground">Indicações</p>
-        </div>
-        <div className="glass-card p-3 sm:p-4 text-center">
-          <p className="text-xl sm:text-2xl font-bold text-purple-500">{stats.affiliates}</p>
-          <p className="text-xs sm:text-sm text-muted-foreground">Afiliados</p>
         </div>
         <div className="glass-card p-3 sm:p-4 text-center">
           <p className="text-xl sm:text-2xl font-bold text-emerald-500">{stats.payments}</p>

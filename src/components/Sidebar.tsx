@@ -11,7 +11,7 @@ import {
   X,
   FileSignature,
   Gift,
-  UserPlus,
+  
   Rocket,
   Ticket,
   MessageSquare,
@@ -42,7 +42,6 @@ const navItems = [
   { icon: Rocket, label: 'Implantações', path: '/implementations' },
   { icon: Ticket, label: 'Cupons', path: '/coupons' },
   { icon: Gift, label: 'Indicações', path: '/referrals' },
-  { icon: UserPlus, label: 'Afiliados', path: '/affiliates' },
 ];
 
 interface SidebarProps {
