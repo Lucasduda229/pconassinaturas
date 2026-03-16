@@ -73,8 +73,10 @@ const App = () => (
                    <Route path="/financial" element={<ProtectedRoute><Financial /></ProtectedRoute>} />
                    <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
                    <Route path="/email" element={<ProtectedRoute><EmailSettings /></ProtectedRoute>} />
-                  {/* Referral Landing Page (Public) - Clients */}
-                  <Route path="/r/:slug" element={<ReferralLanding />} />
+                  {/* Referral Form (Public) */}
+                  <Route path="/indicar" element={<ReferralForm />} />
+                  {/* Legacy referral links redirect */}
+                  <Route path="/r/:slug" element={<ReferralForm />} />
                   
                   {/* Client Routes */}
                   <Route path="/cliente" element={<ClientLogin />} />
