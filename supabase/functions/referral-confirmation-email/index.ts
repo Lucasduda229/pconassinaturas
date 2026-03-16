@@ -10,13 +10,15 @@ const MASCOTE_URL = "https://lcnaptefceboratxhzox.supabase.co/storage/v1/object/
 
 const generateEmailHTML = (referrerName: string, referredName: string) => `
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" translate="no">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="google" content="notranslate">
+  <meta http-equiv="Content-Language" content="pt-BR">
   <title>Indicação Enviada - P-CON CONSTRUNET</title>
 </head>
-<body style="margin:0;padding:0;background-color:#f0f4f8;font-family:'Segoe UI',Arial,Helvetica,sans-serif;">
+<body class="notranslate" style="margin:0;padding:0;background-color:#f0f4f8;font-family:'Segoe UI',Arial,Helvetica,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0f4f8;padding:32px 0;">
     <tr>
       <td align="center">
