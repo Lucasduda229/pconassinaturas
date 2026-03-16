@@ -8,7 +8,7 @@ import {
   Phone,
   Mail,
   FileText,
-  MessageSquare,
+  FileText,
   Clock,
   CheckCircle,
   XCircle,
