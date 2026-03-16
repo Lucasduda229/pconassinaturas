@@ -21,7 +21,7 @@ import Referrals from "./pages/Referrals";
 import Affiliates from "./pages/Affiliates";
 import Implementations from "./pages/Implementations";
 import ClientCoupons from "./pages/ClientCoupons";
-import ReferralLanding from "./pages/ReferralLanding";
+import ReferralForm from "./pages/ReferralForm";
 import WhatsAppMessages from "./pages/WhatsAppMessages";
 import WhatsAppReminders from "./pages/WhatsAppReminders";
 import Financial from "./pages/Financial";
