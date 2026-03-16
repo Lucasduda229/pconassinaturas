@@ -159,7 +159,6 @@ const Notifications = () => {
     unread: unreadCount,
     implementations: notifications.filter(n => n.category === 'implementations').length,
     referrals: notifications.filter(n => n.category === 'referrals').length,
-    affiliates: notifications.filter(n => n.category === 'affiliates').length,
     payments: notifications.filter(n => n.category === 'payments').length,
   };
 
