@@ -8,7 +8,6 @@ import {
   Phone,
   Mail,
   FileText,
-  MessageSquare,
   Clock,
   CheckCircle,
   XCircle,
@@ -18,6 +17,7 @@ import {
   User,
   UserPlus,
 } from 'lucide-react';
+import WhatsAppIcon from '@/components/WhatsAppIcon';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -374,7 +374,7 @@ const Referrals = () => {
                             title="WhatsApp do indicado"
                             onClick={() => openWhatsApp(sub.referred_phone, sub.referred_name)}
                           >
-                            <MessageSquare className="h-4 w-4 text-success" />
+                            <WhatsAppIcon className="h-4 w-4 text-[#25D366]" />
                           </Button>
                           <Button
                             variant="ghost"
@@ -420,7 +420,7 @@ const Referrals = () => {
                     <div className="flex items-center gap-2">
                       <p className="font-medium">{selectedSubmission.referrer_phone}</p>
                       <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openWhatsApp(selectedSubmission.referrer_phone, selectedSubmission.referrer_name)}>
-                        <MessageSquare className="h-3 w-3 text-success" />
+                        <WhatsAppIcon className="h-3 w-3 text-[#25D366]" />
                       </Button>
                     </div>
                   </div>
@@ -455,7 +455,7 @@ const Referrals = () => {
                     <div className="flex items-center gap-2">
                       <p className="font-medium">{selectedSubmission.referred_phone}</p>
                       <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openWhatsApp(selectedSubmission.referred_phone, selectedSubmission.referred_name)}>
-                        <MessageSquare className="h-3 w-3 text-success" />
+                        <WhatsAppIcon className="h-3 w-3 text-[#25D366]" />
                       </Button>
                     </div>
                   </div>
