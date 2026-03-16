@@ -57,12 +57,6 @@ const categoryConfig: Record<string, { icon: typeof Rocket; label: string; bgCla
     bgClass: 'bg-amber-500/10',
     iconClass: 'text-amber-500',
   },
-  affiliates: {
-    icon: UserPlus,
-    label: 'Afiliados',
-    bgClass: 'bg-purple-500/10',
-    iconClass: 'text-purple-500',
-  },
   payments: {
     icon: CreditCard,
     label: 'Pagamentos',
