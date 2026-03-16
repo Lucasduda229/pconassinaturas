@@ -455,7 +455,7 @@ const Referrals = () => {
                     <div className="flex items-center gap-2">
                       <p className="font-medium">{selectedSubmission.referred_phone}</p>
                       <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openWhatsApp(selectedSubmission.referred_phone, selectedSubmission.referred_name)}>
-                        <MessageSquare className="h-3 w-3 text-success" />
+                        <WhatsAppIcon className="h-3 w-3 text-[#25D366]" />
                       </Button>
                     </div>
                   </div>
