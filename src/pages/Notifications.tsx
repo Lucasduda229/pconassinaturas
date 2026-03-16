@@ -146,9 +146,6 @@ const Notifications = () => {
       case 'referrals':
         navigate('/referrals');
         break;
-      case 'affiliates':
-        navigate('/affiliates');
-        break;
       case 'payments':
         if (metadata.payment_id) {
           navigate('/payments');
