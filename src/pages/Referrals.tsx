@@ -374,7 +374,7 @@ const Referrals = () => {
                             title="WhatsApp do indicado"
                             onClick={() => openWhatsApp(sub.referred_phone, sub.referred_name)}
                           >
-                            <MessageSquare className="h-4 w-4 text-success" />
+                            <WhatsAppIcon className="h-4 w-4 text-[#25D366]" />
                           </Button>
                           <Button
                             variant="ghost"
