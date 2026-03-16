@@ -76,11 +76,6 @@ const typeConfig: Record<string, { color: string; bgColor: string; label: string
     bgColor: 'bg-amber-500/10 border-amber-500/30',
     label: 'Novo Lead',
   },
-  new_affiliate: {
-    color: 'text-purple-500',
-    bgColor: 'bg-purple-500/10 border-purple-500/30',
-    label: 'Novo Afiliado',
-  },
   payment_received: {
     color: 'text-emerald-500',
     bgColor: 'bg-emerald-500/10 border-emerald-500/30',
