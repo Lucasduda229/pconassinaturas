@@ -1093,6 +1093,48 @@ export type Database = {
         }
         Relationships: []
       }
+      referral_submissions: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          id: string
+          referred_name: string
+          referred_phone: string
+          referrer_document: string | null
+          referrer_email: string | null
+          referrer_name: string
+          referrer_phone: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          id?: string
+          referred_name: string
+          referred_phone: string
+          referrer_document?: string | null
+          referrer_email?: string | null
+          referrer_name: string
+          referrer_phone: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          id?: string
+          referred_name?: string
+          referred_phone?: string
+          referrer_document?: string | null
+          referrer_email?: string | null
+          referrer_name?: string
+          referrer_phone?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           asaas_id: string | null
