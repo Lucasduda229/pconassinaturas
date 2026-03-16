@@ -232,13 +232,6 @@ const Notifications = () => {
                 Indicações
               </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
-                checked={categoryFilter.includes('affiliates')}
-                onCheckedChange={() => toggleCategoryFilter('affiliates')}
-              >
-                <UserPlus className="w-4 h-4 mr-2 text-purple-500" />
-                Afiliados
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
                 checked={categoryFilter.includes('payments')}
                 onCheckedChange={() => toggleCategoryFilter('payments')}
               >
