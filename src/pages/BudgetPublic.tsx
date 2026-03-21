@@ -225,6 +225,17 @@ const BudgetPublic = () => {
                         <span className="font-semibold">{formatCurrency(proposal.entry_amount)}</span>
                       </div>
                     )}
+                    {proposal.monthly_amount && (
+                      <div className="flex items-center justify-between rounded-xl border border-border/60 bg-secondary/20 px-4 py-3">
+                        <span>Mensalidade</span>
+                        <span className="font-semibold">{formatCurrency(proposal.monthly_amount)}</span>
+                      </div>
+                    )}
+                    {proposal.monthly_amount && (
+                      <p className="text-xs text-muted-foreground rounded-xl border border-border/60 bg-secondary/10 px-4 py-3">
+                        A mensalidade é apenas informativa nesta etapa e a cobrança será gerada no mês seguinte.
+                      </p>
+                    )}
                     <div className="flex items-center justify-between rounded-xl border border-border/60 bg-secondary/20 px-4 py-3 text-sm text-muted-foreground">
                       <span className="flex items-center gap-2"><Eye className="h-4 w-4" /> Visualizações</span>
                       <span className="font-medium text-foreground">{proposal.view_count}</span>

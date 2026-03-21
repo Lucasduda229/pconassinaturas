@@ -21,6 +21,7 @@ interface ProposalFormState {
   scopeItems: string[];
   deliveryDeadline: string;
   totalAmount: string;
+  monthlyAmount: string;
   entryAmount: string;
   allowPartialPayment: boolean;
   discountAmount: string;
@@ -43,6 +44,7 @@ const emptyForm: ProposalFormState = {
   scopeItems: [''],
   deliveryDeadline: '',
   totalAmount: '',
+  monthlyAmount: '',
   entryAmount: '',
   allowPartialPayment: false,
   discountAmount: '',
@@ -100,6 +102,7 @@ const BudgetForm = () => {
           scopeItems: proposal.scope_items?.length ? proposal.scope_items : [''],
           deliveryDeadline: proposal.delivery_deadline || '',
           totalAmount: String(proposal.total_amount || ''),
+          monthlyAmount: proposal.monthly_amount ? String(proposal.monthly_amount) : '',
           entryAmount: proposal.entry_amount ? String(proposal.entry_amount) : '',
           allowPartialPayment: proposal.allow_partial_payment,
           discountAmount: String(proposal.discount_amount || ''),
@@ -173,6 +176,7 @@ const BudgetForm = () => {
     scope_items: form.scopeItems.map((item) => item.trim()).filter(Boolean),
     delivery_deadline: form.deliveryDeadline.trim() || null,
     total_amount: Number(form.totalAmount || 0),
+    monthly_amount: form.monthlyAmount ? Number(form.monthlyAmount) : null,
     entry_amount: form.entryAmount ? Number(form.entryAmount) : null,
     allow_partial_payment: form.allowPartialPayment,
     discount_amount: Number(form.discountAmount || 0),
@@ -321,7 +325,7 @@ const BudgetForm = () => {
                   </div>
                   <div className="space-y-3">
                     {form.scopeItems.map((item, index) => (
-                      <div key={`${index}-${item}`} className="flex gap-2">
+                      <div key={index} className="flex gap-2">
                         <Input value={item} onChange={(e) => updateScopeItem(index, e.target.value)} placeholder={`Entrega ${index + 1}`} maxLength={240} />
                         <Button type="button" variant="outline" onClick={() => removeScopeItem(index)} disabled={form.scopeItems.length === 1}>Remover</Button>
                       </div>
@@ -377,6 +381,10 @@ const BudgetForm = () => {
                   <Input id="entry-amount" type="number" min="0" step="0.01" value={form.entryAmount} onChange={(e) => setForm((current) => ({ ...current, entryAmount: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="monthly-amount">Valor da mensalidade</Label>
+                  <Input id="monthly-amount" type="number" min="0" step="0.01" value={form.monthlyAmount} onChange={(e) => setForm((current) => ({ ...current, monthlyAmount: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="discount-amount">Desconto</Label>
                   <Input id="discount-amount" type="number" min="0" step="0.01" value={form.discountAmount} onChange={(e) => setForm((current) => ({ ...current, discountAmount: e.target.value }))} />
                 </div>
@@ -386,6 +394,9 @@ const BudgetForm = () => {
                     <p className="text-xs text-muted-foreground">Preparado para a futura integração de entrada.</p>
                   </div>
                   <Switch checked={form.allowPartialPayment} onCheckedChange={(checked) => setForm((current) => ({ ...current, allowPartialPayment: checked }))} />
+                </div>
+                <div className="rounded-xl border border-border/60 bg-secondary/20 p-4 text-sm text-muted-foreground leading-relaxed">
+                  A mensalidade fica apenas exposta na proposta. A cobrança recorrente será gerada a partir do mês seguinte em uma próxima integração.
                 </div>
               </CardContent>
             </Card>
