@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Users, 
@@ -19,7 +19,12 @@ import {
   BarChart3,
   Wallet2,
   Mail,
+  ChevronDown,
+  Calculator,
+  FolderPlus,
+  Settings2,
 } from 'lucide-react';
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminNotifications } from '@/hooks/useAdminNotifications';
 import { toast } from 'sonner';
@@ -44,6 +49,12 @@ const navItems = [
   { icon: Gift, label: 'Indicações', path: '/referrals' },
 ];
 
+const budgetChildren = [
+  { icon: Calculator, label: 'Todos os Orçamentos', path: '/budgets' },
+  { icon: FolderPlus, label: 'Novo Orçamento', path: '/budgets/new' },
+  { icon: Settings2, label: 'Configurações', path: '/budgets/settings' },
+];
+
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
@@ -52,7 +63,10 @@ interface SidebarProps {
 const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { unreadCount } = useAdminNotifications();
+  const budgetsActive = location.pathname.startsWith('/budgets');
+  const [budgetsOpen, setBudgetsOpen] = useState(budgetsActive);
 
   const handleLogout = () => {
     logout();
@@ -109,6 +123,38 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 <span className="font-medium">{item.label}</span>
               </NavLink>
             ))}
+
+            <div className="space-y-1">
+              <button
+                type="button"
+                onClick={() => setBudgetsOpen((current) => !current)}
+                className={cn('nav-item w-full justify-between', budgetsActive && 'nav-item-active')}
+              >
+                <span className="flex items-center gap-3">
+                  <Calculator className="w-5 h-5" />
+                  <span className="font-medium">Orçamentos</span>
+                </span>
+                <ChevronDown className={cn('w-4 h-4 transition-transform', budgetsOpen && 'rotate-180')} />
+              </button>
+
+              {budgetsOpen && (
+                <div className="ml-4 space-y-1 border-l border-border/50 pl-3">
+                  {budgetChildren.map((item) => (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      onClick={handleNavClick}
+                      className={({ isActive }) =>
+                        cn('nav-item py-2.5 text-sm', isActive && 'nav-item-active')
+                      }
+                    >
+                      <item.icon className="w-4 h-4" />
+                      <span className="font-medium">{item.label}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+            </div>
             
             {/* Notifications with badge */}
             <NavLink
