@@ -886,6 +886,111 @@ export type Database = {
           },
         ]
       }
+      proposals: {
+        Row: {
+          allow_online_approval: boolean
+          allow_partial_payment: boolean
+          allow_payment: boolean
+          approved_at: string | null
+          client_company: string | null
+          client_email: string | null
+          client_name: string
+          client_phone: string | null
+          created_at: string
+          delivery_deadline: string | null
+          discount_amount: number
+          entry_amount: number | null
+          entry_paid_at: string | null
+          first_viewed_at: string | null
+          id: string
+          last_viewed_at: string | null
+          notes: string | null
+          paid_at: string | null
+          project_description: string | null
+          project_title: string
+          public_link_enabled: boolean
+          public_slug: string
+          rejected_at: string | null
+          scope_items: string[]
+          sent_at: string | null
+          start_deadline: string | null
+          status: string
+          terms_and_conditions: string | null
+          total_amount: number
+          updated_at: string
+          valid_until: string
+          view_count: number
+        }
+        Insert: {
+          allow_online_approval?: boolean
+          allow_partial_payment?: boolean
+          allow_payment?: boolean
+          approved_at?: string | null
+          client_company?: string | null
+          client_email?: string | null
+          client_name: string
+          client_phone?: string | null
+          created_at?: string
+          delivery_deadline?: string | null
+          discount_amount?: number
+          entry_amount?: number | null
+          entry_paid_at?: string | null
+          first_viewed_at?: string | null
+          id?: string
+          last_viewed_at?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          project_description?: string | null
+          project_title: string
+          public_link_enabled?: boolean
+          public_slug?: string
+          rejected_at?: string | null
+          scope_items?: string[]
+          sent_at?: string | null
+          start_deadline?: string | null
+          status?: string
+          terms_and_conditions?: string | null
+          total_amount?: number
+          updated_at?: string
+          valid_until: string
+          view_count?: number
+        }
+        Update: {
+          allow_online_approval?: boolean
+          allow_partial_payment?: boolean
+          allow_payment?: boolean
+          approved_at?: string | null
+          client_company?: string | null
+          client_email?: string | null
+          client_name?: string
+          client_phone?: string | null
+          created_at?: string
+          delivery_deadline?: string | null
+          discount_amount?: number
+          entry_amount?: number | null
+          entry_paid_at?: string | null
+          first_viewed_at?: string | null
+          id?: string
+          last_viewed_at?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          project_description?: string | null
+          project_title?: string
+          public_link_enabled?: boolean
+          public_slug?: string
+          rejected_at?: string | null
+          scope_items?: string[]
+          sent_at?: string | null
+          start_deadline?: string | null
+          status?: string
+          terms_and_conditions?: string | null
+          total_amount?: number
+          updated_at?: string
+          valid_until?: string
+          view_count?: number
+        }
+        Relationships: []
+      }
       referral_clicks: {
         Row: {
           created_at: string
@@ -1296,6 +1401,92 @@ export type Database = {
         Returns: string
       }
       generate_referral_slug: { Args: never; Returns: string }
+      record_proposal_view: {
+        Args: { p_public_slug: string }
+        Returns: {
+          allow_online_approval: boolean
+          allow_partial_payment: boolean
+          allow_payment: boolean
+          approved_at: string | null
+          client_company: string | null
+          client_email: string | null
+          client_name: string
+          client_phone: string | null
+          created_at: string
+          delivery_deadline: string | null
+          discount_amount: number
+          entry_amount: number | null
+          entry_paid_at: string | null
+          first_viewed_at: string | null
+          id: string
+          last_viewed_at: string | null
+          notes: string | null
+          paid_at: string | null
+          project_description: string | null
+          project_title: string
+          public_link_enabled: boolean
+          public_slug: string
+          rejected_at: string | null
+          scope_items: string[]
+          sent_at: string | null
+          start_deadline: string | null
+          status: string
+          terms_and_conditions: string | null
+          total_amount: number
+          updated_at: string
+          valid_until: string
+          view_count: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "proposals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      respond_to_proposal: {
+        Args: { p_action: string; p_public_slug: string }
+        Returns: {
+          allow_online_approval: boolean
+          allow_partial_payment: boolean
+          allow_payment: boolean
+          approved_at: string | null
+          client_company: string | null
+          client_email: string | null
+          client_name: string
+          client_phone: string | null
+          created_at: string
+          delivery_deadline: string | null
+          discount_amount: number
+          entry_amount: number | null
+          entry_paid_at: string | null
+          first_viewed_at: string | null
+          id: string
+          last_viewed_at: string | null
+          notes: string | null
+          paid_at: string | null
+          project_description: string | null
+          project_title: string
+          public_link_enabled: boolean
+          public_slug: string
+          rejected_at: string | null
+          scope_items: string[]
+          sent_at: string | null
+          start_deadline: string | null
+          status: string
+          terms_and_conditions: string | null
+          total_amount: number
+          updated_at: string
+          valid_until: string
+          view_count: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "proposals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       referral_reward_status: "pending" | "approved" | "paid"
