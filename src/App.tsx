@@ -25,6 +25,10 @@ import WhatsAppReminders from "./pages/WhatsAppReminders";
 import Financial from "./pages/Financial";
 import Expenses from "./pages/Expenses";
 import EmailSettings from "./pages/EmailSettings";
+import Budgets from "./pages/Budgets";
+import BudgetForm from "./pages/BudgetForm";
+import BudgetSettings from "./pages/BudgetSettings";
+import BudgetPublic from "./pages/BudgetPublic";
 
 import ClientLogin from "./pages/ClientLogin";
 import ClientRegister from "./pages/ClientRegister";
@@ -64,9 +68,14 @@ const App = () => (
                  <Route path="/financial" element={<ProtectedRoute><Financial /></ProtectedRoute>} />
                  <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
                  <Route path="/email" element={<ProtectedRoute><EmailSettings /></ProtectedRoute>} />
+                 <Route path="/budgets" element={<ProtectedRoute><Budgets /></ProtectedRoute>} />
+                 <Route path="/budgets/new" element={<ProtectedRoute><BudgetForm /></ProtectedRoute>} />
+                 <Route path="/budgets/:id" element={<ProtectedRoute><BudgetForm /></ProtectedRoute>} />
+                 <Route path="/budgets/settings" element={<ProtectedRoute><BudgetSettings /></ProtectedRoute>} />
                 {/* Referral Form (Public) */}
                 <Route path="/indicar" element={<ReferralForm />} />
                 <Route path="/r/:slug" element={<ReferralForm />} />
+                 <Route path="/proposta/:slug" element={<BudgetPublic />} />
                 
                 {/* Client Routes */}
                 <Route path="/cliente" element={<ClientLogin />} />
