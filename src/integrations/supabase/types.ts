@@ -904,6 +904,7 @@ export type Database = {
           first_viewed_at: string | null
           id: string
           last_viewed_at: string | null
+          monthly_amount: number | null
           notes: string | null
           paid_at: string | null
           project_description: string | null
@@ -938,6 +939,7 @@ export type Database = {
           first_viewed_at?: string | null
           id?: string
           last_viewed_at?: string | null
+          monthly_amount?: number | null
           notes?: string | null
           paid_at?: string | null
           project_description?: string | null
@@ -972,6 +974,7 @@ export type Database = {
           first_viewed_at?: string | null
           id?: string
           last_viewed_at?: string | null
+          monthly_amount?: number | null
           notes?: string | null
           paid_at?: string | null
           project_description?: string | null
@@ -1420,6 +1423,7 @@ export type Database = {
           first_viewed_at: string | null
           id: string
           last_viewed_at: string | null
+          monthly_amount: number | null
           notes: string | null
           paid_at: string | null
           project_description: string | null
@@ -1463,6 +1467,7 @@ export type Database = {
           first_viewed_at: string | null
           id: string
           last_viewed_at: string | null
+          monthly_amount: number | null
           notes: string | null
           paid_at: string | null
           project_description: string | null

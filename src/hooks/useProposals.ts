@@ -25,6 +25,7 @@ export interface Proposal {
   scope_items: string[];
   delivery_deadline: string | null;
   total_amount: number;
+  monthly_amount: number | null;
   entry_amount: number | null;
   allow_partial_payment: boolean;
   discount_amount: number;
@@ -57,6 +58,7 @@ export interface ProposalInput {
   scope_items: string[];
   delivery_deadline?: string | null;
   total_amount: number;
+  monthly_amount?: number | null;
   entry_amount?: number | null;
   allow_partial_payment: boolean;
   discount_amount: number;
@@ -198,6 +200,7 @@ export const useProposals = () => {
       scope_items: proposal.scope_items || [],
       delivery_deadline: proposal.delivery_deadline,
       total_amount: Number(proposal.total_amount || 0),
+      monthly_amount: proposal.monthly_amount,
       entry_amount: proposal.entry_amount,
       allow_partial_payment: proposal.allow_partial_payment,
       discount_amount: Number(proposal.discount_amount || 0),
