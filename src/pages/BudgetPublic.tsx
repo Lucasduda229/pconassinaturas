@@ -12,7 +12,6 @@ import { Badge } from '@/components/ui/badge';
 import { Proposal, ProposalStatus } from '@/hooks/useProposals';
 import { useMercadoPago } from '@/hooks/useMercadoPago';
 import { supabase } from '@/integrations/supabase/client';
-import logo from '@/assets/logo-pcon-grande.png';
 import brandImage from '@/assets/pcon-construnet-brand.png';
 import { generateProposalPDF } from '@/utils/proposalPdfGenerator';
 
@@ -247,8 +246,7 @@ const BudgetPublic = () => {
         <header className="border-b border-border/30 bg-background/50 backdrop-blur-xl">
           <div className="container mx-auto px-4 py-5 flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <img src={brandImage} alt="Marca P-CON CONSTRUNET" className="h-16 w-auto object-contain" />
-              <img src={logo} alt="P-CON" className="h-12 w-auto" />
+              <img src="/images/logo-pcon-white.png" alt="P-CON CONSTRUNET" className="h-14 sm:h-16 w-auto object-contain" />
             </div>
             <Badge className={`border ${statusMap[proposal.status].className}`}>{statusMap[proposal.status].label}</Badge>
           </div>
@@ -270,9 +268,9 @@ const BudgetPublic = () => {
                 <div className="flex justify-center lg:justify-end">
                   <div className="flex min-h-44 w-full max-w-[280px] items-center justify-center rounded-[2rem] border border-primary/20 bg-background/10 p-6 backdrop-blur-sm shadow-[var(--shadow-glow)]">
                     <img
-                      src={brandImage}
-                      alt="Marca P-CON CONSTRUNET"
-                      className="max-h-28 w-full object-contain sm:max-h-32"
+                      src="/images/logo-pcon-white.png"
+                      alt="P-CON CONSTRUNET"
+                      className="max-h-20 w-full object-contain sm:max-h-24"
                     />
                   </div>
                 </div>
