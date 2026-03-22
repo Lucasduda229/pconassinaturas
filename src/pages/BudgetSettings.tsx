@@ -1,6 +1,12 @@
-import { CreditCard, Eye, Link2, ShieldCheck } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { CreditCard, Eye, Link2, Save, ShieldCheck } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const settingsCards = [
   {
@@ -26,12 +32,114 @@ const settingsCards = [
 ];
 
 const BudgetSettings = () => {
+  const [notificationEmail, setNotificationEmail] = useState('contato@assinaturaspcon.sbs');
+  const [notificationPhone, setNotificationPhone] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      const { data, error } = await supabase
+        .from('email_settings')
+        .select('id, setting_key, setting_value')
+        .in('setting_key', ['proposal_notification_email', 'proposal_notification_phone']);
+
+      if (error) return;
+
+      const email = data?.find((item) => item.setting_key === 'proposal_notification_email')?.setting_value;
+      const phone = data?.find((item) => item.setting_key === 'proposal_notification_phone')?.setting_value;
+
+      if (email) setNotificationEmail(email);
+      if (phone) setNotificationPhone(phone);
+    };
+
+    void loadSettings();
+  }, []);
+
+  const saveSetting = async (settingKey: string, settingValue: string) => {
+    const { data: existing, error: loadError } = await supabase
+      .from('email_settings')
+      .select('id')
+      .eq('setting_key', settingKey)
+      .maybeSingle();
+
+    if (loadError) throw loadError;
+
+    if (existing?.id) {
+      const { error } = await supabase
+        .from('email_settings')
+        .update({ setting_value: settingValue, updated_at: new Date().toISOString() })
+        .eq('id', existing.id);
+
+      if (error) throw error;
+      return;
+    }
+
+    const { error } = await supabase.from('email_settings').insert({
+      setting_key: settingKey,
+      setting_value: settingValue,
+    });
+
+    if (error) throw error;
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+
+    try {
+      await Promise.all([
+        saveSetting('proposal_notification_email', notificationEmail.trim() || 'contato@assinaturaspcon.sbs'),
+        saveSetting('proposal_notification_phone', notificationPhone.trim()),
+      ]);
+
+      toast.success('Configurações de notificações salvas');
+    } catch (error) {
+      console.error('Error saving budget settings:', error);
+      toast.error('Erro ao salvar as configurações');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <DashboardLayout
       title="Configurações de Orçamentos"
       subtitle="Base pronta para escalar propostas comerciais e pagamentos futuros"
     >
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="space-y-6">
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle>Notificações internas</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="proposal-notification-email">Email de destino</Label>
+              <Input
+                id="proposal-notification-email"
+                type="email"
+                value={notificationEmail}
+                onChange={(event) => setNotificationEmail(event.target.value)}
+                placeholder="contato@assinaturaspcon.sbs"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="proposal-notification-phone">WhatsApp de destino</Label>
+              <Input
+                id="proposal-notification-phone"
+                value={notificationPhone}
+                onChange={(event) => setNotificationPhone(event.target.value)}
+                placeholder="(00) 00000-0000"
+              />
+            </div>
+            <div className="md:col-span-2 flex justify-end">
+              <Button onClick={handleSave} disabled={saving}>
+                <Save className="h-4 w-4 mr-2" />
+                {saving ? 'Salvando...' : 'Salvar destinos'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid gap-4 md:grid-cols-2">
         {settingsCards.map((item) => (
           <Card key={item.title} className="glass-card">
             <CardHeader>
@@ -47,6 +155,7 @@ const BudgetSettings = () => {
             </CardContent>
           </Card>
         ))}
+        </div>
       </div>
     </DashboardLayout>
   );

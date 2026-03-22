@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CheckCircle2, Clock3, CreditCard, Eye, FileText, ShieldCheck, XCircle } from 'lucide-react';
@@ -44,9 +44,21 @@ const BudgetPublic = () => {
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const hasTrackedView = useRef(false);
+
+  const notifyEvent = async (proposalId: string, eventType: 'viewed' | 'approved' | 'rejected') => {
+    try {
+      await supabase.functions.invoke('proposal-status-notification', {
+        body: { proposalId, eventType },
+      });
+    } catch (error) {
+      console.error(`Error notifying proposal event ${eventType}:`, error);
+    }
+  };
 
   useEffect(() => {
-    if (!slug) return;
+    if (!slug || hasTrackedView.current) return;
+    hasTrackedView.current = true;
 
     const loadProposal = async () => {
       try {
@@ -57,7 +69,9 @@ const BudgetPublic = () => {
         if (error) throw error;
         if (!data) throw new Error('Proposal not found');
 
-        setProposal(normalizeStatus(data as Proposal));
+        const normalized = normalizeStatus(data as Proposal);
+        setProposal(normalized);
+        void notifyEvent(normalized.id, 'viewed');
       } catch (error) {
         console.error('Error loading public proposal:', error);
         setProposal(null);
@@ -87,7 +101,9 @@ const BudgetPublic = () => {
       if (error) throw error;
       if (!data) throw new Error('No proposal returned');
 
-      setProposal(normalizeStatus(data as Proposal));
+      const normalized = normalizeStatus(data as Proposal);
+      setProposal(normalized);
+      void notifyEvent(normalized.id, action === 'approve' ? 'approved' : 'rejected');
       toast.success(action === 'approve' ? 'Proposta aprovada com sucesso' : 'Proposta recusada');
     } catch (error) {
       console.error('Error responding to proposal:', error);

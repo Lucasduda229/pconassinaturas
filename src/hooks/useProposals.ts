@@ -46,6 +46,9 @@ export interface Proposal {
   rejected_at: string | null;
   entry_paid_at: string | null;
   paid_at: string | null;
+  view_notification_sent_at?: string | null;
+  approved_notification_sent_at?: string | null;
+  rejected_notification_sent_at?: string | null;
 }
 
 export interface ProposalInput {
