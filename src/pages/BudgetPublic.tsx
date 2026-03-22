@@ -457,9 +457,17 @@ const BudgetPublic = () => {
                         {creatingPayment === 'entry' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
                         {proposal.status === 'entry_paid' || proposal.status === 'paid' ? 'Entrada já paga' : 'Pagar entrada'}
                       </Button>
+                      <Button variant="outline" onClick={() => handleCardPayment('entry')} disabled={!canPayEntry || creatingPayment !== null} className="w-full">
+                        {creatingPayment === 'entry-card' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
+                        {proposal.status === 'entry_paid' || proposal.status === 'paid' ? 'Entrada no cartão já paga' : 'Pagar entrada no cartão em até 4x'}
+                      </Button>
                       <Button variant="secondary" onClick={() => handlePaymentPlaceholder('total')} disabled={!canPayTotal || creatingPayment !== null} className="w-full">
                         {creatingPayment === 'total' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
                         {proposal.status === 'paid' ? 'Pagamento total confirmado' : 'Pagar total'}
+                      </Button>
+                      <Button variant="outline" onClick={() => handleCardPayment('total')} disabled={!canPayTotal || creatingPayment !== null} className="w-full">
+                        {creatingPayment === 'total-card' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
+                        {proposal.status === 'paid' ? 'Pagamento total no cartão confirmado' : 'Pagar total no cartão em até 4x'}
                       </Button>
                       <Button variant="outline" onClick={handleDownloadPdf} disabled={downloadingPdf} className="w-full">
                         {downloadingPdf ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
