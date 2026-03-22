@@ -16,6 +16,7 @@ import { Proposal, ProposalStatus } from '@/hooks/useProposals';
 import { useMercadoPago } from '@/hooks/useMercadoPago';
 import { supabase } from '@/integrations/supabase/client';
 import brandImage from '@/assets/pcon-construnet-brand.png';
+import pixIcon from '@/assets/pix-icon.svg';
 import { generateProposalPDF } from '@/utils/proposalPdfGenerator';
 
 const formatCurrency = (value: number) =>
@@ -536,7 +537,10 @@ const BudgetPublic = () => {
                               <Label htmlFor="method-pix" className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/60 bg-secondary/20 px-4 py-3">
                                 <RadioGroupItem id="method-pix" value="pix" />
                                 <div className="flex-1">
-                                  <p className="font-medium text-foreground">PIX</p>
+                                  <p className="flex items-center gap-2 font-medium text-foreground">
+                                    <img src={pixIcon} alt="PIX" className="h-4 w-4 object-contain" />
+                                    PIX
+                                  </p>
                                   <p className="text-xs text-muted-foreground">Gera QR Code instantâneo</p>
                                 </div>
                               </Label>
