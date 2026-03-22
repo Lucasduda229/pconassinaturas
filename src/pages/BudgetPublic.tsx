@@ -552,7 +552,7 @@ const BudgetPublic = () => {
                             amount={selectedAmount}
                             payerEmail={proposal.client_email}
                             payerName={proposal.client_name}
-                            payerDocument={proposal.document as never}
+                            payerDocument={undefined}
                             submitting={creatingPayment === (selectedChargeType === 'entry' ? 'entry-card' : 'total-card')}
                             onSubmit={(formData) => handleCardPayment(selectedChargeType, formData)}
                           />
