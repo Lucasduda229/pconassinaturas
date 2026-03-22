@@ -59,7 +59,9 @@ const ProposalCardPayment = ({
   const formKey = `${amount}-${installments}-${payerEmail || 'guest'}-${cleanDocument || 'no-doc'}`;
 
   return (
-    <div className="space-y-2 rounded-2xl border border-primary/20 bg-card shadow-[var(--shadow-lg)] backdrop-blur-sm overflow-hidden">
+    <div className="relative isolate space-y-2 overflow-hidden rounded-2xl border border-primary/20 bg-card shadow-[var(--shadow-lg)] backdrop-blur-sm">
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,hsl(var(--primary)/0.14)_0%,transparent_32%,transparent_58%,hsl(var(--accent)/0.12)_100%)]" />
+      <div className="pointer-events-none absolute inset-x-[-10%] top-0 h-24 bg-[linear-gradient(180deg,hsl(var(--foreground)/0.12)_0%,transparent_100%)] blur-2xl" />
       <div className="bg-gradient-to-r from-primary/20 via-accent/15 to-secondary/40 px-3 py-2.5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex items-start gap-3">
@@ -84,7 +86,7 @@ const ProposalCardPayment = ({
           </div>
         </div>
 
-      <div className="space-y-2.5 p-3">
+      <div className="relative z-10 space-y-2.5 p-3">
           <div className={submitting ? 'pointer-events-none opacity-70' : ''}>
             <div className="mb-2.5 space-y-1.5 rounded-xl bg-background/30 p-2.5">
               <p className="text-sm font-medium text-foreground">Parcelamento</p>
@@ -119,7 +121,8 @@ const ProposalCardPayment = ({
               </p>
             </div>
 
-            <div className="overflow-hidden rounded-2xl bg-card/95 p-2.5 shadow-[var(--shadow-md)]">
+            <div className="relative overflow-hidden rounded-2xl bg-card/95 p-2.5 shadow-[var(--shadow-md)]">
+              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(145deg,hsl(var(--foreground)/0.05)_0%,transparent_28%,transparent_72%,hsl(var(--primary)/0.08)_100%)]" />
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2 pb-0.5">
                 <div>
                   <p className="text-sm font-medium text-foreground">Dados do cartão</p>
