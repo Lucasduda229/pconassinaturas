@@ -494,6 +494,10 @@ const BudgetPublic = () => {
                         <XCircle className="h-4 w-4 mr-2" />
                         Recusar proposta
                       </Button>
+                      <Button variant="outline" onClick={handleDownloadPdf} disabled={downloadingPdf} className="w-full">
+                        {downloadingPdf ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                        Baixar proposta em PDF
+                      </Button>
                       <div className="rounded-2xl border border-border/60 bg-secondary/10 p-4 space-y-4">
                         <div className="flex items-start gap-3">
                           <WalletCards className="mt-0.5 h-5 w-5 text-primary" />
@@ -573,10 +577,6 @@ const BudgetPublic = () => {
                           </div>
                         )}
                       </div>
-                      <Button variant="outline" onClick={handleDownloadPdf} disabled={downloadingPdf} className="w-full">
-                        {downloadingPdf ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-                        Baixar proposta em PDF
-                      </Button>
                     </div>
 
                     {pixPayment && (
