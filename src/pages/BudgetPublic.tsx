@@ -55,6 +55,7 @@ const BudgetPublic = () => {
   const [creatingPayment, setCreatingPayment] = useState<'entry' | 'total' | 'entry-card' | 'total-card' | null>(null);
   const [selectedChargeType, setSelectedChargeType] = useState<'entry' | 'total'>('total');
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'card'>('pix');
+  const [selectedInstallments, setSelectedInstallments] = useState(1);
   const [pixPayment, setPixPayment] = useState<{
     type: 'entry' | 'total';
     paymentId: string;
@@ -258,7 +259,7 @@ const BudgetPublic = () => {
       externalReference: `proposal:${proposal.id}:${type}`,
       token: formData.token,
       issuerId: formData.issuer_id,
-      installments: formData.installments,
+      installments: selectedInstallments,
       paymentMethodId: formData.payment_method_id,
       payerIdentificationType: formData.payer?.identification?.type,
       payerIdentificationNumber: formData.payer?.identification?.number,
@@ -570,6 +571,8 @@ const BudgetPublic = () => {
                             payerEmail={proposal.client_email}
                             payerName={proposal.client_name}
                             payerDocument={undefined}
+                            installments={selectedInstallments}
+                            onInstallmentsChange={setSelectedInstallments}
                             submitting={creatingPayment === (selectedChargeType === 'entry' ? 'entry-card' : 'total-card')}
                             onSubmit={(formData) => handleCardPayment(selectedChargeType, formData)}
                           />
