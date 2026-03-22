@@ -59,9 +59,8 @@ const ProposalCardPayment = ({
   const formKey = `${amount}-${installments}-${payerEmail || 'guest'}-${cleanDocument || 'no-doc'}`;
 
   return (
-    <div className="space-y-4 rounded-2xl border border-primary/20 bg-secondary/20 p-4 shadow-[var(--shadow-lg)] backdrop-blur-sm">
-      <div className="overflow-hidden rounded-2xl border border-primary/20 bg-card">
-        <div className="border-b border-border/60 bg-gradient-to-r from-primary/20 via-accent/15 to-secondary/40 px-4 py-4">
+    <div className="space-y-4 rounded-2xl border border-primary/20 bg-card shadow-[var(--shadow-lg)] backdrop-blur-sm overflow-hidden">
+      <div className="bg-gradient-to-r from-primary/20 via-accent/15 to-secondary/40 px-4 py-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex items-start gap-3">
               <div className="rounded-xl border border-primary/30 bg-primary/15 p-2.5">
@@ -85,8 +84,8 @@ const ProposalCardPayment = ({
           </div>
         </div>
 
-        <div className="space-y-4 p-4">
-          <div className="grid gap-3 rounded-2xl border border-border/60 bg-background/40 p-4 md:grid-cols-[1.2fr_0.8fr] md:items-center">
+      <div className="space-y-4 p-4">
+          <div className="grid gap-3 rounded-2xl bg-background/30 p-4 md:grid-cols-[1.2fr_0.8fr] md:items-center">
             <div>
               <p className="text-sm font-medium text-foreground">Resumo do pagamento</p>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -94,7 +93,7 @@ const ProposalCardPayment = ({
               </p>
             </div>
 
-            <div className="rounded-xl border border-primary/20 bg-primary/10 p-3 text-right">
+            <div className="rounded-xl bg-primary/10 p-3 text-right">
               <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Total no cartão</p>
               <p className="mt-1 text-xl font-semibold text-foreground">{formatCurrency(pricing.totalCustomerAmount)}</p>
               <p className="text-xs text-primary">
@@ -104,7 +103,7 @@ const ProposalCardPayment = ({
           </div>
 
           <div className={submitting ? 'pointer-events-none opacity-70' : ''}>
-            <div className="mb-4 space-y-2 rounded-xl border border-border/60 bg-background/30 p-3">
+            <div className="mb-4 space-y-2 rounded-xl bg-background/30 p-3">
               <p className="text-sm font-medium text-foreground">Parcelamento</p>
               <select
                 value={installments}
@@ -133,8 +132,8 @@ const ProposalCardPayment = ({
               </p>
             </div>
 
-            <div className="overflow-hidden rounded-2xl border border-primary/20 bg-card/95 p-4 shadow-[var(--shadow-md)]">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-3">
+            <div className="overflow-hidden rounded-2xl bg-card/95 p-4 shadow-[var(--shadow-md)]">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3 pb-3">
                 <div>
                   <p className="font-medium text-foreground">Dados do cartão</p>
                   <p className="text-xs text-muted-foreground">Visual personalizado com a identidade da proposta.</p>
@@ -215,7 +214,6 @@ const ProposalCardPayment = ({
               />
             </div>
           </div>
-        </div>
       </div>
 
       {submitting && (
