@@ -25,8 +25,74 @@ interface CreatePreferenceRequest {
   title: string;
   description?: string;
   clientEmail: string;
+  clientId?: string;
+  clientName?: string;
+  clientDocument?: string;
   externalReference?: string;
+  subscriptionId?: string;
+  proposalId?: string;
+  proposalPaymentType?: "entry" | "total";
+  maxInstallments?: number;
+  returnUrl?: string;
 }
+
+const getSupabaseAdmin = () => {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  return createClient(supabaseUrl, supabaseKey);
+};
+
+const findExistingPendingPayment = async (
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  body: {
+    clientId?: string;
+    subscriptionId?: string;
+    proposalId?: string;
+    proposalPaymentType?: "entry" | "total";
+    amount: number;
+  },
+) => {
+  if (body.proposalId) {
+    const { data } = await supabase
+      .from("payments")
+      .select("id")
+      .eq("proposal_id", body.proposalId)
+      .eq("proposal_payment_type", body.proposalPaymentType || null)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    return data;
+  }
+
+  if (body.subscriptionId) {
+    const { data } = await supabase
+      .from("payments")
+      .select("id")
+      .eq("client_id", body.clientId)
+      .eq("subscription_id", body.subscriptionId)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    return data;
+  }
+
+  const { data } = await supabase
+    .from("payments")
+    .select("id")
+    .eq("client_id", body.clientId)
+    .is("subscription_id", null)
+    .eq("status", "pending")
+    .eq("amount", body.amount)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return data;
+};
 
 serve(async (req: Request) => {
   // Handle CORS preflight
@@ -98,48 +164,8 @@ serve(async (req: Request) => {
       console.log("PIX payment created:", result.id);
 
       // Save to local database
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
-
-      // Check if there's already a pending payment for this subscription/charge
-      let existingPayment = null;
-      if (body.proposalId) {
-        const { data } = await supabase
-          .from("payments")
-          .select("id")
-          .eq("proposal_id", body.proposalId)
-          .eq("proposal_payment_type", body.proposalPaymentType || null)
-          .eq("status", "pending")
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        existingPayment = data;
-      } else if (body.subscriptionId) {
-        const { data } = await supabase
-          .from("payments")
-          .select("id")
-          .eq("client_id", body.clientId)
-          .eq("subscription_id", body.subscriptionId)
-          .eq("status", "pending")
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .single();
-        existingPayment = data;
-      } else {
-        // For single charges, check by client_id + amount + description
-        const { data } = await supabase
-          .from("payments")
-          .select("id")
-          .eq("client_id", body.clientId)
-          .is("subscription_id", null)
-          .eq("status", "pending")
-          .eq("amount", body.amount)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .single();
-        existingPayment = data;
-      }
+      const supabase = getSupabaseAdmin();
+      const existingPayment = await findExistingPendingPayment(supabase, body);
 
       if (existingPayment) {
         // Update existing payment with transaction_id
@@ -217,9 +243,7 @@ serve(async (req: Request) => {
         throw new Error(result.message || "Erro ao verificar status");
       }
 
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
+      const supabase = getSupabaseAdmin();
 
       const localStatus = result.status === "approved"
         ? "paid"
@@ -295,17 +319,26 @@ serve(async (req: Request) => {
         ],
         payer: {
           email: body.clientEmail,
+          name: body.clientName,
+          identification: body.clientDocument ? {
+            type: body.clientDocument.length <= 11 ? "CPF" : "CNPJ",
+            number: body.clientDocument.replace(/[^\d]/g, ""),
+          } : undefined,
         },
         payment_methods: {
-          excluded_payment_types: [
-            { id: "credit_card" },
-            { id: "debit_card" },
-            { id: "ticket" }, // boleto
-          ],
-          default_payment_method_id: "pix",
+          excluded_payment_types: [{ id: "ticket" }],
+          installments: Math.min(Math.max(body.maxInstallments || 1, 1), 4),
+          default_installments: Math.min(Math.max(body.maxInstallments || 1, 1), 4),
         },
         external_reference: body.externalReference,
         notification_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/mercadopago-webhook`,
+        back_urls: body.returnUrl
+          ? {
+              success: body.returnUrl,
+              failure: body.returnUrl,
+              pending: body.returnUrl,
+            }
+          : undefined,
         auto_return: "approved",
       };
 
@@ -326,6 +359,39 @@ serve(async (req: Request) => {
       }
 
       console.log("Preference created:", result.id);
+
+      const supabase = getSupabaseAdmin();
+      const existingPayment = await findExistingPendingPayment(supabase, body);
+
+      const paymentPayload = {
+        client_id: body.clientId || null,
+        subscription_id: body.subscriptionId || null,
+        proposal_id: body.proposalId || null,
+        proposal_payment_type: body.proposalPaymentType || null,
+        amount: body.amount,
+        status: "pending",
+        payment_method: "CREDIT_CARD",
+        description: body.description || body.title,
+        asaas_id: null,
+        transaction_id: null,
+      };
+
+      if (existingPayment) {
+        const { error: updateError } = await supabase
+          .from("payments")
+          .update(paymentPayload)
+          .eq("id", existingPayment.id);
+
+        if (updateError) {
+          console.error("Error updating card payment in DB:", updateError);
+        }
+      } else {
+        const { error: dbError } = await supabase.from("payments").insert(paymentPayload);
+
+        if (dbError) {
+          console.error("Error saving card payment to DB:", dbError);
+        }
+      }
 
       return new Response(
         JSON.stringify({

@@ -13,6 +13,22 @@ interface CreatePixPaymentParams {
   proposalPaymentType?: 'entry' | 'total';
 }
 
+interface CreateCardPreferenceParams {
+  amount: number;
+  title: string;
+  description?: string;
+  clientEmail: string;
+  clientId?: string;
+  clientName?: string;
+  clientDocument?: string;
+  externalReference?: string;
+  subscriptionId?: string;
+  proposalId?: string;
+  proposalPaymentType?: 'entry' | 'total';
+  maxInstallments?: number;
+  returnUrl?: string;
+}
+
 interface PixPaymentResult {
   success: boolean;
   paymentId?: string;
@@ -97,13 +113,7 @@ export function useMercadoPago() {
     }
   };
 
-  const createPreference = async (params: {
-    amount: number;
-    title: string;
-    description?: string;
-    clientEmail: string;
-    externalReference?: string;
-  }) => {
+  const createPreference = async (params: CreateCardPreferenceParams) => {
     setLoading(true);
     try {
       const response = await fetch(

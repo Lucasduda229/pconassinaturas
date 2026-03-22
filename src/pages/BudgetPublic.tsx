@@ -48,7 +48,7 @@ const BudgetPublic = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
-  const [creatingPayment, setCreatingPayment] = useState<'entry' | 'total' | null>(null);
+  const [creatingPayment, setCreatingPayment] = useState<'entry' | 'total' | 'entry-card' | 'total-card' | null>(null);
   const [pixPayment, setPixPayment] = useState<{
     type: 'entry' | 'total';
     paymentId: string;
@@ -60,7 +60,7 @@ const BudgetPublic = () => {
   } | null>(null);
   const hasTrackedView = useRef(false);
   const notificationRetryRef = useRef<Record<string, boolean>>({});
-  const { createPixPayment, checkPaymentStatus } = useMercadoPago();
+  const { createPixPayment, checkPaymentStatus, createPreference } = useMercadoPago();
 
   const refreshProposal = useCallback(async (proposalId: string) => {
     const { data, error } = await (supabase as any)
@@ -205,6 +205,48 @@ const BudgetPublic = () => {
         });
         toast.success(type === 'entry' ? 'PIX da entrada gerado com sucesso' : 'PIX do pagamento total gerado com sucesso');
       }
+    }).finally(() => {
+      setCreatingPayment(null);
+    });
+  };
+
+  const handleCardPayment = (type: 'entry' | 'total') => {
+    if (!proposal) return;
+
+    const amount = type === 'entry' ? Number(proposal.entry_amount || 0) : Number(proposal.total_amount || 0);
+
+    if (!amount) {
+      toast.error('Não há valor disponível para gerar o pagamento');
+      return;
+    }
+
+    setCreatingPayment(type === 'entry' ? 'entry-card' : 'total-card');
+
+    void createPreference({
+      amount,
+      title: type === 'entry'
+        ? `Entrada da proposta - ${proposal.project_title}`
+        : `Pagamento total da proposta - ${proposal.project_title}`,
+      description: type === 'entry'
+        ? `Entrada da proposta - ${proposal.project_title}`
+        : `Pagamento total da proposta - ${proposal.project_title}`,
+      clientEmail: proposal.client_email || 'contato@assinaturaspcon.sbs',
+      clientName: proposal.client_name,
+      proposalId: proposal.id,
+      proposalPaymentType: type,
+      externalReference: `proposal:${proposal.id}:${type}`,
+      maxInstallments: 4,
+      returnUrl: window.location.href,
+    }).then((result) => {
+      const checkoutUrl = result?.initPoint || result?.sandboxInitPoint;
+
+      if (!checkoutUrl) {
+        toast.error('Não foi possível abrir o checkout do cartão');
+        return;
+      }
+
+      window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
+      toast.success('Checkout de cartão aberto com parcelamento em até 4x');
     }).finally(() => {
       setCreatingPayment(null);
     });
@@ -415,9 +457,17 @@ const BudgetPublic = () => {
                         {creatingPayment === 'entry' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
                         {proposal.status === 'entry_paid' || proposal.status === 'paid' ? 'Entrada já paga' : 'Pagar entrada'}
                       </Button>
+                      <Button variant="outline" onClick={() => handleCardPayment('entry')} disabled={!canPayEntry || creatingPayment !== null} className="w-full">
+                        {creatingPayment === 'entry-card' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
+                        {proposal.status === 'entry_paid' || proposal.status === 'paid' ? 'Entrada no cartão já paga' : 'Pagar entrada no cartão em até 4x'}
+                      </Button>
                       <Button variant="secondary" onClick={() => handlePaymentPlaceholder('total')} disabled={!canPayTotal || creatingPayment !== null} className="w-full">
                         {creatingPayment === 'total' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
                         {proposal.status === 'paid' ? 'Pagamento total confirmado' : 'Pagar total'}
+                      </Button>
+                      <Button variant="outline" onClick={() => handleCardPayment('total')} disabled={!canPayTotal || creatingPayment !== null} className="w-full">
+                        {creatingPayment === 'total-card' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
+                        {proposal.status === 'paid' ? 'Pagamento total no cartão confirmado' : 'Pagar total no cartão em até 4x'}
                       </Button>
                       <Button variant="outline" onClick={handleDownloadPdf} disabled={downloadingPdf} className="w-full">
                         {downloadingPdf ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}

@@ -88,12 +88,32 @@ serve(async (req: Request) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch the payment record BEFORE updating to check current status
-    const { data: paymentRecord } = await supabase
+    const externalReference = paymentData.external_reference as string | undefined;
+
+    let paymentQuery = supabase
       .from("payments")
-      .select("id, subscription_id, client_id, amount, description, status, proposal_id, proposal_payment_type")
+      .select("id, subscription_id, client_id, amount, description, status, proposal_id, proposal_payment_type, payment_method")
       .eq("transaction_id", paymentId.toString())
-      .single();
+      .maybeSingle();
+
+    let { data: paymentRecord } = await paymentQuery;
+
+    if (!paymentRecord && externalReference?.startsWith("proposal:")) {
+      const [, proposalId, paymentType] = externalReference.split(":");
+
+      const { data } = await supabase
+        .from("payments")
+        .select("id, subscription_id, client_id, amount, description, status, proposal_id, proposal_payment_type, payment_method")
+        .eq("proposal_id", proposalId)
+        .eq("proposal_payment_type", paymentType === "entry" ? "entry" : "total")
+        .eq("payment_method", "CREDIT_CARD")
+        .in("status", ["pending", "cancelled"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      paymentRecord = data;
+    }
 
     if (!paymentRecord) {
       console.log("No payment record found for transaction_id:", paymentId);
@@ -109,7 +129,7 @@ serve(async (req: Request) => {
     // Update payment status
     const { error: updateError } = await supabase
       .from("payments")
-      .update({ status: dbStatus, paid_at: paidAt })
+      .update({ status: dbStatus, paid_at: paidAt, transaction_id: paymentId.toString() })
       .eq("id", paymentRecord.id);
 
     if (updateError) {
