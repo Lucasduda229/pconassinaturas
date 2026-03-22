@@ -116,6 +116,9 @@ const BudgetSettings = () => {
                 onChange={(event) => setNotificationEmail(event.target.value)}
                 placeholder="contato@assinaturaspcon.sbs"
               />
+              <p className="text-xs text-muted-foreground">
+                Os alertas de visualização, aprovação e recusa dos orçamentos são enviados automaticamente pela integração de e-mail já conectada com a Resend.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="proposal-notification-phone">WhatsApp de destino</Label>
