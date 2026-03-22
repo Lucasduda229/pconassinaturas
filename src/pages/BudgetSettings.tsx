@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
+const DEFAULT_PROPOSAL_WHATSAPP = '(11) 97836-3600';
+
 const settingsCards = [
   {
     icon: Link2,
@@ -33,7 +35,6 @@ const settingsCards = [
 
 const BudgetSettings = () => {
   const [notificationEmail, setNotificationEmail] = useState('contato@assinaturaspcon.sbs');
-  const [notificationPhone, setNotificationPhone] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -41,15 +42,13 @@ const BudgetSettings = () => {
       const { data, error } = await supabase
         .from('email_settings')
         .select('id, setting_key, setting_value')
-        .in('setting_key', ['proposal_notification_email', 'proposal_notification_phone']);
+        .in('setting_key', ['proposal_notification_email']);
 
       if (error) return;
 
       const email = data?.find((item) => item.setting_key === 'proposal_notification_email')?.setting_value;
-      const phone = data?.find((item) => item.setting_key === 'proposal_notification_phone')?.setting_value;
 
       if (email) setNotificationEmail(email);
-      if (phone) setNotificationPhone(phone);
     };
 
     void loadSettings();
@@ -86,10 +85,7 @@ const BudgetSettings = () => {
     setSaving(true);
 
     try {
-      await Promise.all([
-        saveSetting('proposal_notification_email', notificationEmail.trim() || 'contato@assinaturaspcon.sbs'),
-        saveSetting('proposal_notification_phone', notificationPhone.trim()),
-      ]);
+      await saveSetting('proposal_notification_email', notificationEmail.trim() || 'contato@assinaturaspcon.sbs');
 
       toast.success('Configurações de notificações salvas');
     } catch (error) {
@@ -125,10 +121,13 @@ const BudgetSettings = () => {
               <Label htmlFor="proposal-notification-phone">WhatsApp de destino</Label>
               <Input
                 id="proposal-notification-phone"
-                value={notificationPhone}
-                onChange={(event) => setNotificationPhone(event.target.value)}
-                placeholder="(00) 00000-0000"
+                value={DEFAULT_PROPOSAL_WHATSAPP}
+                readOnly
+                disabled
               />
+              <p className="text-xs text-muted-foreground">
+                Envio automático fixado no número conectado da API para garantir o recebimento dos alertas.
+              </p>
             </div>
             <div className="md:col-span-2 flex justify-end">
               <Button onClick={handleSave} disabled={saving}>

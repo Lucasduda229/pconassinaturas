@@ -8,6 +8,7 @@ const corsHeaders = {
 
 const APP_URL = "https://pconassinaturas.lovable.app";
 const EMAIL_FALLBACK = "contato@assinaturaspcon.sbs";
+const WHATSAPP_FALLBACK = "11978363600";
 
 type EventType = "viewed" | "approved" | "rejected";
 
@@ -46,6 +47,15 @@ const formatDateTime = (value: string | null) => {
     hour: "2-digit",
     minute: "2-digit",
   });
+};
+
+const normalizePhone = (value: string | null | undefined) => {
+  const digits = (value || "").replace(/\D/g, "");
+
+  if (!digits) return "";
+  if (digits.startsWith("55")) return digits;
+
+  return `55${digits}`;
 };
 
 const buildWhatsAppMessage = (proposal: any, eventType: EventType, publicUrl: string) => {
@@ -193,7 +203,8 @@ serve(async (req) => {
       .in("setting_key", ["proposal_notification_email", "proposal_notification_phone"]);
 
     const notificationEmail = settings?.find((item) => item.setting_key === "proposal_notification_email")?.setting_value?.trim() || EMAIL_FALLBACK;
-    const notificationPhone = settings?.find((item) => item.setting_key === "proposal_notification_phone")?.setting_value?.trim() || "";
+    const configuredPhone = settings?.find((item) => item.setting_key === "proposal_notification_phone")?.setting_value?.trim() || "";
+    const notificationPhone = normalizePhone(configuredPhone || WHATSAPP_FALLBACK);
     const publicUrl = `${APP_URL}/proposta/${proposal.public_slug}`;
 
     let emailSent = false;
