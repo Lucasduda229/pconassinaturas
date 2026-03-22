@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Loader2, Lock, Mail, ArrowRight, UserPlus } from 'lucide-react';
-import logo from '@/assets/logo-pcon-grande.png';
+import logo from '@/assets/logo-pcon-pwa-large.png';
 import BlueBackground from '@/components/BlueBackground';
 
 const ClientLogin = () => {
@@ -45,7 +45,7 @@ const ClientLogin = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="w-full max-w-md relative z-10"
+        className="w-full max-w-lg relative z-10"
       >
         {/* Glass Card */}
         <div className="glass-card p-8 sm:p-10">
@@ -59,7 +59,7 @@ const ClientLogin = () => {
             <img 
               src={logo} 
               alt="P-CON Logo" 
-              className="h-24 sm:h-28 w-auto" 
+              className="w-full max-w-[22rem] sm:max-w-[26rem] h-auto drop-shadow-[0_12px_36px_hsl(var(--primary)/0.35)]" 
             />
           </motion.div>
 
