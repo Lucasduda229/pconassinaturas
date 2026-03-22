@@ -48,7 +48,7 @@ const BudgetPublic = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
-  const [creatingPayment, setCreatingPayment] = useState<'entry' | 'total' | null>(null);
+  const [creatingPayment, setCreatingPayment] = useState<'entry' | 'total' | 'entry-card' | 'total-card' | null>(null);
   const [pixPayment, setPixPayment] = useState<{
     type: 'entry' | 'total';
     paymentId: string;
@@ -60,7 +60,7 @@ const BudgetPublic = () => {
   } | null>(null);
   const hasTrackedView = useRef(false);
   const notificationRetryRef = useRef<Record<string, boolean>>({});
-  const { createPixPayment, checkPaymentStatus } = useMercadoPago();
+  const { createPixPayment, checkPaymentStatus, createPreference } = useMercadoPago();
 
   const refreshProposal = useCallback(async (proposalId: string) => {
     const { data, error } = await (supabase as any)
@@ -205,6 +205,48 @@ const BudgetPublic = () => {
         });
         toast.success(type === 'entry' ? 'PIX da entrada gerado com sucesso' : 'PIX do pagamento total gerado com sucesso');
       }
+    }).finally(() => {
+      setCreatingPayment(null);
+    });
+  };
+
+  const handleCardPayment = (type: 'entry' | 'total') => {
+    if (!proposal) return;
+
+    const amount = type === 'entry' ? Number(proposal.entry_amount || 0) : Number(proposal.total_amount || 0);
+
+    if (!amount) {
+      toast.error('Não há valor disponível para gerar o pagamento');
+      return;
+    }
+
+    setCreatingPayment(type === 'entry' ? 'entry-card' : 'total-card');
+
+    void createPreference({
+      amount,
+      title: type === 'entry'
+        ? `Entrada da proposta - ${proposal.project_title}`
+        : `Pagamento total da proposta - ${proposal.project_title}`,
+      description: type === 'entry'
+        ? `Entrada da proposta - ${proposal.project_title}`
+        : `Pagamento total da proposta - ${proposal.project_title}`,
+      clientEmail: proposal.client_email || 'contato@assinaturaspcon.sbs',
+      clientName: proposal.client_name,
+      proposalId: proposal.id,
+      proposalPaymentType: type,
+      externalReference: `proposal:${proposal.id}:${type}`,
+      maxInstallments: 4,
+      returnUrl: window.location.href,
+    }).then((result) => {
+      const checkoutUrl = result?.initPoint || result?.sandboxInitPoint;
+
+      if (!checkoutUrl) {
+        toast.error('Não foi possível abrir o checkout do cartão');
+        return;
+      }
+
+      window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
+      toast.success('Checkout de cartão aberto com parcelamento em até 4x');
     }).finally(() => {
       setCreatingPayment(null);
     });
