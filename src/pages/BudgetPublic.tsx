@@ -562,7 +562,7 @@ const BudgetPublic = () => {
 
                         {paymentMethod === 'pix' ? (
                           <Button variant="secondary" onClick={handleSelectedPayment} disabled={!canPaySelected || creatingPayment !== null} className="w-full">
-                            {creatingPayment === selectedChargeType ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
+                            {creatingPayment === selectedChargeType ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <img src={pixIcon} alt="PIX" className="h-4 w-4 mr-2 object-contain" />}
                             Gerar PIX do pagamento selecionado
                           </Button>
                         ) : (
