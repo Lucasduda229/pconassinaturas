@@ -41,6 +41,7 @@ const ProposalCardPayment = ({
   onSubmit,
 }: ProposalCardPaymentProps) => {
   const cleanDocument = normalizeDocument(payerDocument);
+  const formKey = `${amount}-${payerEmail || 'guest'}-${cleanDocument || 'no-doc'}`;
 
   return (
     <div className="space-y-4 rounded-2xl border border-border/60 bg-secondary/10 p-4">
@@ -56,6 +57,7 @@ const ProposalCardPayment = ({
 
       <div className={submitting ? 'pointer-events-none opacity-70' : ''}>
         <CardPayment
+          key={formKey}
           initialization={{
             amount,
             payer: {
