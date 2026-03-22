@@ -28,8 +28,8 @@ const settingsCards = [
   },
   {
     icon: CreditCard,
-    title: 'Pagamento futuro',
-    description: 'Estrutura pronta para integrar PIX, cartão e entrada parcial em uma próxima etapa.',
+    title: 'Pagamento integrado',
+    description: 'As propostas já podem gerar cobrança por PIX com entrada ou valor total, usando a integração ativa do sistema.',
   },
 ];
 
@@ -99,7 +99,7 @@ const BudgetSettings = () => {
   return (
     <DashboardLayout
       title="Configurações de Orçamentos"
-      subtitle="Base pronta para escalar propostas comerciais e pagamentos futuros"
+      subtitle="Gerencie notificações e recursos ativos das propostas comerciais"
     >
       <div className="space-y-6">
         <Card className="glass-card">
