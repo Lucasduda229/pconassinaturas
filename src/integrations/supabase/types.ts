@@ -892,6 +892,7 @@ export type Database = {
           allow_partial_payment: boolean
           allow_payment: boolean
           approved_at: string | null
+          approved_notification_sent_at: string | null
           client_company: string | null
           client_email: string | null
           client_name: string
@@ -912,6 +913,7 @@ export type Database = {
           public_link_enabled: boolean
           public_slug: string
           rejected_at: string | null
+          rejected_notification_sent_at: string | null
           scope_items: string[]
           sent_at: string | null
           start_deadline: string | null
@@ -921,12 +923,14 @@ export type Database = {
           updated_at: string
           valid_until: string
           view_count: number
+          view_notification_sent_at: string | null
         }
         Insert: {
           allow_online_approval?: boolean
           allow_partial_payment?: boolean
           allow_payment?: boolean
           approved_at?: string | null
+          approved_notification_sent_at?: string | null
           client_company?: string | null
           client_email?: string | null
           client_name: string
@@ -947,6 +951,7 @@ export type Database = {
           public_link_enabled?: boolean
           public_slug?: string
           rejected_at?: string | null
+          rejected_notification_sent_at?: string | null
           scope_items?: string[]
           sent_at?: string | null
           start_deadline?: string | null
@@ -956,12 +961,14 @@ export type Database = {
           updated_at?: string
           valid_until: string
           view_count?: number
+          view_notification_sent_at?: string | null
         }
         Update: {
           allow_online_approval?: boolean
           allow_partial_payment?: boolean
           allow_payment?: boolean
           approved_at?: string | null
+          approved_notification_sent_at?: string | null
           client_company?: string | null
           client_email?: string | null
           client_name?: string
@@ -982,6 +989,7 @@ export type Database = {
           public_link_enabled?: boolean
           public_slug?: string
           rejected_at?: string | null
+          rejected_notification_sent_at?: string | null
           scope_items?: string[]
           sent_at?: string | null
           start_deadline?: string | null
@@ -991,6 +999,7 @@ export type Database = {
           updated_at?: string
           valid_until?: string
           view_count?: number
+          view_notification_sent_at?: string | null
         }
         Relationships: []
       }
@@ -1411,6 +1420,7 @@ export type Database = {
           allow_partial_payment: boolean
           allow_payment: boolean
           approved_at: string | null
+          approved_notification_sent_at: string | null
           client_company: string | null
           client_email: string | null
           client_name: string
@@ -1431,6 +1441,7 @@ export type Database = {
           public_link_enabled: boolean
           public_slug: string
           rejected_at: string | null
+          rejected_notification_sent_at: string | null
           scope_items: string[]
           sent_at: string | null
           start_deadline: string | null
@@ -1440,6 +1451,7 @@ export type Database = {
           updated_at: string
           valid_until: string
           view_count: number
+          view_notification_sent_at: string | null
         }
         SetofOptions: {
           from: "*"
@@ -1455,6 +1467,7 @@ export type Database = {
           allow_partial_payment: boolean
           allow_payment: boolean
           approved_at: string | null
+          approved_notification_sent_at: string | null
           client_company: string | null
           client_email: string | null
           client_name: string
@@ -1475,6 +1488,7 @@ export type Database = {
           public_link_enabled: boolean
           public_slug: string
           rejected_at: string | null
+          rejected_notification_sent_at: string | null
           scope_items: string[]
           sent_at: string | null
           start_deadline: string | null
@@ -1484,6 +1498,7 @@ export type Database = {
           updated_at: string
           valid_until: string
           view_count: number
+          view_notification_sent_at: string | null
         }
         SetofOptions: {
           from: "*"
