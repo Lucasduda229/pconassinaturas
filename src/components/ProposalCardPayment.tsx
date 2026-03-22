@@ -34,6 +34,9 @@ interface ProposalCardPaymentProps {
 
 const normalizeDocument = (value?: string | null) => value?.replace(/\D/g, '') || '';
 
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+
 const ProposalCardPayment = ({
   amount,
   payerEmail,
@@ -46,6 +49,7 @@ const ProposalCardPayment = ({
 }: ProposalCardPaymentProps) => {
   const cleanDocument = normalizeDocument(payerDocument);
   const formKey = `${amount}-${payerEmail || 'guest'}-${cleanDocument || 'no-doc'}`;
+  const installmentAmount = amount / installments;
 
   return (
     <div className="space-y-4 rounded-2xl border border-border/60 bg-secondary/10 p-4">
@@ -67,12 +71,14 @@ const ProposalCardPayment = ({
             onChange={(event) => onInstallmentsChange(Number(event.target.value))}
             className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground"
           >
-            <option value={1}>1x sem juros</option>
-            <option value={2}>2x</option>
-            <option value={3}>3x</option>
-            <option value={4}>4x</option>
+            <option value={1}>1x de {formatCurrency(amount)} sem juros</option>
+            <option value={2}>2x de {formatCurrency(amount / 2)}</option>
+            <option value={3}>3x de {formatCurrency(amount / 3)}</option>
+            <option value={4}>4x de {formatCurrency(amount / 4)}</option>
           </select>
-          <p className="text-xs text-muted-foreground">Escolha quantas parcelas o cliente vai pagar no cartão.</p>
+          <p className="text-xs text-muted-foreground">
+            Total de {formatCurrency(amount)} em <span className="font-medium text-foreground">{installments}x de {formatCurrency(installmentAmount)}</span>.
+          </p>
         </div>
 
         <CardPayment
