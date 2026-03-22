@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Copy, CheckCircle, Clock, RefreshCw, ExternalLink } from 'lucide-react';
+import { Copy, CheckCircle, LoaderCircle, RefreshCw, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import pixIcon from '@/assets/pix-icon.svg';
@@ -168,7 +168,7 @@ const PixQRCode = ({
           transition={{ duration: 2, repeat: Infinity }}
           className="flex items-center gap-2"
         >
-          <Clock className="h-4 w-4 text-amber-400" />
+          <LoaderCircle className="h-4 w-4 animate-spin text-amber-400" />
           <span className="text-muted-foreground">Aguardando pagamento...</span>
         </motion.div>
       </div>
