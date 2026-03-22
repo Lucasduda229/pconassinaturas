@@ -59,39 +59,39 @@ const ProposalCardPayment = ({
   const formKey = `${amount}-${installments}-${payerEmail || 'guest'}-${cleanDocument || 'no-doc'}`;
 
   return (
-    <div className="space-y-3 rounded-2xl border border-primary/20 bg-card shadow-[var(--shadow-lg)] backdrop-blur-sm overflow-hidden">
-      <div className="bg-gradient-to-r from-primary/20 via-accent/15 to-secondary/40 px-4 py-3">
+    <div className="space-y-2 rounded-2xl border border-primary/20 bg-card shadow-[var(--shadow-lg)] backdrop-blur-sm overflow-hidden">
+      <div className="bg-gradient-to-r from-primary/20 via-accent/15 to-secondary/40 px-3 py-2.5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex items-start gap-3">
-              <div className="rounded-xl border border-primary/30 bg-primary/15 p-2.5">
-                <CreditCard className="h-5 w-5 text-primary" />
+              <div className="rounded-lg border border-primary/30 bg-primary/15 p-2">
+                <CreditCard className="h-4.5 w-4.5 text-primary" />
               </div>
               <div>
-                <p className="flex items-center gap-2 font-semibold text-foreground">
+                <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
                   Cartão de crédito ou débito
-                  <Sparkles className="h-4 w-4 text-primary" />
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
                 </p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   Escolha o parcelamento e preencha os dados.
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 rounded-full border border-success/20 bg-success/10 px-3 py-1 text-xs font-medium text-success">
-              <ShieldCheck className="h-3.5 w-3.5" />
+            <div className="flex items-center gap-1.5 rounded-full border border-success/20 bg-success/10 px-2.5 py-1 text-[11px] font-medium text-success">
+              <ShieldCheck className="h-3 w-3" />
               Ambiente protegido
             </div>
           </div>
         </div>
 
-      <div className="space-y-3 p-4">
+      <div className="space-y-2.5 p-3">
           <div className={submitting ? 'pointer-events-none opacity-70' : ''}>
-            <div className="mb-3 space-y-2 rounded-xl bg-background/30 p-3">
+            <div className="mb-2.5 space-y-1.5 rounded-xl bg-background/30 p-2.5">
               <p className="text-sm font-medium text-foreground">Parcelamento</p>
               <select
                 value={installments}
                 onChange={(event) => onInstallmentsChange(Number(event.target.value))}
-                className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-primary"
+                className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-primary"
               >
                 {installmentOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -99,7 +99,7 @@ const ProposalCardPayment = ({
                   </option>
                 ))}
               </select>
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+              <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px] text-muted-foreground">
                 <span>
                   Você recebe <span className="font-medium text-foreground">{formatCurrency(pricing.requestedAmount)}</span>
                 </span>
@@ -119,15 +119,15 @@ const ProposalCardPayment = ({
               </p>
             </div>
 
-            <div className="overflow-hidden rounded-2xl bg-card/95 p-3 shadow-[var(--shadow-md)]">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-3 pb-1">
+            <div className="overflow-hidden rounded-2xl bg-card/95 p-2.5 shadow-[var(--shadow-md)]">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2 pb-0.5">
                 <div>
-                  <p className="font-medium text-foreground">Dados do cartão</p>
-                  <p className="text-xs text-muted-foreground">Pagamento seguro na própria proposta.</p>
+                  <p className="text-sm font-medium text-foreground">Dados do cartão</p>
+                  <p className="text-[11px] text-muted-foreground">Pagamento seguro na própria proposta.</p>
                 </div>
 
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Lock className="h-3.5 w-3.5 text-primary" />
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <Lock className="h-3 w-3 text-primary" />
                   Pagamento seguro
                 </div>
               </div>
