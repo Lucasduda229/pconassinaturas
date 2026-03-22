@@ -1,14 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CheckCircle2, Clock3, CreditCard, Eye, FileText, ShieldCheck, XCircle } from 'lucide-react';
+import { CheckCircle2, Clock3, CreditCard, Eye, FileText, Loader2, ShieldCheck, XCircle } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import BlueBackground from '@/components/BlueBackground';
+import PixQRCode from '@/components/PixQRCode';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Proposal, ProposalStatus } from '@/hooks/useProposals';
+import { useMercadoPago } from '@/hooks/useMercadoPago';
 import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/logo-pcon-grande.png';
 import brandImage from '@/assets/pcon-construnet-brand.png';
@@ -45,7 +47,30 @@ const BudgetPublic = () => {
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [creatingPayment, setCreatingPayment] = useState<'entry' | 'total' | null>(null);
+  const [pixPayment, setPixPayment] = useState<{
+    type: 'entry' | 'total';
+    paymentId: string;
+    qrCode: string;
+    qrCodeBase64?: string;
+    ticketUrl?: string;
+    expirationDate?: string;
+    amount: number;
+  } | null>(null);
   const hasTrackedView = useRef(false);
+  const { createPixPayment, checkPaymentStatus } = useMercadoPago();
+
+  const refreshProposal = useCallback(async (proposalId: string) => {
+    const { data, error } = await (supabase as any)
+      .from('proposals')
+      .select('*')
+      .eq('id', proposalId)
+      .single();
+
+    if (error || !data) return;
+
+    setProposal(normalizeStatus(data as Proposal));
+  }, []);
 
   const notifyEvent = async (proposalId: string, eventType: 'viewed' | 'approved' | 'rejected') => {
     try {
@@ -115,7 +140,62 @@ const BudgetPublic = () => {
   };
 
   const handlePaymentPlaceholder = (type: 'entry' | 'total') => {
-    toast.info(type === 'entry' ? 'Pagamento da entrada será habilitado em breve.' : 'Pagamento total será habilitado em breve.');
+    if (!proposal) return;
+
+    const amount = type === 'entry' ? Number(proposal.entry_amount || 0) : Number(proposal.total_amount || 0);
+
+    if (!amount) {
+      toast.error('Não há valor disponível para gerar o pagamento');
+      return;
+    }
+
+    setCreatingPayment(type);
+
+    void createPixPayment({
+      amount,
+      description: type === 'entry'
+        ? `Entrada da proposta - ${proposal.project_title}`
+        : `Pagamento total da proposta - ${proposal.project_title}`,
+      clientEmail: proposal.client_email || 'contato@assinaturaspcon.sbs',
+      clientName: proposal.client_name,
+      proposalId: proposal.id,
+      proposalPaymentType: type,
+    }).then((result) => {
+      if (result?.success && result.paymentId && result.qrCode) {
+        setPixPayment({
+          type,
+          paymentId: result.paymentId,
+          qrCode: result.qrCode,
+          qrCodeBase64: result.qrCodeBase64,
+          ticketUrl: result.ticketUrl,
+          expirationDate: result.expirationDate,
+          amount,
+        });
+        toast.success(type === 'entry' ? 'PIX da entrada gerado com sucesso' : 'PIX do pagamento total gerado com sucesso');
+      }
+    }).finally(() => {
+      setCreatingPayment(null);
+    });
+  };
+
+  const canPayEntry = !!proposal?.allow_payment && !!proposal?.entry_amount && !['rejected', 'expired', 'entry_paid', 'paid'].includes(proposal?.status || 'draft');
+  const canPayTotal = !!proposal?.allow_payment && !['rejected', 'expired', 'paid'].includes(proposal?.status || 'draft');
+
+  const handleCheckPixStatus = async () => {
+    if (!pixPayment) return null;
+
+    const result = await checkPaymentStatus(pixPayment.paymentId);
+
+    if (result?.status === 'approved' && proposal) {
+      await refreshProposal(proposal.id);
+    }
+
+    return result;
+  };
+
+  const handlePaymentConfirmed = async () => {
+    if (!proposal) return;
+    await refreshProposal(proposal.id);
   };
 
   if (loading) {
@@ -274,15 +354,38 @@ const BudgetPublic = () => {
                         <XCircle className="h-4 w-4 mr-2" />
                         Recusar proposta
                       </Button>
-                      <Button variant="secondary" onClick={() => handlePaymentPlaceholder('entry')} disabled={!proposal.allow_payment || !proposal.entry_amount} className="w-full">
-                        <CreditCard className="h-4 w-4 mr-2" />
-                        Pagar entrada
+                      <Button variant="secondary" onClick={() => handlePaymentPlaceholder('entry')} disabled={!canPayEntry || creatingPayment !== null} className="w-full">
+                        {creatingPayment === 'entry' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
+                        {proposal.status === 'entry_paid' || proposal.status === 'paid' ? 'Entrada já paga' : 'Pagar entrada'}
                       </Button>
-                      <Button variant="secondary" onClick={() => handlePaymentPlaceholder('total')} disabled={!proposal.allow_payment} className="w-full">
-                        <CreditCard className="h-4 w-4 mr-2" />
-                        Pagar total
+                      <Button variant="secondary" onClick={() => handlePaymentPlaceholder('total')} disabled={!canPayTotal || creatingPayment !== null} className="w-full">
+                        {creatingPayment === 'total' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
+                        {proposal.status === 'paid' ? 'Pagamento total confirmado' : 'Pagar total'}
                       </Button>
                     </div>
+
+                    {pixPayment && (
+                      <div className="rounded-2xl border border-border/60 bg-secondary/10 p-4">
+                        <div className="mb-4">
+                          <p className="text-sm font-medium text-foreground">
+                            {pixPayment.type === 'entry' ? 'Pagamento da entrada' : 'Pagamento total'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Use o PIX abaixo para concluir o pagamento desta proposta.
+                          </p>
+                        </div>
+                        <PixQRCode
+                          paymentId={pixPayment.paymentId}
+                          qrCode={pixPayment.qrCode}
+                          qrCodeBase64={pixPayment.qrCodeBase64}
+                          ticketUrl={pixPayment.ticketUrl}
+                          expirationDate={pixPayment.expirationDate}
+                          amount={pixPayment.amount}
+                          onCheckStatus={handleCheckPixStatus}
+                          onPaymentConfirmed={handlePaymentConfirmed}
+                        />
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

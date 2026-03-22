@@ -837,6 +837,8 @@ export type Database = {
           id: string
           paid_at: string | null
           payment_method: string | null
+          proposal_id: string | null
+          proposal_payment_type: string | null
           status: string
           subscription_id: string | null
           transaction_id: string | null
@@ -851,6 +853,8 @@ export type Database = {
           id?: string
           paid_at?: string | null
           payment_method?: string | null
+          proposal_id?: string | null
+          proposal_payment_type?: string | null
           status?: string
           subscription_id?: string | null
           transaction_id?: string | null
@@ -865,6 +869,8 @@ export type Database = {
           id?: string
           paid_at?: string | null
           payment_method?: string | null
+          proposal_id?: string | null
+          proposal_payment_type?: string | null
           status?: string
           subscription_id?: string | null
           transaction_id?: string | null
@@ -875,6 +881,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
           {
