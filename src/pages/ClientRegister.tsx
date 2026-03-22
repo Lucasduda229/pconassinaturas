@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Loader2, User, Mail, Phone, FileText, Lock, ArrowRight, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import logo from '@/assets/logo-pcon-grande.png';
+import logo from '@/assets/logo-pcon-pwa-large.png';
 import BlueBackground from '@/components/BlueBackground';
 import { z } from 'zod';
 
@@ -131,7 +131,7 @@ const ClientRegister = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="w-full max-w-md relative z-10"
+        className="w-full max-w-lg relative z-10"
       >
         {/* Glass Card */}
         <div className="glass-card p-8 sm:p-10">
@@ -145,7 +145,7 @@ const ClientRegister = () => {
             <img 
               src={logo} 
               alt="P-CON Logo" 
-              className="h-20 sm:h-24 w-auto" 
+              className="w-full max-w-[20rem] sm:max-w-[24rem] h-auto drop-shadow-[0_12px_36px_hsl(var(--primary)/0.35)]" 
             />
           </motion.div>
 
