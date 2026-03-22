@@ -25,9 +25,9 @@ const Login = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
     if (!username || !password) {
       toast.error('Por favor, preencha todos os campos.');
       setIsLoading(false);
@@ -35,14 +35,14 @@ const Login = () => {
     }
 
     const success = login(username, password);
-    
+
     if (success) {
       toast.success('Login realizado com sucesso!');
       navigate('/dashboard');
     } else {
       toast.error('Usuário ou senha incorretos.');
     }
-    
+
     setIsLoading(false);
   };
 
@@ -50,19 +50,19 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center p-4 relative">
       <BlueBackground />
       
-      <motion.div 
+      <motion.div
         className="w-full max-w-sm sm:max-w-md relative z-10"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-      >
+        transition={{ duration: 0.5, ease: 'easeOut' }}>
+        
         {/* Logo */}
-        <motion.div 
+        <motion.div
           className="text-center mb-8"
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.1, duration: 0.4 }}
-        >
+          transition={{ delay: 0.1, duration: 0.4 }}>
+          
           <div className="inline-flex items-center justify-center gap-3 mb-4">
             <img src={logo} alt="P-CON" className="h-20 sm:h-28 w-auto" />
           </div>
@@ -75,12 +75,12 @@ const Login = () => {
         </motion.div>
 
         {/* Login Card */}
-        <motion.div 
+        <motion.div
           className="glass-card p-6 sm:p-8"
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15, duration: 0.4 }}
-        >
+          transition={{ delay: 0.15, duration: 0.4 }}>
+          
           <h2 className="font-heading text-lg sm:text-xl font-semibold text-foreground mb-6">
             Entrar no Sistema
           </h2>
@@ -96,8 +96,8 @@ const Login = () => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="pl-12 bg-secondary/50 border-border/50 focus:border-primary/60 focus:ring-2 focus:ring-primary/20 h-12 rounded-xl transition-all duration-200"
-                  autoComplete="username"
-                />
+                  autoComplete="username" />
+                
               </div>
             </div>
 
@@ -111,13 +111,13 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-12 pr-12 bg-secondary/50 border-border/50 focus:border-primary/60 focus:ring-2 focus:ring-primary/20 h-12 rounded-xl transition-all duration-200"
-                  autoComplete="current-password"
-                />
+                  autoComplete="current-password" />
+                
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                  
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
@@ -126,37 +126,37 @@ const Login = () => {
             <motion.div
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
-              className="pt-2"
-            >
-              <Button 
-                type="submit" 
+              className="pt-2">
+              
+              <Button
+                type="submit"
                 className="w-full h-12 btn-blue text-base font-semibold"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  'Entrando...'
-                ) : (
-                  <span className="flex items-center justify-center gap-2">
+                disabled={isLoading}>
+                
+                {isLoading ?
+                'Entrando...' :
+
+                <span className="flex items-center justify-center gap-2">
                     Entrar
                     <ArrowRight className="h-5 w-5" />
                   </span>
-                )}
+                }
               </Button>
             </motion.div>
           </form>
         </motion.div>
 
-        <motion.p 
-          className="text-center text-muted-foreground/60 text-xs sm:text-sm mt-6"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-        >
-          © 2024 P-CON Construct. Todos os direitos reservados.
-        </motion.p>
+        
+
+
+
+
+
+
+        
       </motion.div>
-    </div>
-  );
+    </div>);
+
 };
 
 export default Login;
