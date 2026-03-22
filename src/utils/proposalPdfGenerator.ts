@@ -1,7 +1,6 @@
 import jsPDF from 'jspdf';
 import type { Proposal } from '@/hooks/useProposals';
 import brandImage from '@/assets/pcon-construnet-brand.png';
-import logoImage from '@/assets/logo-pcon-grande.png';
 
 const formatCurrency = (value: number | null) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0));
@@ -88,13 +87,9 @@ export const generateProposalPDF = async (proposal: Proposal) => {
   doc.rect(0, 0, pageWidth, 48, 'F');
 
   try {
-    const [brandBase64, logoBase64] = await Promise.all([
-      loadImageAsBase64(brandImage),
-      loadImageAsBase64(logoImage),
-    ]);
+    const brandBase64 = await loadImageAsBase64(brandImage);
 
-    doc.addImage(brandBase64, 'PNG', 16, 9, 54, 24);
-    doc.addImage(logoBase64, 'PNG', 159, 10, 26, 20);
+    doc.addImage(brandBase64, 'PNG', 16, 9, 64, 24);
   } catch (error) {
     console.error('Erro ao carregar imagens da proposta PDF:', error);
     doc.setFont('helvetica', 'bold');
