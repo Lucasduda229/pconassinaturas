@@ -11,11 +11,13 @@ const MERCADOPAGO_API_URL = "https://api.mercadopago.com";
 interface CreatePixPaymentRequest {
   amount: number;
   description: string;
-  clientId: string;
+  clientId?: string;
   clientEmail: string;
   clientName: string;
   clientDocument?: string;
   subscriptionId?: string;
+  proposalId?: string;
+  proposalPaymentType?: "entry" | "total";
 }
 
 interface CreatePreferenceRequest {
@@ -47,6 +49,11 @@ serve(async (req: Request) => {
     // Create PIX payment
     if (action === "create-pix") {
       const body: CreatePixPaymentRequest = await req.json();
+
+      if (!body.clientId && !body.proposalId) {
+        throw new Error("clientId ou proposalId é obrigatório");
+      }
+
       console.log("Creating PIX payment:", { 
         amount: body.amount, 
         description: body.description,
@@ -97,7 +104,18 @@ serve(async (req: Request) => {
 
       // Check if there's already a pending payment for this subscription/charge
       let existingPayment = null;
-      if (body.subscriptionId) {
+      if (body.proposalId) {
+        const { data } = await supabase
+          .from("payments")
+          .select("id")
+          .eq("proposal_id", body.proposalId)
+          .eq("proposal_payment_type", body.proposalPaymentType || null)
+          .eq("status", "pending")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        existingPayment = data;
+      } else if (body.subscriptionId) {
         const { data } = await supabase
           .from("payments")
           .select("id")
@@ -130,6 +148,11 @@ serve(async (req: Request) => {
           .update({
             transaction_id: result.id?.toString(),
             payment_method: "PIX",
+            description: body.description,
+            amount: body.amount,
+            client_id: body.clientId || null,
+            proposal_id: body.proposalId || null,
+            proposal_payment_type: body.proposalPaymentType || null,
           })
           .eq("id", existingPayment.id);
 
@@ -141,8 +164,10 @@ serve(async (req: Request) => {
       } else {
         // No existing payment found, create new one
         const { error: dbError } = await supabase.from("payments").insert({
-          client_id: body.clientId,
+          client_id: body.clientId || null,
           subscription_id: body.subscriptionId || null,
+          proposal_id: body.proposalId || null,
+          proposal_payment_type: body.proposalPaymentType || null,
           amount: body.amount,
           status: "pending",
           payment_method: "PIX",
@@ -190,6 +215,56 @@ serve(async (req: Request) => {
       if (!response.ok) {
         console.error("Mercado Pago status check error:", result);
         throw new Error(result.message || "Erro ao verificar status");
+      }
+
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const supabase = createClient(supabaseUrl, supabaseKey);
+
+      const localStatus = result.status === "approved"
+        ? "paid"
+        : result.status === "rejected" || result.status === "cancelled"
+          ? "cancelled"
+          : result.status === "refunded"
+            ? "refunded"
+            : "pending";
+
+      const { data: paymentRecord } = await supabase
+        .from("payments")
+        .select("id, proposal_id, proposal_payment_type")
+        .eq("transaction_id", paymentId)
+        .maybeSingle();
+
+      if (paymentRecord) {
+        await supabase
+          .from("payments")
+          .update({
+            status: localStatus,
+            paid_at: localStatus === "paid" ? result.date_approved || new Date().toISOString() : null,
+          })
+          .eq("id", paymentRecord.id);
+
+        if (localStatus === "paid" && paymentRecord.proposal_id) {
+          const { data: proposal } = await supabase
+            .from("proposals")
+            .select("status")
+            .eq("id", paymentRecord.proposal_id)
+            .maybeSingle();
+
+          const paidAt = result.date_approved || new Date().toISOString();
+          const nextStatus = paymentRecord.proposal_payment_type === "entry" && proposal?.status !== "paid"
+            ? "entry_paid"
+            : "paid";
+
+          await supabase
+            .from("proposals")
+            .update(
+              paymentRecord.proposal_payment_type === "entry"
+                ? { status: nextStatus, entry_paid_at: paidAt }
+                : { status: "paid", paid_at: paidAt }
+            )
+            .eq("id", paymentRecord.proposal_id);
+        }
       }
 
       return new Response(

@@ -4,11 +4,13 @@ import { toast } from 'sonner';
 interface CreatePixPaymentParams {
   amount: number;
   description: string;
-  clientId: string;
+  clientId?: string;
   clientEmail: string;
   clientName: string;
   clientDocument?: string;
   subscriptionId?: string;
+  proposalId?: string;
+  proposalPaymentType?: 'entry' | 'total';
 }
 
 interface PixPaymentResult {

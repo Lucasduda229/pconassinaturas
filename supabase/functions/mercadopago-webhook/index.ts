@@ -91,7 +91,7 @@ serve(async (req: Request) => {
     // Fetch the payment record BEFORE updating to check current status
     const { data: paymentRecord } = await supabase
       .from("payments")
-      .select("id, subscription_id, client_id, amount, description, status")
+      .select("id, subscription_id, client_id, amount, description, status, proposal_id, proposal_payment_type")
       .eq("transaction_id", paymentId.toString())
       .single();
 
@@ -120,6 +120,33 @@ serve(async (req: Request) => {
 
     // If payment was approved, handle subscription recurrence + invoice
     if (dbStatus === "paid") {
+      if (paymentRecord.proposal_id) {
+        const { data: proposal } = await supabase
+          .from("proposals")
+          .select("status")
+          .eq("id", paymentRecord.proposal_id)
+          .maybeSingle();
+
+        const nextProposalStatus = paymentRecord.proposal_payment_type === "entry" && proposal?.status !== "paid"
+          ? "entry_paid"
+          : "paid";
+
+        const proposalUpdate = paymentRecord.proposal_payment_type === "entry"
+          ? { status: nextProposalStatus, entry_paid_at: paidAt }
+          : { status: "paid", paid_at: paidAt };
+
+        await supabase
+          .from("proposals")
+          .update(proposalUpdate)
+          .eq("id", paymentRecord.proposal_id);
+
+        console.log("Proposal updated successfully from Mercado Pago webhook:", {
+          proposalId: paymentRecord.proposal_id,
+          paymentType: paymentRecord.proposal_payment_type,
+          status: nextProposalStatus,
+        });
+      }
+
       let subscriptionId = paymentRecord.subscription_id;
 
       // If payment has no subscription_id, try to find a matching active subscription
@@ -200,6 +227,32 @@ serve(async (req: Request) => {
           const invoiceNumber = `NF-${year}${month}-${paymentRecord.id.slice(-4).toUpperCase()}`;
           const invoiceDescription = `Valor pago referente ao plano ativo: ${subscription.plan_name}`;
 
+          if (paymentRecord.client_id) {
+            await supabase
+              .from("invoices")
+              .insert({
+                payment_id: paymentRecord.id,
+                client_id: paymentRecord.client_id,
+                number: invoiceNumber,
+                amount: paymentRecord.amount,
+                status: "issued",
+                description: invoiceDescription,
+              });
+
+            console.log("Invoice created:", invoiceNumber);
+          } else {
+            console.log("Skipping invoice creation because payment has no client_id");
+          }
+
+          console.log("Subscription recurrence completed for payment:", paymentId);
+        }
+      } else {
+        // Single charge - create invoice without subscription linkage
+        if (paymentRecord.client_id) {
+          const year = new Date().getFullYear();
+          const month = String(new Date().getMonth() + 1).padStart(2, "0");
+          const invoiceNumber = `NF-${year}${month}-${paymentRecord.id.slice(-4).toUpperCase()}`;
+
           await supabase
             .from("invoices")
             .insert({
@@ -208,30 +261,13 @@ serve(async (req: Request) => {
               number: invoiceNumber,
               amount: paymentRecord.amount,
               status: "issued",
-              description: invoiceDescription,
+              description: paymentRecord.description || "Pagamento avulso",
             });
 
-          console.log("Invoice created:", invoiceNumber);
-          console.log("Subscription recurrence completed for payment:", paymentId);
+          console.log("Single charge invoice created:", invoiceNumber);
+        } else {
+          console.log("Skipping single charge invoice creation because payment has no client_id");
         }
-      } else {
-        // Single charge - create invoice without subscription linkage
-        const year = new Date().getFullYear();
-        const month = String(new Date().getMonth() + 1).padStart(2, "0");
-        const invoiceNumber = `NF-${year}${month}-${paymentRecord.id.slice(-4).toUpperCase()}`;
-
-        await supabase
-          .from("invoices")
-          .insert({
-            payment_id: paymentRecord.id,
-            client_id: paymentRecord.client_id,
-            number: invoiceNumber,
-            amount: paymentRecord.amount,
-            status: "issued",
-            description: paymentRecord.description || "Pagamento avulso",
-          });
-
-        console.log("Single charge invoice created:", invoiceNumber);
       }
 
       // Send WhatsApp payment confirmation (with idempotency guard)
