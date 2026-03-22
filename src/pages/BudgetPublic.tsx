@@ -71,6 +71,19 @@ const BudgetPublic = () => {
   const notificationRetryRef = useRef<Record<string, boolean>>({});
   const { createPixPayment, createCardPayment, checkPaymentStatus } = useMercadoPago();
 
+  useEffect(() => {
+    if (!proposal) return;
+
+    if (!proposal.entry_amount && selectedChargeType === 'entry') {
+      setSelectedChargeType('total');
+    }
+  }, [proposal, selectedChargeType]);
+
+  useEffect(() => {
+    setPixPayment(null);
+    setCardPaymentStatus(null);
+  }, [paymentMethod, selectedChargeType]);
+
   const refreshProposal = useCallback(async (proposalId: string) => {
     const { data, error } = await (supabase as any)
       .from('proposals')
@@ -294,14 +307,10 @@ const BudgetPublic = () => {
   const handleSelectedPayment = () => {
     if (!canPaySelected) return;
 
-    setCardPaymentStatus(null);
-
     if (paymentMethod === 'pix') {
       void handlePaymentPlaceholder(selectedChargeType);
       return;
     }
-
-    setPixPayment(null);
   };
 
   const handleDownloadPdf = async () => {
