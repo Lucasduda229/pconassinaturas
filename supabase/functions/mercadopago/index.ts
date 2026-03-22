@@ -36,6 +36,25 @@ interface CreatePreferenceRequest {
   returnUrl?: string;
 }
 
+interface CreateCardPaymentRequest {
+  amount: number;
+  description: string;
+  clientId?: string;
+  clientEmail: string;
+  clientName: string;
+  clientDocument?: string;
+  subscriptionId?: string;
+  proposalId?: string;
+  proposalPaymentType?: "entry" | "total";
+  externalReference?: string;
+  token: string;
+  issuerId: string;
+  installments: number;
+  paymentMethodId: string;
+  payerIdentificationType?: string;
+  payerIdentificationNumber?: string;
+}
+
 const getSupabaseAdmin = () => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -92,6 +111,13 @@ const findExistingPendingPayment = async (
     .maybeSingle();
 
   return data;
+};
+
+const mapMercadoPagoStatus = (status: string) => {
+  if (status === "approved") return "paid";
+  if (status === "rejected" || status === "cancelled") return "cancelled";
+  if (status === "refunded") return "refunded";
+  return "pending";
 };
 
 serve(async (req: Request) => {
@@ -216,6 +242,130 @@ serve(async (req: Request) => {
           ticketUrl: result.point_of_interaction?.transaction_data?.ticket_url,
           expirationDate: result.date_of_expiration,
           status: result.status,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (action === "create-card-payment") {
+      const body: CreateCardPaymentRequest = await req.json();
+
+      if (!body.clientId && !body.proposalId) {
+        throw new Error("clientId ou proposalId é obrigatório");
+      }
+
+      if (!body.token || !body.paymentMethodId || !body.installments) {
+        throw new Error("Dados do cartão incompletos");
+      }
+
+      const identificationNumber = (body.payerIdentificationNumber || body.clientDocument || "").replace(/[^\d]/g, "");
+      const identificationType = body.payerIdentificationType || (identificationNumber ? (identificationNumber.length <= 11 ? "CPF" : "CNPJ") : undefined);
+
+      const paymentData = {
+        transaction_amount: body.amount,
+        token: body.token,
+        description: body.description,
+        installments: body.installments,
+        issuer_id: body.issuerId,
+        payment_method_id: body.paymentMethodId,
+        payer: {
+          email: body.clientEmail,
+          first_name: body.clientName?.split(" ")[0] || "Cliente",
+          last_name: body.clientName?.split(" ").slice(1).join(" ") || "",
+          identification: identificationNumber && identificationType
+            ? {
+                type: identificationType,
+                number: identificationNumber,
+              }
+            : undefined,
+        },
+        external_reference: body.externalReference || body.description,
+        notification_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/mercadopago-webhook`,
+      };
+
+      const response = await fetch(`${MERCADOPAGO_API_URL}/v1/payments`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+          "X-Idempotency-Key": crypto.randomUUID(),
+        },
+        body: JSON.stringify(paymentData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error("Mercado Pago card payment error:", result);
+        throw new Error(result.message || "Erro ao processar pagamento no cartão");
+      }
+
+      const supabase = getSupabaseAdmin();
+      const existingPayment = await findExistingPendingPayment(supabase, body);
+      const localStatus = mapMercadoPagoStatus(result.status);
+      const paidAt = localStatus === "paid" ? result.date_approved || new Date().toISOString() : null;
+
+      const paymentPayload = {
+        client_id: body.clientId || null,
+        subscription_id: body.subscriptionId || null,
+        proposal_id: body.proposalId || null,
+        proposal_payment_type: body.proposalPaymentType || null,
+        amount: body.amount,
+        status: localStatus,
+        payment_method: "CREDIT_CARD",
+        description: body.description,
+        asaas_id: null,
+        transaction_id: result.id?.toString(),
+        paid_at: paidAt,
+      };
+
+      if (existingPayment) {
+        const { error: updateError } = await supabase
+          .from("payments")
+          .update(paymentPayload)
+          .eq("id", existingPayment.id);
+
+        if (updateError) {
+          console.error("Error updating existing card payment:", updateError);
+        }
+      } else {
+        const { error: insertError } = await supabase
+          .from("payments")
+          .insert(paymentPayload);
+
+        if (insertError) {
+          console.error("Error saving card payment to DB:", insertError);
+        }
+      }
+
+      if (localStatus === "paid" && body.proposalId) {
+        const { data: proposal } = await supabase
+          .from("proposals")
+          .select("status")
+          .eq("id", body.proposalId)
+          .maybeSingle();
+
+        const nextStatus = body.proposalPaymentType === "entry" && proposal?.status !== "paid"
+          ? "entry_paid"
+          : "paid";
+
+        await supabase
+          .from("proposals")
+          .update(
+            body.proposalPaymentType === "entry"
+              ? { status: nextStatus, entry_paid_at: paidAt }
+              : { status: "paid", paid_at: paidAt }
+          )
+          .eq("id", body.proposalId);
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          paymentId: result.id,
+          status: result.status,
+          statusDetail: result.status_detail,
+          paidAt: result.date_approved,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

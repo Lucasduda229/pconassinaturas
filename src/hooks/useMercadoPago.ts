@@ -29,6 +29,25 @@ interface CreateCardPreferenceParams {
   returnUrl?: string;
 }
 
+interface CreateCardPaymentParams {
+  amount: number;
+  description: string;
+  clientId?: string;
+  clientEmail: string;
+  clientName: string;
+  clientDocument?: string;
+  subscriptionId?: string;
+  proposalId?: string;
+  proposalPaymentType?: 'entry' | 'total';
+  externalReference?: string;
+  token: string;
+  issuerId: string;
+  installments: number;
+  paymentMethodId: string;
+  payerIdentificationType?: string;
+  payerIdentificationNumber?: string;
+}
+
 interface PixPaymentResult {
   success: boolean;
   paymentId?: string;
@@ -42,6 +61,15 @@ interface PixPaymentResult {
 
 interface PaymentStatusResult {
   success: boolean;
+  status?: string;
+  statusDetail?: string;
+  paidAt?: string;
+  error?: string;
+}
+
+interface CardPaymentResult {
+  success: boolean;
+  paymentId?: string;
   status?: string;
   statusDetail?: string;
   paidAt?: string;
@@ -146,10 +174,44 @@ export function useMercadoPago() {
     }
   };
 
+  const createCardPayment = async (params: CreateCardPaymentParams): Promise<CardPaymentResult | null> => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mercadopago?action=create-card-payment`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify(params),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || result.error) {
+        console.error('Error creating card payment:', result.error);
+        toast.error(result.error || 'Erro ao processar pagamento no cartão');
+        return null;
+      }
+
+      return result;
+    } catch (error: any) {
+      console.error('Error in createCardPayment:', error);
+      toast.error('Erro ao processar pagamento no cartão');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     loading,
     createPixPayment,
     checkPaymentStatus,
     createPreference,
+    createCardPayment,
   };
 }
