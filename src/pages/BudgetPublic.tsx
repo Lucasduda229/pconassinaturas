@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Proposal, ProposalStatus } from '@/hooks/useProposals';
 import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/logo-pcon-grande.png';
+import brandImage from '@/assets/pcon-construnet-brand.png';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0));
@@ -149,7 +150,10 @@ const BudgetPublic = () => {
       <div className="relative z-10">
         <header className="border-b border-border/30 bg-background/50 backdrop-blur-xl">
           <div className="container mx-auto px-4 py-5 flex items-center justify-between gap-4">
-            <img src={logo} alt="P-CON" className="h-12 w-auto" />
+            <div className="flex items-center gap-4">
+              <img src={brandImage} alt="Marca P-CON CONSTRUNET" className="h-16 w-auto object-contain" />
+              <img src={logo} alt="P-CON" className="h-12 w-auto" />
+            </div>
             <Badge className={`border ${statusMap[proposal.status].className}`}>{statusMap[proposal.status].label}</Badge>
           </div>
         </header>
