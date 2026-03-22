@@ -1,6 +1,7 @@
 import { CardPayment, initMercadoPago } from '@mercadopago/sdk-react';
 import { CreditCard, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { calculateCardPricing } from '@/utils/cardFees';
 
 const MERCADO_PAGO_PUBLIC_KEY = 'APP_USR-ee8c080e-cad1-4b48-8965-6f2b0a1abcbd';
 
@@ -37,6 +38,8 @@ const normalizeDocument = (value?: string | null) => value?.replace(/\D/g, '') |
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
+const formatPercent = (value: number) => `${(value * 100).toFixed(2).replace('.', ',')}%`;
+
 const ProposalCardPayment = ({
   amount,
   payerEmail,
@@ -48,8 +51,12 @@ const ProposalCardPayment = ({
   onSubmit,
 }: ProposalCardPaymentProps) => {
   const cleanDocument = normalizeDocument(payerDocument);
-  const formKey = `${amount}-${payerEmail || 'guest'}-${cleanDocument || 'no-doc'}`;
-  const installmentAmount = amount / installments;
+  const pricing = calculateCardPricing(amount, installments);
+  const installmentOptions = [1, 2, 3, 4].map((option) => ({
+    value: option,
+    pricing: calculateCardPricing(amount, option),
+  }));
+  const formKey = `${amount}-${installments}-${payerEmail || 'guest'}-${cleanDocument || 'no-doc'}`;
 
   return (
     <div className="space-y-4 rounded-2xl border border-border/60 bg-secondary/10 p-4">
@@ -71,20 +78,32 @@ const ProposalCardPayment = ({
             onChange={(event) => onInstallmentsChange(Number(event.target.value))}
             className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground"
           >
-            <option value={1}>1x de {formatCurrency(amount)} sem juros</option>
-            <option value={2}>2x de {formatCurrency(amount / 2)}</option>
-            <option value={3}>3x de {formatCurrency(amount / 3)}</option>
-            <option value={4}>4x de {formatCurrency(amount / 4)}</option>
+            {installmentOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.value}x de {formatCurrency(option.pricing.installmentAmount)}
+              </option>
+            ))}
           </select>
           <p className="text-xs text-muted-foreground">
-            Total de {formatCurrency(amount)} em <span className="font-medium text-foreground">{installments}x de {formatCurrency(installmentAmount)}</span>.
+            Você recebe {formatCurrency(pricing.requestedAmount)} e o cliente paga{' '}
+            <span className="font-medium text-foreground">
+              {formatCurrency(pricing.totalCustomerAmount)} em {pricing.installments}x de {formatCurrency(pricing.installmentAmount)}
+            </span>
+            .
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Taxa base de {formatPercent(pricing.baseFeeRate)}
+            {pricing.installmentSurchargeRate > 0
+              ? ` + taxa do parcelamento de ${formatPercent(pricing.installmentSurchargeRate)}`
+              : ''}
+            .
           </p>
         </div>
 
         <CardPayment
           key={formKey}
           initialization={{
-            amount,
+            amount: pricing.totalCustomerAmount,
             payer: {
               email: payerEmail || undefined,
               identification: cleanDocument
@@ -108,6 +127,7 @@ const ProposalCardPayment = ({
           onSubmit={async (formData) => {
             await onSubmit({
               ...(formData as ProposalCardPaymentFormData),
+              transaction_amount: pricing.totalCustomerAmount,
               installments,
             });
           }}
