@@ -238,6 +238,7 @@ const BudgetPublic = () => {
     if (!proposal) return;
 
     const amount = type === 'entry' ? Number(proposal.entry_amount || 0) : Number(proposal.total_amount || 0);
+    const transactionAmount = Number(formData.transaction_amount || amount);
 
     if (!amount) {
       toast.error('Não há valor disponível para gerar o pagamento');
@@ -247,7 +248,7 @@ const BudgetPublic = () => {
     setCreatingPayment(type === 'entry' ? 'entry-card' : 'total-card');
 
     const result = await createCardPayment({
-      amount,
+      amount: transactionAmount,
       description: type === 'entry'
         ? `Entrada da proposta - ${proposal.project_title}`
         : `Pagamento total da proposta - ${proposal.project_title}`,
@@ -259,7 +260,7 @@ const BudgetPublic = () => {
       externalReference: `proposal:${proposal.id}:${type}`,
       token: formData.token,
       issuerId: formData.issuer_id,
-      installments: selectedInstallments,
+      installments: formData.installments,
       paymentMethodId: formData.payment_method_id,
       payerIdentificationType: formData.payer?.identification?.type,
       payerIdentificationNumber: formData.payer?.identification?.number,
