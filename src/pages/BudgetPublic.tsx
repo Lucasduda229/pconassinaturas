@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CheckCircle2, Clock3, CreditCard, Eye, FileText, Loader2, ShieldCheck, XCircle } from 'lucide-react';
+import { CheckCircle2, Clock3, CreditCard, Download, Eye, FileText, Loader2, ShieldCheck, XCircle } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import BlueBackground from '@/components/BlueBackground';
@@ -14,6 +14,7 @@ import { useMercadoPago } from '@/hooks/useMercadoPago';
 import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/logo-pcon-grande.png';
 import brandImage from '@/assets/pcon-construnet-brand.png';
+import { generateProposalPDF } from '@/utils/proposalPdfGenerator';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0));
@@ -47,6 +48,7 @@ const BudgetPublic = () => {
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [creatingPayment, setCreatingPayment] = useState<'entry' | 'total' | null>(null);
   const [pixPayment, setPixPayment] = useState<{
     type: 'entry' | 'total';
@@ -196,6 +198,20 @@ const BudgetPublic = () => {
   const handlePaymentConfirmed = async () => {
     if (!proposal) return;
     await refreshProposal(proposal.id);
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!proposal) return;
+
+    setDownloadingPdf(true);
+    try {
+      await generateProposalPDF(proposal);
+    } catch (error) {
+      console.error('Error generating proposal PDF:', error);
+      toast.error('Não foi possível gerar o PDF da proposta');
+    } finally {
+      setDownloadingPdf(false);
+    }
   };
 
   if (loading) {
@@ -361,6 +377,10 @@ const BudgetPublic = () => {
                       <Button variant="secondary" onClick={() => handlePaymentPlaceholder('total')} disabled={!canPayTotal || creatingPayment !== null} className="w-full">
                         {creatingPayment === 'total' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
                         {proposal.status === 'paid' ? 'Pagamento total confirmado' : 'Pagar total'}
+                      </Button>
+                      <Button variant="outline" onClick={handleDownloadPdf} disabled={downloadingPdf} className="w-full">
+                        {downloadingPdf ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                        Baixar proposta em PDF
                       </Button>
                     </div>
 

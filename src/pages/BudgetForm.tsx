@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Eye, Link2, Loader2, Save, SendHorizontal } from 'lucide-react';
+import { Download, Eye, Link2, Loader2, Save, SendHorizontal } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useProposals, ProposalInput } from '@/hooks/useProposals';
+import { generateProposalPDF } from '@/utils/proposalPdfGenerator';
 
 interface ProposalFormState {
   clientName: string;
@@ -85,6 +86,7 @@ const BudgetForm = () => {
   const [proposalSlug, setProposalSlug] = useState<string | null>(null);
   const [loading, setLoading] = useState(isEditing);
   const [saving, setSaving] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -241,6 +243,24 @@ const BudgetForm = () => {
     toast.success('Link público copiado');
   };
 
+  const handleDownloadPdf = async () => {
+    if (!id) {
+      toast.error('Salve a proposta antes de baixar o PDF');
+      return;
+    }
+
+    setDownloadingPdf(true);
+    try {
+      const proposal = await getProposalById(id);
+      await generateProposalPDF(proposal);
+    } catch (error) {
+      console.error('Error generating proposal PDF:', error);
+      toast.error('Erro ao gerar PDF da proposta');
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout title="Orçamentos" subtitle="Carregando orçamento...">
@@ -262,6 +282,10 @@ const BudgetForm = () => {
           <Button variant="outline" onClick={handlePreview} disabled={!proposalSlug}>
             <Eye className="h-4 w-4 mr-2" />
             Visualizar proposta
+          </Button>
+          <Button variant="outline" onClick={handleDownloadPdf} disabled={!id || downloadingPdf}>
+            {downloadingPdf ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+            Baixar PDF
           </Button>
         </div>
       }
