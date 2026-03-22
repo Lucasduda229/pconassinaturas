@@ -257,7 +257,7 @@ const BudgetPublic = () => {
             <div className="space-y-6">
               <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-center">
                 <div className="space-y-4 max-w-3xl">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm text-primary">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-primary/50 bg-primary/20 px-4 py-2 text-sm font-medium text-primary-foreground shadow-[var(--shadow-glow)] backdrop-blur-md">
                     <ShieldCheck className="h-4 w-4" />
                     Proposta comercial digital
                   </span>
