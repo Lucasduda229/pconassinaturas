@@ -26,6 +26,8 @@ interface ProposalCardPaymentProps {
   payerEmail?: string | null;
   payerName: string;
   payerDocument?: string | null;
+  installments: number;
+  onInstallmentsChange: (value: number) => void;
   submitting: boolean;
   onSubmit: (data: ProposalCardPaymentFormData) => Promise<void>;
 }
@@ -37,6 +39,8 @@ const ProposalCardPayment = ({
   payerEmail,
   payerName,
   payerDocument,
+  installments,
+  onInstallmentsChange,
   submitting,
   onSubmit,
 }: ProposalCardPaymentProps) => {
@@ -56,6 +60,21 @@ const ProposalCardPayment = ({
       </div>
 
       <div className={submitting ? 'pointer-events-none opacity-70' : ''}>
+        <div className="mb-4 space-y-2 rounded-xl border border-border/60 bg-background/30 p-3">
+          <p className="text-sm font-medium text-foreground">Parcelamento</p>
+          <select
+            value={installments}
+            onChange={(event) => onInstallmentsChange(Number(event.target.value))}
+            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground"
+          >
+            <option value={1}>1x sem juros</option>
+            <option value={2}>2x</option>
+            <option value={3}>3x</option>
+            <option value={4}>4x</option>
+          </select>
+          <p className="text-xs text-muted-foreground">Escolha quantas parcelas o cliente vai pagar no cartão.</p>
+        </div>
+
         <CardPayment
           key={formKey}
           initialization={{
@@ -81,7 +100,10 @@ const ProposalCardPayment = ({
           } as any}
           locale="pt-BR"
           onSubmit={async (formData) => {
-            await onSubmit(formData as ProposalCardPaymentFormData);
+            await onSubmit({
+              ...(formData as ProposalCardPaymentFormData),
+              installments,
+            });
           }}
           onError={(error) => {
             console.error('Erro no formulário de cartão do Mercado Pago:', error);
