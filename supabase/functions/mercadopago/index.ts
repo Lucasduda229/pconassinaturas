@@ -14,6 +14,7 @@ interface CreatePixPaymentRequest {
   clientId?: string;
   clientEmail: string;
   clientName: string;
+  clientPhone?: string;
   clientDocument?: string;
   subscriptionId?: string;
   proposalId?: string;
@@ -42,6 +43,7 @@ interface CreateCardPaymentRequest {
   clientId?: string;
   clientEmail: string;
   clientName: string;
+  clientPhone?: string;
   clientDocument?: string;
   subscriptionId?: string;
   proposalId?: string;
@@ -149,7 +151,8 @@ serve(async (req: Request) => {
       console.log("Creating PIX payment:", { 
         amount: body.amount, 
         description: body.description,
-        clientEmail: body.clientEmail 
+        clientEmail: body.clientEmail,
+        clientPhone: body.clientPhone,
       });
 
       // Create payment via Mercado Pago API
@@ -161,6 +164,12 @@ serve(async (req: Request) => {
           email: body.clientEmail,
           first_name: body.clientName?.split(" ")[0] || "Cliente",
           last_name: body.clientName?.split(" ").slice(1).join(" ") || "",
+          phone: body.clientPhone
+            ? {
+                area_code: body.clientPhone.replace(/\D/g, "").slice(0, 2),
+                number: body.clientPhone.replace(/\D/g, "").slice(2),
+              }
+            : undefined,
           identification: body.clientDocument ? {
             type: body.clientDocument.length <= 11 ? "CPF" : "CNPJ",
             number: body.clientDocument.replace(/[^\d]/g, ""),
@@ -260,6 +269,9 @@ serve(async (req: Request) => {
 
       const identificationNumber = (body.payerIdentificationNumber || body.clientDocument || "").replace(/[^\d]/g, "");
       const identificationType = body.payerIdentificationType || (identificationNumber ? (identificationNumber.length <= 11 ? "CPF" : "CNPJ") : undefined);
+      const normalizedPhone = (body.clientPhone || "").replace(/\D/g, "");
+      const phoneAreaCode = normalizedPhone.length >= 10 ? normalizedPhone.slice(0, 2) : undefined;
+      const phoneNumber = normalizedPhone.length >= 10 ? normalizedPhone.slice(2) : undefined;
 
       const paymentData = {
         transaction_amount: body.amount,
@@ -272,6 +284,12 @@ serve(async (req: Request) => {
           email: body.clientEmail,
           first_name: body.clientName?.split(" ")[0] || "Cliente",
           last_name: body.clientName?.split(" ").slice(1).join(" ") || "",
+          phone: phoneAreaCode && phoneNumber
+            ? {
+                area_code: phoneAreaCode,
+                number: phoneNumber,
+              }
+            : undefined,
           identification: identificationNumber && identificationType
             ? {
                 type: identificationType,
