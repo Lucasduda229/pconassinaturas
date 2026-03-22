@@ -7,6 +7,7 @@ interface CreatePixPaymentParams {
   clientId?: string;
   clientEmail: string;
   clientName: string;
+  clientPhone?: string;
   clientDocument?: string;
   subscriptionId?: string;
   proposalId?: string;
@@ -35,6 +36,7 @@ interface CreateCardPaymentParams {
   clientId?: string;
   clientEmail: string;
   clientName: string;
+  clientPhone?: string;
   clientDocument?: string;
   subscriptionId?: string;
   proposalId?: string;

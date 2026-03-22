@@ -214,6 +214,7 @@ const BudgetPublic = () => {
         : `Pagamento total da proposta - ${proposal.project_title}`,
       clientEmail: proposal.client_email || 'contato@assinaturaspcon.sbs',
       clientName: proposal.client_name,
+      clientPhone: proposal.client_phone || undefined,
       proposalId: proposal.id,
       proposalPaymentType: type,
     }).then((result) => {
@@ -254,7 +255,7 @@ const BudgetPublic = () => {
         : `Pagamento total da proposta - ${proposal.project_title}`,
       clientEmail: proposal.client_email || 'contato@assinaturaspcon.sbs',
       clientName: proposal.client_name,
-      clientDocument: proposal.client_phone || undefined,
+      clientPhone: proposal.client_phone || undefined,
       proposalId: proposal.id,
       proposalPaymentType: type,
       externalReference: `proposal:${proposal.id}:${type}`,
