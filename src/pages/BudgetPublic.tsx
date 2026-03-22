@@ -59,6 +59,7 @@ const BudgetPublic = () => {
     amount: number;
   } | null>(null);
   const hasTrackedView = useRef(false);
+  const notificationRetryRef = useRef<Record<string, boolean>>({});
   const { createPixPayment, checkPaymentStatus } = useMercadoPago();
 
   const refreshProposal = useCallback(async (proposalId: string) => {
@@ -73,15 +74,45 @@ const BudgetPublic = () => {
     setProposal(normalizeStatus(data as Proposal));
   }, []);
 
-  const notifyEvent = async (proposalId: string, eventType: 'viewed' | 'approved' | 'rejected') => {
+  const notifyEvent = async (
+    proposalId: string,
+    eventType: 'viewed' | 'approved' | 'rejected',
+    options?: { skipWhatsapp?: boolean },
+  ) => {
     try {
-      await supabase.functions.invoke('proposal-status-notification', {
-        body: { proposalId, eventType },
+      const { error, data } = await supabase.functions.invoke('proposal-status-notification', {
+        body: { proposalId, eventType, skipWhatsapp: options?.skipWhatsapp ?? false },
       });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.success === false) {
+        throw new Error(data.error || 'Falha ao enviar notificação automática');
+      }
     } catch (error) {
       console.error(`Error notifying proposal event ${eventType}:`, error);
     }
   };
+
+  useEffect(() => {
+    if (!proposal) return;
+
+    const retryEvent = proposal.status === 'approved'
+      ? (!proposal.approved_notification_sent_at ? 'approved' : null)
+      : proposal.status === 'rejected'
+        ? (!proposal.rejected_notification_sent_at ? 'rejected' : null)
+        : null;
+
+    if (!retryEvent) return;
+
+    const retryKey = `${proposal.id}:${retryEvent}`;
+    if (notificationRetryRef.current[retryKey]) return;
+
+    notificationRetryRef.current[retryKey] = true;
+    void notifyEvent(proposal.id, retryEvent, { skipWhatsapp: true });
+  }, [proposal]);
 
   useEffect(() => {
     if (!slug || hasTrackedView.current) return;

@@ -161,7 +161,7 @@ serve(async (req) => {
   }
 
   try {
-    const { proposalId, eventType } = await req.json();
+    const { proposalId, eventType, skipWhatsapp = false } = await req.json();
 
     if (!proposalId || !eventType || !(eventType in eventConfig)) {
       return new Response(JSON.stringify({ error: "Dados inválidos" }), {
@@ -207,12 +207,20 @@ serve(async (req) => {
     const notificationPhone = normalizePhone(configuredPhone || WHATSAPP_FALLBACK);
     const publicUrl = `${APP_URL}/proposta/${proposal.public_slug}`;
 
+    const shouldSendEmail = Boolean(notificationEmail);
+    const shouldSendWhatsapp = !skipWhatsapp && Boolean(notificationPhone);
+
     let emailSent = false;
     let whatsappSent = false;
     let emailError: string | null = null;
     let whatsappError: string | null = null;
 
-    if (resendApiKey && notificationEmail) {
+    if (!resendApiKey && shouldSendEmail) {
+      emailError = "Integração de email indisponível";
+      console.error("proposal-status-notification email unavailable: RESEND_API_KEY missing");
+    }
+
+    if (resendApiKey && shouldSendEmail) {
       const emailResponse = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
@@ -232,10 +240,17 @@ serve(async (req) => {
       } else {
         const result = await emailResponse.text();
         emailError = result;
+        console.error("proposal-status-notification email failed:", {
+          proposalId,
+          eventType,
+          status: emailResponse.status,
+          body: result,
+          notificationEmail,
+        });
       }
     }
 
-    if (notificationPhone) {
+    if (shouldSendWhatsapp) {
       const whatsappResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
         method: "POST",
         headers: {
@@ -262,6 +277,9 @@ serve(async (req) => {
       }
     }
 
+    const emailRequired = shouldSendEmail;
+    const canMarkNotificationAsSent = emailSent || !emailRequired;
+
     if (!emailSent && !whatsappSent) {
       return new Response(JSON.stringify({
         success: false,
@@ -273,15 +291,32 @@ serve(async (req) => {
       });
     }
 
-    await supabase
-      .from("proposals")
-      .update({ [config.column]: new Date().toISOString() })
-      .eq("id", proposal.id);
+    if (canMarkNotificationAsSent) {
+      await supabase
+        .from("proposals")
+        .update({ [config.column]: new Date().toISOString() })
+        .eq("id", proposal.id);
+    }
+
+    if (!canMarkNotificationAsSent) {
+      return new Response(JSON.stringify({
+        success: false,
+        partial: true,
+        error: "WhatsApp enviado, mas o email falhou",
+        details: { emailError, whatsappError },
+        emailSent,
+        whatsappSent,
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     return new Response(JSON.stringify({
       success: true,
       emailSent,
       whatsappSent,
+      skipWhatsapp,
       skippedWhatsapp: !notificationPhone,
     }), {
       status: 200,
