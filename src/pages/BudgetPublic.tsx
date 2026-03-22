@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CheckCircle2, Clock3, CreditCard, Download, Eye, FileText, Loader2, ShieldCheck, XCircle } from 'lucide-react';
+import { CheckCircle2, Clock3, CreditCard, Download, Eye, FileText, Loader2, ShieldCheck, WalletCards, XCircle } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import BlueBackground from '@/components/BlueBackground';
+import ProposalCardPayment, { ProposalCardPaymentFormData } from '@/components/ProposalCardPayment';
 import PixQRCode from '@/components/PixQRCode';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import { Proposal, ProposalStatus } from '@/hooks/useProposals';
 import { useMercadoPago } from '@/hooks/useMercadoPago';
 import { supabase } from '@/integrations/supabase/client';
@@ -49,6 +52,8 @@ const BudgetPublic = () => {
   const [submitting, setSubmitting] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [creatingPayment, setCreatingPayment] = useState<'entry' | 'total' | 'entry-card' | 'total-card' | null>(null);
+  const [selectedChargeType, setSelectedChargeType] = useState<'entry' | 'total'>('total');
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'card'>('pix');
   const [pixPayment, setPixPayment] = useState<{
     type: 'entry' | 'total';
     paymentId: string;
@@ -58,9 +63,13 @@ const BudgetPublic = () => {
     expirationDate?: string;
     amount: number;
   } | null>(null);
+  const [cardPaymentStatus, setCardPaymentStatus] = useState<{
+    type: 'entry' | 'total';
+    status: string;
+  } | null>(null);
   const hasTrackedView = useRef(false);
   const notificationRetryRef = useRef<Record<string, boolean>>({});
-  const { createPixPayment, checkPaymentStatus, createPreference } = useMercadoPago();
+  const { createPixPayment, createCardPayment, checkPaymentStatus } = useMercadoPago();
 
   const refreshProposal = useCallback(async (proposalId: string) => {
     const { data, error } = await (supabase as any)
@@ -210,7 +219,7 @@ const BudgetPublic = () => {
     });
   };
 
-  const handleCardPayment = (type: 'entry' | 'total') => {
+  const handleCardPayment = async (type: 'entry' | 'total', formData: ProposalCardPaymentFormData) => {
     if (!proposal) return;
 
     const amount = type === 'entry' ? Number(proposal.entry_amount || 0) : Number(proposal.total_amount || 0);
@@ -222,34 +231,38 @@ const BudgetPublic = () => {
 
     setCreatingPayment(type === 'entry' ? 'entry-card' : 'total-card');
 
-    void createPreference({
+    const result = await createCardPayment({
       amount,
-      title: type === 'entry'
-        ? `Entrada da proposta - ${proposal.project_title}`
-        : `Pagamento total da proposta - ${proposal.project_title}`,
       description: type === 'entry'
         ? `Entrada da proposta - ${proposal.project_title}`
         : `Pagamento total da proposta - ${proposal.project_title}`,
       clientEmail: proposal.client_email || 'contato@assinaturaspcon.sbs',
       clientName: proposal.client_name,
+      clientDocument: proposal.client_phone || undefined,
       proposalId: proposal.id,
       proposalPaymentType: type,
       externalReference: `proposal:${proposal.id}:${type}`,
-      maxInstallments: 4,
-      returnUrl: window.location.href,
-    }).then((result) => {
-      const checkoutUrl = result?.initPoint || result?.sandboxInitPoint;
-
-      if (!checkoutUrl) {
-        toast.error('Não foi possível abrir o checkout do cartão');
-        return;
-      }
-
-      window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
-      toast.success('Checkout de cartão aberto com parcelamento em até 4x');
-    }).finally(() => {
-      setCreatingPayment(null);
+      token: formData.token,
+      issuerId: formData.issuer_id,
+      installments: formData.installments,
+      paymentMethodId: formData.payment_method_id,
+      payerIdentificationType: formData.payer?.identification?.type,
+      payerIdentificationNumber: formData.payer?.identification?.number,
     });
+
+    if (result?.success) {
+      setPixPayment(null);
+      setCardPaymentStatus({ type, status: result.status || 'pending' });
+
+      if (result.status === 'approved') {
+        toast.success('Pagamento no cartão aprovado com sucesso');
+        await refreshProposal(proposal.id);
+      } else {
+        toast.success('Pagamento no cartão enviado para processamento');
+      }
+    }
+
+    setCreatingPayment(null);
   };
 
   const canPayEntry = !!proposal?.allow_payment && !!proposal?.entry_amount && !['rejected', 'expired', 'entry_paid', 'paid'].includes(proposal?.status || 'draft');
@@ -270,6 +283,25 @@ const BudgetPublic = () => {
   const handlePaymentConfirmed = async () => {
     if (!proposal) return;
     await refreshProposal(proposal.id);
+  };
+
+  const selectedAmount = selectedChargeType === 'entry'
+    ? Number(proposal?.entry_amount || 0)
+    : Number(proposal?.total_amount || 0);
+
+  const canPaySelected = selectedChargeType === 'entry' ? canPayEntry : canPayTotal;
+
+  const handleSelectedPayment = () => {
+    if (!canPaySelected) return;
+
+    setCardPaymentStatus(null);
+
+    if (paymentMethod === 'pix') {
+      void handlePaymentPlaceholder(selectedChargeType);
+      return;
+    }
+
+    setPixPayment(null);
   };
 
   const handleDownloadPdf = async () => {
@@ -453,22 +485,85 @@ const BudgetPublic = () => {
                         <XCircle className="h-4 w-4 mr-2" />
                         Recusar proposta
                       </Button>
-                      <Button variant="secondary" onClick={() => handlePaymentPlaceholder('entry')} disabled={!canPayEntry || creatingPayment !== null} className="w-full">
-                        {creatingPayment === 'entry' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
-                        {proposal.status === 'entry_paid' || proposal.status === 'paid' ? 'Entrada já paga' : 'Pagar entrada'}
-                      </Button>
-                      <Button variant="outline" onClick={() => handleCardPayment('entry')} disabled={!canPayEntry || creatingPayment !== null} className="w-full">
-                        {creatingPayment === 'entry-card' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
-                        {proposal.status === 'entry_paid' || proposal.status === 'paid' ? 'Entrada no cartão já paga' : 'Pagar entrada no cartão em até 4x'}
-                      </Button>
-                      <Button variant="secondary" onClick={() => handlePaymentPlaceholder('total')} disabled={!canPayTotal || creatingPayment !== null} className="w-full">
-                        {creatingPayment === 'total' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
-                        {proposal.status === 'paid' ? 'Pagamento total confirmado' : 'Pagar total'}
-                      </Button>
-                      <Button variant="outline" onClick={() => handleCardPayment('total')} disabled={!canPayTotal || creatingPayment !== null} className="w-full">
-                        {creatingPayment === 'total-card' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
-                        {proposal.status === 'paid' ? 'Pagamento total no cartão confirmado' : 'Pagar total no cartão em até 4x'}
-                      </Button>
+                      <div className="rounded-2xl border border-border/60 bg-secondary/10 p-4 space-y-4">
+                        <div className="flex items-start gap-3">
+                          <WalletCards className="mt-0.5 h-5 w-5 text-primary" />
+                          <div>
+                            <p className="font-semibold text-foreground">Escolha como deseja pagar</p>
+                            <p className="text-sm text-muted-foreground">Selecione o valor e depois escolha entre PIX ou cartão.</p>
+                          </div>
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <div className="space-y-3 rounded-xl border border-border/60 bg-background/30 p-4">
+                            <p className="text-sm font-medium text-foreground">Tipo de pagamento</p>
+                            <RadioGroup value={selectedChargeType} onValueChange={(value) => setSelectedChargeType(value as 'entry' | 'total')} className="gap-3">
+                              {proposal.entry_amount ? (
+                                <Label htmlFor="charge-entry" className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/60 bg-secondary/20 px-4 py-3">
+                                  <RadioGroupItem id="charge-entry" value="entry" />
+                                  <div className="flex-1">
+                                    <p className="font-medium text-foreground">Entrada</p>
+                                    <p className="text-xs text-muted-foreground">{formatCurrency(Number(proposal.entry_amount || 0))}</p>
+                                  </div>
+                                </Label>
+                              ) : null}
+                              <Label htmlFor="charge-total" className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/60 bg-secondary/20 px-4 py-3">
+                                <RadioGroupItem id="charge-total" value="total" />
+                                <div className="flex-1">
+                                  <p className="font-medium text-foreground">Valor total</p>
+                                  <p className="text-xs text-muted-foreground">{formatCurrency(Number(proposal.total_amount || 0))}</p>
+                                </div>
+                              </Label>
+                            </RadioGroup>
+                          </div>
+
+                          <div className="space-y-3 rounded-xl border border-border/60 bg-background/30 p-4">
+                            <p className="text-sm font-medium text-foreground">Método</p>
+                            <RadioGroup value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as 'pix' | 'card')} className="gap-3">
+                              <Label htmlFor="method-pix" className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/60 bg-secondary/20 px-4 py-3">
+                                <RadioGroupItem id="method-pix" value="pix" />
+                                <div className="flex-1">
+                                  <p className="font-medium text-foreground">PIX</p>
+                                  <p className="text-xs text-muted-foreground">Gera QR Code instantâneo</p>
+                                </div>
+                              </Label>
+                              <Label htmlFor="method-card" className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/60 bg-secondary/20 px-4 py-3">
+                                <RadioGroupItem id="method-card" value="card" />
+                                <div className="flex-1">
+                                  <p className="font-medium text-foreground">Cartão de crédito</p>
+                                  <p className="text-xs text-muted-foreground">Pagamento no formulário abaixo com até 4x</p>
+                                </div>
+                              </Label>
+                            </RadioGroup>
+                          </div>
+                        </div>
+
+                        <div className="rounded-xl border border-border/60 bg-background/30 px-4 py-3 text-sm text-muted-foreground">
+                          Valor selecionado: <span className="font-semibold text-foreground">{formatCurrency(selectedAmount)}</span>
+                        </div>
+
+                        {paymentMethod === 'pix' ? (
+                          <Button variant="secondary" onClick={handleSelectedPayment} disabled={!canPaySelected || creatingPayment !== null} className="w-full">
+                            {creatingPayment === selectedChargeType ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CreditCard className="h-4 w-4 mr-2" />}
+                            Gerar PIX do pagamento selecionado
+                          </Button>
+                        ) : (
+                          <ProposalCardPayment
+                            amount={selectedAmount}
+                            payerEmail={proposal.client_email}
+                            payerName={proposal.client_name}
+                            payerDocument={undefined}
+                            submitting={creatingPayment === (selectedChargeType === 'entry' ? 'entry-card' : 'total-card')}
+                            onSubmit={(formData) => handleCardPayment(selectedChargeType, formData)}
+                          />
+                        )}
+
+                        {cardPaymentStatus && paymentMethod === 'card' && (
+                          <div className="rounded-xl border border-border/60 bg-background/30 px-4 py-3 text-sm text-muted-foreground">
+                            Status do cartão para {cardPaymentStatus.type === 'entry' ? 'entrada' : 'valor total'}: <span className="font-semibold text-foreground">{cardPaymentStatus.status === 'approved' ? 'aprovado' : 'em processamento'}</span>
+                          </div>
+                        )}
+                      </div>
                       <Button variant="outline" onClick={handleDownloadPdf} disabled={downloadingPdf} className="w-full">
                         {downloadingPdf ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
                         Baixar proposta em PDF
