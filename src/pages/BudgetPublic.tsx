@@ -257,13 +257,25 @@ const BudgetPublic = () => {
         <main className="container mx-auto px-4 py-10 sm:py-16">
           <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr] items-start">
             <div className="space-y-6">
-              <div className="space-y-4 max-w-3xl">
-                <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm text-primary">
-                  <ShieldCheck className="h-4 w-4" />
-                  Proposta comercial digital
-                </span>
-                <h1 className="text-4xl sm:text-5xl font-heading font-bold leading-tight">{proposal.project_title}</h1>
-                <p className="text-lg text-muted-foreground leading-relaxed">{proposal.project_description || 'Proposta comercial estruturada para apresentação profissional do projeto.'}</p>
+              <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-center">
+                <div className="space-y-4 max-w-3xl">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm text-primary">
+                    <ShieldCheck className="h-4 w-4" />
+                    Proposta comercial digital
+                  </span>
+                  <h1 className="text-4xl sm:text-5xl font-heading font-bold leading-tight">{proposal.project_title}</h1>
+                  <p className="text-lg text-muted-foreground leading-relaxed">{proposal.project_description || 'Proposta comercial estruturada para apresentação profissional do projeto.'}</p>
+                </div>
+
+                <div className="flex justify-center lg:justify-end">
+                  <div className="flex min-h-44 w-full max-w-[280px] items-center justify-center rounded-[2rem] border border-primary/20 bg-background/10 p-6 backdrop-blur-sm shadow-[var(--shadow-glow)]">
+                    <img
+                      src={brandImage}
+                      alt="Marca P-CON CONSTRUNET"
+                      className="max-h-28 w-full object-contain sm:max-h-32"
+                    />
+                  </div>
+                </div>
               </div>
 
               <Card className="glass-card">
